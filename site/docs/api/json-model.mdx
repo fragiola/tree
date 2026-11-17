@@ -1,0 +1,105 @@
+---
+title: The JSON model
+description: The tree document, version 1, that createTreeModel loads and get("tree-json") writes back: its fields, its rules and how it is normalized.
+---
+
+A tree is one JSON document. `createTreeModel<Types>(json)` validates it against its JSON Schema
+(`treeSchema`) and the rules below, and throws a `TreeValidationError` listing every problem with
+its JSON path; `validateTree(json)` returns the same issues instead. `model.get("tree-json")`
+writes the current state back as a document with every field filled in, so a round trip is stable.
+
+```json
+{
+    "version": 1,
+    "settings": { "selectionMode": "multiple", "checkMode": "cascade" },
+    "rootItemIds": ["src", "readme"],
+    "items": {
+        "src": { "id": "src", "kind": "folder", "label": "src", "childItemIds": ["app", "lib"] },
+        "app": { "id": "app", "kind": "file", "label": "app.ts", "data": { "size": 120 } },
+        "lib": { "id": "lib", "kind": "folder", "label": "lib", "childrenStatus": "unloaded" },
+        "readme": { "id": "readme", "kind": "file", "label": "README.md", "data": { "size": 3 } }
+    },
+    "expandedItemIds": ["src"],
+    "selectedItemIds": [],
+    "checkedItemIds": [],
+    "selectionAnchorItemId": null,
+    "focusedItemId": "src",
+    "renamingItemId": null
+}
+```
+
+A field holding an id is named `<entity>Id`, a list of ids `<entity>Ids`.
+
+## The document
+
+| field | type | required | what it is |
+| --- | --- | --- | --- |
+| `version` | `1` | yes | the document version |
+| `settings` | object | no | the modes and the flags' defaults (below) |
+| `rootItemIds` | `string[]` | yes | the root items, in order |
+| `items` | object | yes | every item, keyed by its id |
+| `expandedItemIds` | `string[]` | no | the expanded items |
+| `selectedItemIds` | `string[]` | no | the selection, in the order it was made |
+| `checkedItemIds` | `string[]` | no | the checked items |
+| `selectionAnchorItemId` | `string \| null` | no | where a range selection starts |
+| `focusedItemId` | `string \| null` | no | the roving tab stop |
+| `renamingItemId` | `string \| null` | no | the item whose label is being edited |
+
+## Settings
+
+| field | values | default |
+| --- | --- | --- |
+| `selectionMode` | `"none"`, `"single"`, `"multiple"` | `"single"` |
+| `checkMode` | `"cascade"`, `"independent"` | `"cascade"` |
+| `movable` | boolean: the default of an item's `movable` | `true` |
+| `renamable` | boolean: the default of an item's `renamable` | `true` |
+| `droppable` | boolean: the default of an item's `droppable` | `true` |
+
+## Items
+
+| field | type | required | what it is |
+| --- | --- | --- | --- |
+| `id` | `string` | no | the item's id: equal to its key in `items` when given |
+| `kind` | `string` | yes | what the item is: a key of the app's registry, which types `data` |
+| `label` | `string` | yes | the item's name, raw: the app renders it, the packages never do |
+| `data` | JSON | no | the app's data (required by the type when the kind's data does not allow `undefined`) |
+| `childItemIds` | `string[]` | no | its children, in order |
+| `childrenStatus` | `"unloaded"`, `"loading"`, `"loaded"`, `"error"` | no | where its children come from the app's loader |
+| `disabled` | boolean | no | focusable, but not actionable |
+| `movable` | boolean | no | whether it can be moved (default: `settings.movable`) |
+| `renamable` | boolean | no | whether its label can be edited (default: `settings.renamable`) |
+| `droppable` | boolean | no | whether it accepts items moved into it (default: `settings.droppable`) |
+
+An item with neither `childItemIds` nor `childrenStatus` is a **leaf**. An item with
+`childItemIds` (possibly empty) holds its children itself. An item with a `childrenStatus` gets
+them from the app's loader: `unloaded` until it is first expanded, `loading` while the engine
+waits for `loadChildren`, `loaded` with its `childItemIds`, `error` when the load failed.
+
+## Rules
+
+- Every id in `rootItemIds` and `childItemIds` is an item, and every item has exactly one place:
+  one parent, or the root. An item no root reaches (an orphan, or a cycle) is an error.
+- A parent whose `childrenStatus` is `unloaded`, `loading` or `error` has no children yet.
+- `expandedItemIds`, `selectedItemIds`, `checkedItemIds` and the single ids name items; no list
+  repeats an id.
+- `selectionMode: "none"` holds no selection, `"single"` at most one item.
+- With `dataSchemas` (a JSON Schema per kind, an option of `createTreeModel`), each item's `data`
+  is validated against its kind's schema.
+
+## How a document is normalized
+
+The state the model holds, and the document it writes back, is the loaded document with:
+
+- every setting filled in from the defaults, and every list and single id present;
+- an expanded leaf dropped from `expandedItemIds`;
+- a `loaded` parent given an empty `childItemIds` when it had none;
+- in `cascade` mode, the checks made consistent: a listed parent checks all its descendants, then
+  a parent with children is checked exactly when all of them are (a parent with only some of its
+  descendants checked is `mixed`: `model.get("check-state-by", { itemId })`, never stored);
+- a `focusedItemId` that is hidden (inside a collapsed item) moved to its nearest visible ancestor.
+
+## Ids
+
+A document's ids are its keys. Items created by commands without an id (`item.add`,
+`item.set-children`) get one from `createId` (an option of `createTreeModel`), else the default
+`item-<n>`; an id in use is never given again.
