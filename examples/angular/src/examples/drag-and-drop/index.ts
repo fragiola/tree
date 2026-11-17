@@ -7,6 +7,10 @@ import {
     type TreeJson,
     type TreeModel,
 } from "@fragiola/tree-angular";
+import {
+    dragAndDrop,
+    TreeDropIndicatorDirective,
+} from "@fragiola/tree-angular/drag-and-drop";
 import { selection } from "@fragiola/tree-angular/selection";
 import {
     LucideChevronRight,
@@ -18,8 +22,11 @@ import {
 } from "@lucide/angular";
 import * as styles from "./styles";
 
-/** The opt-in features of the model: the selection. */
-const features = [selection()] as const;
+/** The opt-in features of the model: the selection and the drags (a drop line starts past the grip and the toggle). */
+const features = [
+    selection(),
+    dragAndDrop({ indicatorInset: styles.indicatorInset }),
+] as const;
 
 type Types = { items: { folder: undefined; file: undefined } };
 
@@ -94,6 +101,7 @@ let nextId = 0;
     selector: "example-drag-and-drop",
     imports: [
         TREE,
+        TreeDropIndicatorDirective,
         LucideChevronRight,
         LucideFile,
         LucideFolder,
@@ -106,7 +114,6 @@ let nextId = 0;
         <div [class]="styles.frame">
             <div
                 [treeRoot]="model"
-                [indicatorInset]="styles.indicatorInset"
                 #tree="treeRoot"
                 [announce]="announce"
                 aria-label="Project files"

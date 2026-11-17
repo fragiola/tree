@@ -5,6 +5,7 @@ import {
     useTreeState,
     validateTree,
 } from "@fragiola/tree-vue";
+import { DropIndicator } from "@fragiola/tree-vue/drag-and-drop";
 import { RotateCcw, Trash2 } from "@lucide/vue";
 import { onMounted, onUnmounted, ref } from "vue";
 import { Clickable } from "#/components/atoms/clickable";
@@ -89,14 +90,13 @@ const reset = () => model.run("tree.load", { json: fileSystem() });
         </div>
         <Tree.Root
             :model="model"
-            :indicator-inset="styles.indicatorInset"
             aria-label="Project files"
             :class="styles.root"
         >
             <Tree.Items v-slot="{ item }">
                 <FileItem :item="item" />
             </Tree.Items>
-            <Tree.DropIndicator :class="styles.dropIndicator" />
+            <DropIndicator :class="styles.dropIndicator" />
         </Tree.Root>
         <p :class="styles.hint">
             Expand, drag, rename (F2) or delete, then reload: the tree comes

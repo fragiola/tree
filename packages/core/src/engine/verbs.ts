@@ -4,7 +4,7 @@
 // scrolling, calling the loader, a drag). The ones that change the tree do it by running commands,
 // so middleware sees them.
 import type { NoPayload } from "../commands/types";
-import type { DropPosition, DropTarget } from "../dnd/drop-evaluation";
+import type { DropPosition, DropTarget } from "../drop-target/drop-evaluation";
 import type { ScrollAlign } from "../virtual/scroll-target";
 import type { VirtualWindow } from "../virtual/virtualizer";
 

@@ -1,6 +1,8 @@
 import { typedTree } from "@fragiola/tree-vue";
+import { dragAndDrop } from "@fragiola/tree-vue/drag-and-drop";
 import { typeAhead } from "@fragiola/tree-vue/type-ahead";
 import { virtualization } from "@fragiola/tree-vue/virtualization";
+import * as styles from "./styles";
 
 export type Types = { items: { folder: undefined; file: undefined } };
 
@@ -9,6 +11,7 @@ export type Types = { items: { folder: undefined; file: undefined } };
 export const features = [
     virtualization({ estimateRowSize: 28, overscan: 10 }),
     typeAhead(),
+    dragAndDrop({ indicatorInset: styles.indicatorInset }),
 ] as const;
 
 // The primitives typed by Types (a template cannot pass a type argument).

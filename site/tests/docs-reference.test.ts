@@ -101,7 +101,6 @@ const MODULE_PAGES: Record<string, string> = {
     "./components/item-content": "item-content",
     "./components/group": "group",
     "./components/toggle": "toggle",
-    "./components/drop-indicator": "drop-indicator",
     "./components/live-region": "live-region",
     "./components/virtual-items": "virtual-items",
     "./hooks/use-tree": "hooks",
@@ -229,7 +228,6 @@ describe("the React reference", () => {
     it("documents every part as Tree.<Part> on its own page", () => {
         expect(partExports.map((entry) => entry.name).sort()).toEqual(
             [
-                "DropIndicator",
                 "Group",
                 "Item",
                 "ItemContent",
@@ -288,7 +286,7 @@ describe("the React reference", () => {
             }
         }
         // the parser found the props (a formatting change must not silently pass)
-        expect(checked).toBeGreaterThan(20);
+        expect(checked).toBeGreaterThan(12);
     });
 
     it("has a table row for every field of every other exported interface", () => {
@@ -403,6 +401,41 @@ describe("the React feature entries", () => {
         );
         expect(page("hooks")).toMatch(/^## `useTreeVirtualWindow`/m);
     });
+
+    it("ship the drop indicator from /drag-and-drop (and /foreign-drop), on its own page", () => {
+        for (const name of [
+            "drag-and-drop",
+            "drag-group",
+            "foreign-drop",
+            "drop-outside",
+        ]) {
+            expect(read(join(REACT_SRC, name, "index.ts"))).toMatch(
+                new RegExp(`^export \\* from "@fragiola/tree/${name}";$`, "m"),
+            );
+        }
+        const exported = entry("drag-and-drop").map(({ name }) => name);
+        expect(exported.sort()).toEqual(
+            [
+                "DropIndicator",
+                "DropIndicatorProps",
+                "DropIndicatorState",
+            ].sort(),
+        );
+        const mdx = page("drop-indicator");
+        expect(mdx).toMatch(/^title: DropIndicator$/m);
+        for (const name of exported)
+            expect(
+                mentions(mdx, name),
+                `${name} on api/drop-indicator.mdx`,
+            ).toBe(true);
+        const props = interfaceFields(
+            read(join(REACT_SRC, "drag-and-drop/drop-indicator.tsx")),
+            "DropIndicatorProps",
+        );
+        expect([...tableRowNames(section(mdx, "Props") ?? "")].sort()).toEqual(
+            [...(props?.fields ?? [])].sort(),
+        );
+    });
 });
 
 describe("the Vue reference", () => {
@@ -436,7 +469,7 @@ describe("the Vue reference", () => {
     it("lists every prop of Tree.Root and every event", () => {
         const root = read(join(VUE_SRC, "components/root.ts"));
         const fields = interfaceFields(root, "RootBaseProps")?.fields ?? [];
-        expect(fields.length).toBeGreaterThan(10);
+        expect(fields.length).toBeGreaterThan(5);
         const row = mdx
             .split("\n")
             .find((line) => line.startsWith("| `Tree.Root` |"));
@@ -484,7 +517,7 @@ describe("the Angular reference", () => {
             .filter((name) => !name.startsWith("ɵ"));
         expect(names.length).toBeGreaterThan(0);
         expect(names.filter((name) => !mentions(mdx, name))).toEqual([]);
-        for (const entry of ["virtualization", "rename"]) {
+        for (const entry of ["virtualization", "rename", "drag-and-drop"]) {
             const names = namedExports(
                 read(join(ROOT, `packages/angular/${entry}/public-api.ts`)),
             ).map((found) => found.name);
@@ -493,7 +526,7 @@ describe("the Angular reference", () => {
     });
 
     it("lists every directive with its selector and exportAs, and TREE holds them all", () => {
-        expect(directives.length).toBe(8);
+        expect(directives.length).toBe(7);
         for (const { selector, exportAs, name } of directives) {
             expect(mdx, name).toMatch(
                 new RegExp(
@@ -515,7 +548,7 @@ describe("the Angular reference", () => {
         const fields = [
             ...root.matchAll(/^ {4}readonly (\w+) = (?:input|output)\b/gm),
         ].map((match) => match[1] ?? "");
-        expect(fields.length).toBeGreaterThan(15);
+        expect(fields.length).toBeGreaterThan(10);
         const row = mdx
             .split("\n")
             .find((line) => line.startsWith("| `TreeRootDirective` |"));
@@ -530,6 +563,7 @@ describe("the concept pages", () => {
         .map((file) => read(join(REACT_SRC, "components", file)))
         .concat(read(join(REACT_SRC, "hooks/use-tree-item.ts")))
         .concat(read(join(REACT_SRC, "virtualization/virtual-items.tsx")))
+        .concat(read(join(REACT_SRC, "drag-and-drop/drop-indicator.tsx")))
         // the features' attributes (`data-checked` with `checkboxes()`), the core's
         .concat(
             [

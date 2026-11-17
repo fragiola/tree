@@ -1,5 +1,6 @@
 import {
     type AnnounceEvent,
+    type AnyFeatures,
     type AnyTypes,
     createTreeEngine,
     createTreeModel,
@@ -7,11 +8,8 @@ import {
     type FeatureRootPropsOf,
     type KeyMap,
     type LoadChildren,
-    type TransferHandler,
-    type TreeDropOutside,
     type TreeEngine,
     type TreeFeatures,
-    type TreeForeignDrop,
     type TreeJson,
     type TreeModel,
     type TreeTypes,
@@ -60,7 +58,7 @@ export interface RootState {
     dragging: boolean;
     /** a keyboard drag is under way */
     keyboardDragging: boolean;
-    /** a drag from another tree of the drag group is under way (`dragGroup`) */
+    /** a drag from another tree of the drag group is under way (`dragGroup()`) */
     draggingFromOtherTree: boolean;
     /** the tree has no item */
     empty: boolean;
@@ -95,38 +93,6 @@ export interface RootBaseProps<
     keyMap?: Partial<KeyMap> | undefined;
     /** a click on a parent's content also expands or collapses it (default false) */
     expandOnClick?: boolean | undefined;
-    /** how far (px) a press moves before it is a drag (default 4) */
-    dragThreshold?: number | undefined;
-    /** how long (ms) a drag hovers a collapsed parent before it expands (default 800) */
-    autoExpandDelay?: number | undefined;
-    /** the indentation of one level (px), for the drop level at the end of a sublist (default 16) */
-    indentation?: number | undefined;
-    /** how far (px) a drop line starts past its level's inline start: the toggle, a grip or padding before the label (default 0) */
-    indicatorInset?: number | undefined;
-    /**
-     * joins the trees of the document with the same group name: items drag between them, by pointer
-     * and keyboard (over one model a drop is one `item.move`, over two a transfer)
-     */
-    dragGroup?: string | undefined;
-    /**
-     * what a drop from a tree of another model does here: run your commands (copy, convert kinds)
-     * and return false to refuse; asked first with `dryRun` for each target. Default: the target
-     * model adds the dragged subtrees and the source model removes them
-     */
-    transfer?: TransferHandler | undefined;
-    /**
-     * takes files, links and text dragged on the tree from the desktop or another window
-     * (`createTreeForeignDrop(options)`): the target shows as for a tree drag, and its `onDrop`
-     * runs your commands. Create it once (in `setup`, or at module level): another one creates
-     * another engine
-     */
-    foreignDrop?: TreeForeignDrop<T> | undefined;
-    /**
-     * hands your `onDrop` the items of a pointer drag released outside every tree of the group
-     * (`createTreeDropOutside(options)`), for your own targets. Create it once: another one
-     * creates another engine
-     */
-    dropOutside?: TreeDropOutside<T> | undefined;
     /** access to the model and the engine from outside the root (`useTreeRef`, `createTreeRef`) */
     treeRef?: TreeRef<T, F> | undefined;
 }
@@ -200,14 +166,6 @@ const ROOT_PROPS = [
     "announce",
     "keyMap",
     "expandOnClick",
-    "dragThreshold",
-    "autoExpandDelay",
-    "indentation",
-    "indicatorInset",
-    "dragGroup",
-    "transfer",
-    "foreignDrop",
-    "dropOutside",
     "treeRef",
     "as",
 ] as const satisfies readonly (keyof RootBaseProps)[];
@@ -301,14 +259,6 @@ const RootTree = definePrimitive<RootTreeProps, RootSlots, RootTreeEmits>(
             hasLoader: props.loadChildren !== undefined,
             keyMap: JSON.stringify(props.keyMap ?? null),
             expandOnClick: props.expandOnClick,
-            dragThreshold: props.dragThreshold,
-            autoExpandDelay: props.autoExpandDelay,
-            indentation: props.indentation,
-            indicatorInset: props.indicatorInset,
-            dragGroup: props.dragGroup,
-            hasTransfer: props.transfer !== undefined,
-            foreignDrop: keyOfModel(props.foreignDrop),
-            dropOutside: keyOfModel(props.dropOutside),
         });
         const create = () => {
             const hasLoader = props.loadChildren !== undefined;
@@ -327,17 +277,6 @@ const RootTree = definePrimitive<RootTreeProps, RootSlots, RootTreeEmits>(
                 announce: (event) => props.announce?.(event),
                 keyMap: props.keyMap,
                 expandOnClick: props.expandOnClick,
-                dragThreshold: props.dragThreshold,
-                autoExpandDelay: props.autoExpandDelay,
-                indentation: props.indentation,
-                indicatorInset: props.indicatorInset,
-                dragGroup: props.dragGroup,
-                transfer:
-                    props.transfer !== undefined
-                        ? (event) => props.transfer?.(event)
-                        : undefined,
-                foreignDrop: props.foreignDrop as TreeForeignDrop | undefined,
-                dropOutside: props.dropOutside as TreeDropOutside | undefined,
                 // a remount (a route change, a `v-if`) loads what this engine was loading
                 resetLoadsOnDestroy: true,
             });
@@ -449,15 +388,21 @@ const RootTree = definePrimitive<RootTreeProps, RootSlots, RootTreeEmits>(
         const onKeydown = (event: KeyboardEvent) => {
             engine.value?.adapter.handleKeyDown(event);
         };
-        // native drags bring foreign content (`foreignDrop`); the engine ignores them without it
-        const onDrag = (event: DragEvent) => {
-            engine.value?.adapter.handleDragEvent(event);
-        };
+        // native drags bring foreign content: forwarded only with `foreignDrop()`
+        const onDrag = installed.has("foreign-drop")
+            ? (event: DragEvent) => {
+                  engine.value?.adapter.handleDragEvent(event);
+              }
+            : undefined;
 
         return () => {
             const tree = state.value;
             revision.value;
-            const live = engine.value;
+            // the drag keys are the drag features' (`engine.is` answers false without them)
+            const live = engine.value as TreeEngine<
+                AnyTypes,
+                AnyFeatures
+            > | null;
             // the installed features' ARIA and data-* (`aria-multiselectable` with `selection()`)
             const rootAttributes = model.get("root-attributes");
             const rootState: RootState = {

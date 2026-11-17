@@ -28,38 +28,23 @@ export type {
     TreeSettingsPatch,
 } from "./commands/types";
 export { veto } from "./commands/types";
-export type {
-    DropContext,
-    DropPosition,
-    DropTarget,
-    HoverPosition,
-} from "./dnd/drop-evaluation";
-export {
-    createTreeDropOutside,
-    type DropOutside,
-    type DropOutsideController,
-    type TreeDropOutside,
-    type TreeDropOutsideOptions,
-} from "./dnd/drop-outside";
-export {
-    createTreeForeignDrop,
-    type ForeignDrag,
-    type ForeignDrop,
-    type ForeignDropController,
-    type TreeForeignDrop,
-    type TreeForeignDropOptions,
-} from "./dnd/foreign-drop";
-export type {
-    DragModifiers,
-    TransferHandler,
-    TreeTransfer,
-} from "./dnd/transfer";
 export {
     DRAG_EXEMPT,
     NO_DRAG_ATTRIBUTE,
     PART_ATTRIBUTE,
     PATH_ATTRIBUTE,
 } from "./dom/owner";
+export type {
+    DropContext,
+    DropPosition,
+    DropTarget,
+    HoverPosition,
+} from "./drop-target/drop-evaluation";
+export type {
+    DragModifiers,
+    TransferHandler,
+    TreeTransfer,
+} from "./drop-target/host";
 export type {
     KeyEventInput,
     PressInput,

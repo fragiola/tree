@@ -9,6 +9,10 @@ import {
     type TreeModel,
     TreeRootDirective,
 } from "@fragiola/tree-angular";
+import {
+    dragAndDrop,
+    TreeDropIndicatorDirective,
+} from "@fragiola/tree-angular/drag-and-drop";
 import { typeAhead } from "@fragiola/tree-angular/type-ahead";
 import {
     TreeVirtualItemsDirective,
@@ -50,6 +54,7 @@ function largeTree(): TreeJson<Types> {
 const features = [
     virtualization({ estimateRowSize: 28, overscan: 10 }),
     typeAhead(),
+    dragAndDrop({ indicatorInset: styles.indicatorInset }),
 ] as const;
 
 /** The live region's text for each step of a drag (pointer or keyboard): the package writes none. */
@@ -86,6 +91,7 @@ function announcer(model: TreeModel<Types>) {
     selector: "example-large-tree",
     imports: [
         TREE,
+        TreeDropIndicatorDirective,
         TreeVirtualItemsDirective,
         ClickableButton,
         LucideChevronRight,
@@ -108,7 +114,6 @@ function announcer(model: TreeModel<Types>) {
             </div>
             <div
                 [treeRoot]="model"
-                [indicatorInset]="styles.indicatorInset"
                 #tree="treeRoot"
                 [announce]="announce"
                 aria-label="Large project"

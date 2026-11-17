@@ -6,6 +6,7 @@ import {
     Tree,
     useTreeState,
 } from "@fragiola/tree-react";
+import { DropIndicator, dragAndDrop } from "@fragiola/tree-react/drag-and-drop";
 import { rename, useTreeItemRename } from "@fragiola/tree-react/rename";
 import { selection } from "@fragiola/tree-react/selection";
 import { ChevronRight, File, Folder, Redo2, Trash2, Undo2 } from "lucide-react";
@@ -15,8 +16,12 @@ import { type FileTypes, fileSystem } from "../_kit/data";
 import { UndoManager } from "../_kit/undo";
 import * as styles from "./styles";
 
-/** The opt-in features of the model: the selection and the rename (F2). */
-const features = [selection(), rename()] as const;
+/** The opt-in features of the model: the selection, the rename (F2) and the drags. */
+const features = [
+    selection(),
+    rename(),
+    dragAndDrop({ indicatorInset: styles.indicatorInset }),
+] as const;
 
 // Undo/redo is app code (`_kit/undo.ts`): it listens to the model's commits, keeps the document
 // before each step, and puts it back with `tree.load`. The package ships no history.
@@ -100,7 +105,6 @@ export default function UndoRedo() {
             </div>
             <div className={styles.body}>
                 <Tree.Root<FileTypes, typeof features>
-                    indicatorInset={styles.indicatorInset}
                     model={model}
                     onKeyDown={onKeyDown}
                     aria-label="Project files"
@@ -109,7 +113,7 @@ export default function UndoRedo() {
                     <Tree.Items<FileTypes>>
                         {(item) => <FileItem item={item} />}
                     </Tree.Items>
-                    <Tree.DropIndicator className={styles.dropIndicator} />
+                    <DropIndicator className={styles.dropIndicator} />
                 </Tree.Root>
                 <section aria-label="History" className={styles.history}>
                     <h2 className={styles.historyTitle}>History</h2>

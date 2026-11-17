@@ -20,7 +20,6 @@ const OWN = [
 ];
 /** The same primitives as @fragiola/tree-react's, in files of the same names. */
 const PRIMITIVES = [
-    "DropIndicator",
     "Group",
     "Item",
     "ItemContent",
@@ -30,7 +29,6 @@ const PRIMITIVES = [
     "Toggle",
 ];
 const FILES = [
-    "drop-indicator",
     "group",
     "item",
     "item-content",
@@ -61,6 +59,20 @@ describe("@fragiola/tree-vue", () => {
         expect(own.sort()).toEqual([...OWN].sort());
         expect(Object.keys(vue.Tree).sort()).toEqual(PRIMITIVES);
         expect(vue.typedTree()).toBe(vue.Tree);
+    });
+
+    it("ships the drop indicator from /drag-and-drop, in a file named as in the React adapter", () => {
+        expect(read("src/drag-and-drop/drop-indicator.ts")).toBeTruthy();
+        expect(
+            readFileSync(
+                join(
+                    import.meta.dirname,
+                    "../../react/src/drag-and-drop/drop-indicator.tsx",
+                ),
+                "utf-8",
+            ),
+        ).toBeTruthy();
+        expect("DropIndicator" in vue).toBe(false);
     });
 
     it("has a file per primitive, named as in the React adapter", () => {
@@ -113,6 +125,8 @@ describe("@fragiola/tree-vue", () => {
             "src/virtualization/index.ts",
             "src/virtualization/virtual-items.ts",
             "src/virtualization/use-tree-virtual-window.ts",
+            "src/drag-and-drop/index.ts",
+            "src/drag-and-drop/drop-indicator.ts",
         ];
         for (const file of files) {
             expect(read(file), file).not.toMatch(/:\s*any\b|<any>|as any\b/);

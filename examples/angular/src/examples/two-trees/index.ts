@@ -7,6 +7,11 @@ import {
     type TreeJson,
     type TreeModel,
 } from "@fragiola/tree-angular";
+import {
+    dragAndDrop,
+    TreeDropIndicatorDirective,
+} from "@fragiola/tree-angular/drag-and-drop";
+import { dragGroup } from "@fragiola/tree-angular/drag-group";
 import { selection } from "@fragiola/tree-angular/selection";
 import {
     LucideChevronRight,
@@ -17,8 +22,15 @@ import {
 import { SWITCH } from "#/components/ui/switch";
 import * as styles from "./styles";
 
-/** The opt-in features of the model: the selection. */
-const features = [selection()] as const;
+/**
+ * The opt-in features of the models: the selection, the drags, and the "lists" drag group (the
+ * trees of the document whose models have it share their drags).
+ */
+const features = [
+    selection(),
+    dragAndDrop({ indicatorInset: styles.indicatorInset }),
+    dragGroup({ name: "lists" }),
+] as const;
 
 type Types = { items: { group: undefined; produce: undefined } };
 
@@ -127,6 +139,7 @@ let nextId = 0;
     selector: "example-two-trees",
     imports: [
         TREE,
+        TreeDropIndicatorDirective,
         SWITCH,
         LucideChevronRight,
         LucideFolder,
@@ -154,10 +167,8 @@ let nextId = 0;
                 @for (list of lists(); track list.key) {
                     <div
                         [treeRoot]="list.model"
-                        dragGroup="lists"
                         #tree="treeRoot"
                         [announce]="list.announce"
-                        [indicatorInset]="styles.indicatorInset"
                         [attr.aria-label]="list.name"
                         [class]="styles.root"
                     >

@@ -170,7 +170,7 @@
                     "path": "api/toggle"
                 },
                 {
-                    "label": "Tree.DropIndicator",
+                    "label": "DropIndicator",
                     "path": "api/drop-indicator"
                 },
                 {

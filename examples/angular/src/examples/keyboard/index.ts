@@ -6,6 +6,10 @@ import {
     TREE,
     type TreeModel,
 } from "@fragiola/tree-angular";
+import {
+    dragAndDrop,
+    TreeDropIndicatorDirective,
+} from "@fragiola/tree-angular/drag-and-drop";
 import { rename, TreeItemRenameDirective } from "@fragiola/tree-angular/rename";
 import { selection } from "@fragiola/tree-angular/selection";
 import { typeAhead } from "@fragiola/tree-angular/type-ahead";
@@ -14,8 +18,13 @@ import { LucideChevronRight, LucideFile, LucideFolder } from "@lucide/angular";
 import { type FileTypes, fileSystem } from "../_kit/data";
 import * as styles from "./styles";
 
-/** The opt-in features of the model: the selection, the rename (F2) and the type-ahead. */
-const features = [selection(), rename(), typeAhead()] as const;
+/** The opt-in features of the model: the selection, the rename (F2), the type-ahead and the drags. */
+const features = [
+    selection(),
+    rename(),
+    typeAhead(),
+    dragAndDrop({ indicatorInset: styles.indicatorInset }),
+] as const;
 
 // Every key is the engine's (the WAI-ARIA APG tree view, `DEFAULT_KEY_MAP`): the example only
 // lists them. `[keyMap]` on the root would change any of them.
@@ -80,6 +89,7 @@ let nextId = 0;
     selector: "example-keyboard",
     imports: [
         TREE,
+        TreeDropIndicatorDirective,
         TreeItemRenameDirective,
         LucideChevronRight,
         LucideFile,
@@ -91,7 +101,6 @@ let nextId = 0;
             <div [class]="styles.treeColumn">
                 <div
                     [treeRoot]="model"
-                    [indicatorInset]="styles.indicatorInset"
                     [announce]="announce"
                     aria-label="Project files"
                     [class]="styles.root"

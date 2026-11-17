@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { createTreeModel, useTreeState } from "@fragiola/tree-vue";
+import { DropIndicator } from "@fragiola/tree-vue/drag-and-drop";
 import { Redo2, Trash2, Undo2 } from "@lucide/vue";
 import { onUnmounted, shallowRef } from "vue";
 import { Clickable } from "#/components/atoms/clickable";
@@ -92,7 +93,6 @@ const onKeydown = (event: KeyboardEvent) => {
         </div>
         <div :class="styles.body">
             <Tree.Root
-                :indicator-inset="styles.indicatorInset"
                 :model="model"
                 aria-label="Project files"
                 :class="styles.root"
@@ -101,7 +101,7 @@ const onKeydown = (event: KeyboardEvent) => {
                 <Tree.Items v-slot="{ item }">
                     <FileItem :item="item" />
                 </Tree.Items>
-                <Tree.DropIndicator :class="styles.dropIndicator" />
+                <DropIndicator :class="styles.dropIndicator" />
             </Tree.Root>
             <section aria-label="History" :class="styles.history">
                 <h2 :class="styles.historyTitle">History</h2>

@@ -1,10 +1,11 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createTreeForeignDrop } from "../../src/dnd/foreign-drop";
+import { dragGroup } from "../../src/drag-group/drag-group";
 import { createTreeEngine } from "../../src/engine/tree-engine";
+import { foreignDrop } from "../../src/foreign-drop/foreign-drop";
 import { virtualization } from "../../src/virtual/virtualization";
 import { dataTransfer, mount, nativeDrag, pointer, wait } from "../engine/dom";
-import { filesModel } from "../fixture";
+import { allFeatures, filesModel } from "../fixture";
 import { flatModel, mountVirtual, type VirtualMounted } from "./dom";
 
 let mounted: VirtualMounted | undefined;
@@ -286,9 +287,14 @@ describe("the virtualizer", () => {
     });
 
     it("a pointer drag auto-scrolls to a target outside the window, keeping the pressed row", async () => {
-        mounted = mountVirtual(flatModel(1000), fixed, {
-            autoScroll: { speed: 40 },
-        });
+        mounted = mountVirtual(
+            flatModel(
+                1000,
+                undefined,
+                allFeatures({ dragAndDrop: { autoScroll: { speed: 40 } } }),
+            ),
+            fixed,
+        );
         const content = mounted.content("n0") as HTMLElement;
         pointer(content, "pointerdown", 50, 10);
         pointer(content, "pointermove", 50, 30);
@@ -310,9 +316,7 @@ describe("the virtualizer", () => {
     it("takes a foreign drop on a row of its window, scrolled", () => {
         const dropped: unknown[] = [];
         mounted = mountVirtual(flatModel(1000), fixed, {
-            foreignDrop: createTreeForeignDrop({
-                onDrop: ({ to }) => dropped.push(to),
-            }),
+            features: [foreignDrop({ onDrop: ({ to }) => dropped.push(to) })],
         });
         mounted.scroll(1000);
         const transfer = dataTransfer(["Files"]);
@@ -331,8 +335,14 @@ describe("the virtualizer", () => {
     });
 
     it("drags between a virtualized tree and another tree of its group, by pointer and keyboard", () => {
-        mounted = mountVirtual(flatModel(1000), fixed, { dragGroup: "g" });
-        const other = mount(filesModel(), { dragGroup: "g" }, document, 400);
+        const grouped = [...allFeatures(), dragGroup({ name: "g" })];
+        mounted = mountVirtual(flatModel(1000, undefined, grouped), fixed);
+        const other = mount(
+            filesModel({}, { features: grouped }),
+            {},
+            document,
+            400,
+        );
         try {
             // a pointer drag from the virtualized tree into the other one
             const content = mounted.content("n0") as HTMLElement;

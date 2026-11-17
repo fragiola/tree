@@ -1,5 +1,6 @@
 import {
     type AnnounceEvent,
+    type AnyFeatures,
     type AnyTypes,
     createTreeEngine,
     createTreeModel,
@@ -7,11 +8,8 @@ import {
     type FeatureRootPropsOf,
     type KeyMap,
     type LoadChildren,
-    type TransferHandler,
-    type TreeDropOutside,
     type TreeEngine,
     type TreeFeatures,
-    type TreeForeignDrop,
     type TreeJson,
     type TreeModel,
     type TreeTypes,
@@ -38,7 +36,7 @@ export interface RootState {
     dragging: boolean;
     /** a keyboard drag is under way */
     keyboardDragging: boolean;
-    /** a drag from another tree of the drag group is under way (`dragGroup`) */
+    /** a drag from another tree of the drag group is under way (`dragGroup()`) */
     draggingFromOtherTree: boolean;
     /** the tree has no item */
     empty: boolean;
@@ -76,38 +74,6 @@ export interface RootBaseProps<
     keyMap?: Partial<KeyMap> | undefined;
     /** a click on a parent's content also expands or collapses it (default false) */
     expandOnClick?: boolean | undefined;
-    /** how far (px) a press moves before it is a drag (default 4) */
-    dragThreshold?: number | undefined;
-    /** how long (ms) a drag hovers a collapsed parent before it expands (default 800) */
-    autoExpandDelay?: number | undefined;
-    /** the indentation of one level (px), for the drop level at the end of a sublist (default 16) */
-    indentation?: number | undefined;
-    /** how far (px) a drop line starts past its level's inline start: the toggle, a grip or padding before the label (default 0) */
-    indicatorInset?: number | undefined;
-    /**
-     * joins the trees of the document with the same group name: items drag between them, by pointer
-     * and keyboard (over one model a drop is one `item.move`, over two a transfer)
-     */
-    dragGroup?: string | undefined;
-    /**
-     * what a drop from a tree of another model does here: run your commands (copy, convert kinds)
-     * and return false to refuse; asked first with `dryRun` for each target. Default: the target
-     * model adds the dragged subtrees and the source model removes them
-     */
-    transfer?: TransferHandler | undefined;
-    /**
-     * takes files, links and text dragged on the tree from the desktop or another window
-     * (`createTreeForeignDrop(options)`): the target shows as for a tree drag, and its `onDrop`
-     * runs your commands. Create it once (at module level, or memoized): another one creates
-     * another engine
-     */
-    foreignDrop?: TreeForeignDrop<T> | undefined;
-    /**
-     * hands your `onDrop` the items of a pointer drag released outside every tree of the group
-     * (`createTreeDropOutside(options)`), for your own targets. Create it once: another one
-     * creates another engine
-     */
-    dropOutside?: TreeDropOutside<T> | undefined;
     /** access to the model and the engine from outside the root (`useTreeRef`, `createTreeRef`) */
     treeRef?: TreeRef<T, F> | undefined;
     children?: React.ReactNode;
@@ -170,14 +136,6 @@ export function Root<
         announce,
         keyMap,
         expandOnClick,
-        dragThreshold,
-        autoExpandDelay,
-        indentation,
-        indicatorInset,
-        dragGroup,
-        transfer,
-        foreignDrop,
-        dropOutside,
         treeRef,
         children,
         ...others
@@ -211,10 +169,9 @@ export function Root<
     }
 
     // the callbacks are read when called: a new function each render recreates nothing
-    const latest = React.useRef({ loadChildren, announce, transfer });
-    latest.current = { loadChildren, announce, transfer };
+    const latest = React.useRef({ loadChildren, announce });
+    latest.current = { loadChildren, announce };
     const hasLoader = loadChildren !== undefined;
-    const hasTransfer = transfer !== undefined;
     const keyMapKey = JSON.stringify(keyMap ?? null);
 
     const [facade] = React.useState(createEngineFacade);
@@ -236,16 +193,6 @@ export function Root<
             announce: (event) => latest.current.announce?.(event),
             keyMap,
             expandOnClick,
-            dragThreshold,
-            autoExpandDelay,
-            indentation,
-            indicatorInset,
-            dragGroup,
-            transfer: hasTransfer
-                ? (event) => latest.current.transfer?.(event)
-                : undefined,
-            foreignDrop: foreignDrop as TreeForeignDrop | undefined,
-            dropOutside: dropOutside as TreeDropOutside | undefined,
             // a remount (StrictMode, a route change) loads what this engine was loading
             resetLoadsOnDestroy: true,
         });
@@ -255,21 +202,7 @@ export function Root<
             facade.set(null);
             created.destroy();
         };
-    }, [
-        model,
-        facade,
-        hasLoader,
-        keyMapKey,
-        expandOnClick,
-        dragThreshold,
-        autoExpandDelay,
-        indentation,
-        indicatorInset,
-        dragGroup,
-        hasTransfer,
-        foreignDrop,
-        dropOutside,
-    ]);
+    }, [model, facade, hasLoader, keyMapKey, expandOnClick]);
     // a destroyed engine (StrictMode's first mount, a replaced model) is never used again
     const live = engine && engine.adapter.model === model ? engine : null;
 
@@ -316,10 +249,12 @@ export function Root<
     const onKeyDown = (event: React.KeyboardEvent<HTMLElement>) => {
         live?.adapter.handleKeyDown(event);
     };
-    // native drags bring foreign content (`foreignDrop`); the engine ignores them without it
-    const onDrag = (event: React.DragEvent<HTMLElement>) => {
-        live?.adapter.handleDragEvent(event.nativeEvent);
-    };
+    // native drags bring foreign content: forwarded only with `foreignDrop()`
+    const onDrag = installed.has("foreign-drop")
+        ? (event: React.DragEvent<HTMLElement>) => {
+              live?.adapter.handleDragEvent(event.nativeEvent);
+          }
+        : undefined;
 
     // biome-ignore lint/correctness/useExhaustiveDependencies: the tab stop is the state's
     const tabStopItemId = React.useMemo(
@@ -340,11 +275,13 @@ export function Root<
 
     // the installed features' ARIA and data-* (`aria-multiselectable` with `selection()`)
     const rootAttributes = model.get("root-attributes");
+    // the drag keys are the drag features' (`engine.is` answers false without them)
+    const drags = live as TreeEngine<AnyTypes, AnyFeatures> | null;
     const rootState: RootState = {
         multiselectable: rootAttributes["aria-multiselectable"] === "true",
-        dragging: live?.is("dragging") ?? false,
-        keyboardDragging: live?.is("keyboard-dragging") ?? false,
-        draggingFromOtherTree: live?.is("dragging-from-other-tree") ?? false,
+        dragging: drags?.is("dragging") ?? false,
+        keyboardDragging: drags?.is("keyboard-dragging") ?? false,
+        draggingFromOtherTree: drags?.is("dragging-from-other-tree") ?? false,
         empty: state.rootItemIds.length === 0,
     };
     const element = useRenderElement("div", rest, {

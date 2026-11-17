@@ -7,16 +7,19 @@
 // comparison leaves those hidden elements out.
 import { Component, input } from "@angular/core";
 import { Tree as ReactTree, useTree, useTreeItem } from "@fragiola/tree-react";
+import { DropIndicator as ReactDropIndicator } from "@fragiola/tree-react/drag-and-drop";
 import { useTreeItemRename } from "@fragiola/tree-react/rename";
 import { VirtualItems as ReactVirtualItems } from "@fragiola/tree-react/virtualization";
 import * as React from "react";
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { describe, expect, it } from "vitest";
+import { TreeDropIndicatorDirective } from "../drag-and-drop/public-api";
+import { dragGroup } from "../drag-group/public-api";
+import { foreignDrop as foreignDropFeature } from "../foreign-drop/public-api";
 import { TreeItemRenameDirective } from "../rename/public-api";
 import { selection } from "../selection/public-api";
 import {
-    createTreeForeignDrop,
     createTreeModel,
     TREE,
     type TreeFeatures,
@@ -27,8 +30,8 @@ import { BigTree, virtualModel } from "./big-tree";
 import {
     FEATURES,
     type FileTypes,
+    featuresWith,
     files,
-    filesModel,
     filesModelWith,
     focus,
     itemElement,
@@ -152,7 +155,7 @@ async function both(
                 r(ReactTree.Items, {
                     children: (item: Item) => reactItem(item),
                 } as never),
-                r(ReactTree.DropIndicator),
+                r(ReactDropIndicator),
                 r(ReactTree.LiveRegion),
             ),
         );
@@ -266,10 +269,10 @@ describe("parity with @fragiola/tree-react in a virtualized tree", () => {
 /** Two trees of the drag group "files": the files, and an inbox over another model. */
 @Component({
     selector: "test-two-trees",
-    imports: [TREE, TreeItemRenameDirective],
+    imports: [TREE, TreeItemRenameDirective, TreeDropIndicatorDirective],
     template: `
         @for (tree of trees(); track tree.name) {
-            <div [treeRoot]="tree.model" dragGroup="files" [attr.aria-label]="tree.name">
+            <div [treeRoot]="tree.model" [attr.aria-label]="tree.name">
                 <ng-template [treeItems]="tree.model" let-item>
                     <div [treeItem]="item" #treeItem="treeItem">
                         <div treeItemContent>
@@ -309,8 +312,11 @@ class TwoTrees {
     }
 }
 
+/** The features of the drag group "files". */
+const grouped = () => featuresWith([dragGroup({ name: "files" })]);
+
 const inboxModel = () =>
-    createTreeModel<FileTypes, typeof FEATURES>(
+    createTreeModel<FileTypes, ReturnType<typeof grouped>>(
         {
             version: 1,
             rootItemIds: ["inbox"],
@@ -318,7 +324,7 @@ const inboxModel = () =>
                 inbox: { kind: "folder", label: "inbox", childItemIds: [] },
             },
         },
-        { features: FEATURES },
+        { features: grouped() },
     );
 
 /** Whether the keyboard drag reached the inbox folder, a drop into it. */
@@ -332,7 +338,7 @@ const intoInbox = () =>
 describe("parity with @fragiola/tree-react across a drag group", () => {
     it("renders the same cross-tree drag state", async () => {
         const trees = () => [
-            { name: "Files", model: filesModel() },
+            { name: "Files", model: filesModelWith(grouped()) },
             { name: "Inbox", model: inboxModel() },
         ];
         await render(TwoTrees, { trees: trees() });
@@ -358,13 +364,12 @@ describe("parity with @fragiola/tree-react across a drag group", () => {
                         {
                             key: name,
                             model: model as never,
-                            dragGroup: "files",
                             "aria-label": name,
                         },
                         r(ReactTree.Items, {
                             children: (item: Item) => reactItem(item),
                         } as never),
-                        r(ReactTree.DropIndicator),
+                        r(ReactDropIndicator),
                         r(ReactTree.LiveRegion),
                     ),
                 ),
@@ -417,9 +422,12 @@ describe("parity with @fragiola/tree-react across a drag group", () => {
 
 describe("parity with @fragiola/tree-react in a foreign drag", () => {
     it("renders the same target for files dragged on the tree", async () => {
-        const foreignDrop = createTreeForeignDrop<FileTypes>({
-            onDrop: () => {},
-        });
+        const withFiles = () =>
+            filesModelWith(
+                featuresWith([
+                    foreignDropFeature<FileTypes>({ onDrop: () => {} }),
+                ]),
+            );
         // the top of app.ts (the second row, 20px each): before it
         const dragOver = (target: Element | null | undefined) => {
             const event = new MouseEvent("dragover", {
@@ -433,10 +441,7 @@ describe("parity with @fragiola/tree-react in a foreign drag", () => {
             });
             target?.dispatchEvent(event);
         };
-        const rendered = await renderFiles({
-            model: filesModel(),
-            foreignDrop,
-        });
+        const rendered = await renderFiles({ model: withFiles() });
         dragOver(document.querySelector('[role="tree"]'));
         rendered.fixture.detectChanges();
         await settle();
@@ -457,14 +462,13 @@ describe("parity with @fragiola/tree-react in a foreign drag", () => {
                 r(
                     ReactTree.Root,
                     {
-                        model: filesModel() as never,
+                        model: withFiles() as never,
                         "aria-label": "Files",
-                        foreignDrop: foreignDrop as never,
                     },
                     r(ReactTree.Items, {
                         children: (item: Item) => reactItem(item),
                     } as never),
-                    r(ReactTree.DropIndicator),
+                    r(ReactDropIndicator),
                     r(ReactTree.LiveRegion),
                 ),
             );

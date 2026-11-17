@@ -27,6 +27,10 @@
         "async-children",
         "type-ahead",
         "virtualization",
+        "drag-and-drop",
+        "drag-group",
+        "foreign-drop",
+        "drop-outside",
         "tests",
         "*.config.ts"
     ]

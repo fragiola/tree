@@ -1,18 +1,23 @@
 import {
     type CommandEvent,
-    createTreeDropOutside,
-    createTreeForeignDrop,
     createTreeModel,
+    type TreeFeatures,
     veto,
 } from "@fragiola/tree";
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
+import { dragAndDrop } from "../src/drag-and-drop";
+import { dragGroup as dragGroupFeature } from "../src/drag-group";
+import { dropOutside } from "../src/drop-outside";
+import { foreignDrop } from "../src/foreign-drop";
 import { ROW } from "./setup";
 import {
     content,
     FileTree,
     type FileTypes,
+    featuresWith,
     filesModel,
+    filesModelWith,
     itemElement,
 } from "./tree";
 
@@ -152,7 +157,11 @@ describe("drag and drop", () => {
     });
 
     it("starts a drop line past its level by indicatorInset", () => {
-        render(<FileTree model={filesModel()} indicatorInset={28} />);
+        render(
+            <FileTree
+                model={filesModelWith(featuresWith([], { indicatorInset: 28 }))}
+            />,
+        );
         press("readme.md");
         // the top of app.ts (level 2): a line before it
         move(rowY("app.ts", 0.1));
@@ -167,22 +176,22 @@ describe("drag and drop", () => {
 describe("drag between trees", () => {
     /** Two trees of one group: the files, and an inbox over another model. */
     function setupGroup(dragGroup: string | undefined) {
-        const files = filesModel();
-        const inbox = createTreeModel<FileTypes>({
-            version: 1,
-            rootItemIds: ["inbox"],
-            items: {
-                inbox: { kind: "folder", label: "inbox", childItemIds: [] },
+        const group = dragGroup ? [dragGroupFeature({ name: dragGroup })] : [];
+        const files = filesModelWith(featuresWith(group));
+        const inbox = createTreeModel<FileTypes, TreeFeatures>(
+            {
+                version: 1,
+                rootItemIds: ["inbox"],
+                items: {
+                    inbox: { kind: "folder", label: "inbox", childItemIds: [] },
+                },
             },
-        });
+            { features: [dragAndDrop(), ...group] },
+        );
         render(
             <>
-                <FileTree model={files} dragGroup={dragGroup} />
-                <FileTree
-                    model={inbox}
-                    dragGroup={dragGroup}
-                    aria-label="Inbox"
-                />
+                <FileTree model={files} />
+                <FileTree model={inbox} aria-label="Inbox" />
             </>,
         );
         const [filesRoot, inboxRoot] = screen.getAllByRole("tree") as [
@@ -259,16 +268,14 @@ function nativeDrag(
 
 describe("foreign drops", () => {
     it("shows the target of files dragged on the tree and hands the drop to foreignDrop", () => {
-        const model = filesModel();
         const dropped: unknown[] = [];
-        const foreignDrop = createTreeForeignDrop<FileTypes>({
+        const files = foreignDrop<FileTypes>({
             accept: ({ types }) => types.includes("Files"),
             onDrop: ({ to }) => dropped.push(to),
         });
         render(
             <FileTree
-                model={model}
-                foreignDrop={foreignDrop}
+                model={filesModelWith(featuresWith([files]))}
                 announce={(event) => event.type}
             />,
         );
@@ -288,12 +295,12 @@ describe("foreign drops", () => {
     });
 
     it("a refused type shows nothing, and a tree without foreignDrop ignores native drags", () => {
-        const foreignDrop = createTreeForeignDrop<FileTypes>({
+        const files = foreignDrop<FileTypes>({
             accept: ({ types }) => types.includes("Files"),
             onDrop: () => {},
         });
         const { unmount } = render(
-            <FileTree model={filesModel()} foreignDrop={foreignDrop} />,
+            <FileTree model={filesModelWith(featuresWith([files]))} />,
         );
         const tree = screen.getByRole("tree");
         expect(
@@ -311,20 +318,23 @@ describe("foreign drops", () => {
 
 describe("drops outside the tree", () => {
     it("hands a pointer drag released outside the tree to dropOutside", () => {
-        const model = filesModel();
         const trash = document.createElement("div");
         document.body.append(trash);
         Object.defineProperty(document, "elementFromPoint", {
             configurable: true,
             value: () => trash,
         });
-        const dropOutside = createTreeDropOutside<FileTypes>({
-            onDrop: ({ itemIds, element }) =>
-                element === trash &&
-                model.run("item.remove", { itemIds: [...itemIds] }).ok,
-        });
+        const model = filesModelWith(
+            featuresWith([
+                dropOutside<FileTypes>({
+                    onDrop: ({ itemIds, element, model }) =>
+                        element === trash &&
+                        model.run("item.remove", { itemIds: [...itemIds] }).ok,
+                }),
+            ]),
+        );
         try {
-            render(<FileTree model={model} dropOutside={dropOutside} />);
+            render(<FileTree model={model} />);
             press("readme.md");
             act(() => {
                 fireEvent.pointerMove(document, {

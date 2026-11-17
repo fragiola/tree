@@ -6,6 +6,7 @@ import {
 } from "@fragiola/tree-react";
 import { asyncChildren } from "@fragiola/tree-react/async-children";
 import { checkboxes } from "@fragiola/tree-react/checkboxes";
+import { DropIndicator, dragAndDrop } from "@fragiola/tree-react/drag-and-drop";
 import { rename, useTreeItemRename } from "@fragiola/tree-react/rename";
 import { selection } from "@fragiola/tree-react/selection";
 import { typeAhead } from "@fragiola/tree-react/type-ahead";
@@ -57,13 +58,14 @@ export function Item({ item }: { item: ItemOf<Types> }) {
     );
 }
 
-/** The fixtures' features: every feature with a model of its own. */
+/** The fixtures' features: every feature but the drag extensions. */
 const FEATURES = [
     selection(),
     checkboxes(),
     rename(),
     asyncChildren(),
     typeAhead(),
+    dragAndDrop(),
 ] as const;
 
 export function FixtureTree(props: RootProps<Types, typeof FEATURES>) {
@@ -74,7 +76,7 @@ export function FixtureTree(props: RootProps<Types, typeof FEATURES>) {
             {...props}
         >
             <Tree.Items<Types>>{(item) => <Item item={item} />}</Tree.Items>
-            <Tree.DropIndicator />
+            <DropIndicator />
             <Tree.LiveRegion />
         </Tree.Root>
     );

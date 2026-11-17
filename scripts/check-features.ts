@@ -41,6 +41,25 @@ export const FEATURES: readonly FeatureSources[] = [
             "../../virtualization/",
         ],
     },
+    {
+        subpath: "drag-and-drop",
+        folders: ["src/drag-and-drop/", "../../drag-and-drop/"],
+    },
+    {
+        subpath: "drag-group",
+        folders: ["src/drag-group/", "../../drag-group/"],
+    },
+    {
+        subpath: "foreign-drop",
+        folders: ["src/foreign-drop/", "../../foreign-drop/"],
+    },
+    {
+        subpath: "drop-outside",
+        folders: ["src/drop-outside/", "../../drop-outside/"],
+    },
+    // the drag features' shared code (the drop evaluation, the targets, the drag session): no
+    // entry of its own, imported only by theirs
+    { subpath: "drop-target", folders: ["src/drop-target/"] },
 ];
 
 /** A feature as the guard reads it: its subpath and the source folders of its code. */

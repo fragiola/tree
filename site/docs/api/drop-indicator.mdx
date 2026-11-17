@@ -1,21 +1,31 @@
 ---
-title: Tree.DropIndicator
-description: Where the drag under way would drop - a line before or after a row, or the row's box - positioned by the package and drawn by you.
+title: DropIndicator
+description: Where the drag under way would drop - a line before or after a row, or the row's box - from the drag and drop feature's entry.
 ---
 
-`Tree.DropIndicator` renders only while a drag has a drop target, absolutely positioned in the
-root: for `before` and `after`, a zero-height line at the target's level (starting
+`DropIndicator` shows the target of a drag: a `Tree.Root` whose model has the drag and drop
+feature (`dragAndDrop()`) or the foreign drop feature (`foreignDrop()`). It comes with them, from
+`@fragiola/tree-react/drag-and-drop` (and `/foreign-drop`; `@fragiola/tree-vue/…`,
+`@fragiola/tree-angular/…` with `TreeDropIndicatorDirective`): a tree that never imports them does
+not ship it. It renders only while a drag has a drop target, absolutely positioned in the root: for
+`before` and `after`, a zero-height line at the target's level (starting
 `(level - 1) * indentation + indicatorInset` pixels from the root's inline start); for `inside`,
-the row's box. It
-sets only its geometry, from `engine.get("drop-indicator")`; draw the line or the box yourself. It
-is hidden from assistive technology: the live region announces the drag.
+the row's box. It sets only its geometry, from `engine.get("drop-indicator")`; draw the line or the
+box yourself. It is hidden from assistive technology: the live region announces the drag. Without
+a drag feature, it renders nothing.
 
 <Framework name="react">
 
 ```tsx
-<Tree.Root<Types> defaultTree={json} aria-label="Files">
+import { createTreeModel, Tree } from "@fragiola/tree-react";
+import { DropIndicator, dragAndDrop } from "@fragiola/tree-react/drag-and-drop";
+
+const features = [dragAndDrop()] as const;
+const model = createTreeModel<Types, typeof features>(json, { features });
+
+<Tree.Root model={model} aria-label="Files">
     <Tree.Items<Types>>{(item) => <FileItem item={item} />}</Tree.Items>
-    <Tree.DropIndicator className="drop-indicator" />
+    <DropIndicator className="drop-indicator" />
 </Tree.Root>
 ```
 
@@ -24,26 +34,53 @@ is hidden from assistive technology: the live region announces the drag.
 <Framework name="vue">
 
 ```vue
-<Tree.Root :default-tree="json" aria-label="Files">
-    <Tree.Items v-slot="{ item }"><FileItem :item="item" /></Tree.Items>
-    <Tree.DropIndicator class="drop-indicator" />
-</Tree.Root>
+<script setup lang="ts">
+import { createTreeModel, typedTree } from "@fragiola/tree-vue";
+import { DropIndicator, dragAndDrop } from "@fragiola/tree-vue/drag-and-drop";
+
+const features = [dragAndDrop()] as const;
+const Tree = typedTree<Types, typeof features>();
+const model = createTreeModel<Types, typeof features>(json, { features });
+</script>
+
+<template>
+    <Tree.Root :model="model" aria-label="Files">
+        <Tree.Items v-slot="{ item }"><FileItem :item="item" /></Tree.Items>
+        <DropIndicator class="drop-indicator" />
+    </Tree.Root>
+</template>
 ```
 
 </Framework>
 
 <Framework name="angular">
 
-```html
-<div treeRoot [defaultTree]="json" aria-label="Files">
-    <ng-template [treeItems]="json" let-item>
-        <div [treeItem]="item">
-            <div treeItemContent>{{ item.label }}</div>
-            <div treeGroup></div>
+```ts
+import { createTreeModel, TREE } from "@fragiola/tree-angular";
+import {
+    dragAndDrop,
+    TreeDropIndicatorDirective,
+} from "@fragiola/tree-angular/drag-and-drop";
+
+const features = [dragAndDrop()] as const;
+
+@Component({
+    imports: [TREE, TreeDropIndicatorDirective],
+    template: `
+        <div [treeRoot]="model" aria-label="Files">
+            <ng-template [treeItems]="model" let-item>
+                <div [treeItem]="item">
+                    <div treeItemContent>{{ item.label }}</div>
+                    <div treeGroup></div>
+                </div>
+            </ng-template>
+            <div treeDropIndicator class="drop-indicator"></div>
         </div>
-    </ng-template>
-    <div treeDropIndicator class="drop-indicator"></div>
-</div>
+    `,
+})
+export class Files {
+    readonly model = createTreeModel<Types, typeof features>(json, { features });
+}
 ```
 
 In Angular, the element stays while there is no drop target, hidden (`display: none`).
@@ -61,8 +98,8 @@ In Angular, the element stays while there is no drop target, hidden (`display: n
 }
 ```
 
-Rows whose label starts after a toggle, a grip or padding start the line there with the root's
-`indicatorInset` (px), as the examples do
+Rows whose label starts after a toggle, a grip or padding start the line there with the
+`indicatorInset` option (px) of `dragAndDrop()` (or `foreignDrop()`), as the examples do
 ([Keeping drops in line](/docs/getting-started/depth#keeping-drops-in-line)).
 
 ## Props

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { AnnounceEvent, DropTarget, TreeModel } from "@fragiola/tree-vue";
+import { DropIndicator } from "@fragiola/tree-vue/drag-and-drop";
 import ProduceItem from "./produce-item.vue";
 import * as styles from "./styles";
 import { Tree, type Types } from "./tree";
@@ -59,16 +60,14 @@ const announce = announcer(props.model, props.name);
 <template>
     <Tree.Root
         :model="model"
-        drag-group="lists"
         :announce="announce"
-        :indicator-inset="styles.indicatorInset"
         :aria-label="name"
         :class="styles.root"
     >
         <Tree.Items v-slot="{ item }">
             <ProduceItem :item="item" />
         </Tree.Items>
-        <Tree.DropIndicator :class="styles.dropIndicator" />
+        <DropIndicator :class="styles.dropIndicator" />
         <Tree.LiveRegion :class="styles.liveRegion" />
     </Tree.Root>
 </template>

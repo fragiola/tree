@@ -9,14 +9,23 @@ import {
     type TreeJson,
     type TreeModel,
 } from "@fragiola/tree-react";
+import { DropIndicator, dragAndDrop } from "@fragiola/tree-react/drag-and-drop";
+import { dragGroup } from "@fragiola/tree-react/drag-group";
 import { selection } from "@fragiola/tree-react/selection";
 import { ChevronRight, Folder, GripVertical, Leaf } from "lucide-react";
 import { useId, useState } from "react";
 import { Switch } from "#/components/ui/switch";
 import * as styles from "./styles";
 
-/** The opt-in features of the model: the selection. */
-const features = [selection()] as const;
+/**
+ * The opt-in features of the models: the selection, the drags, and the "lists" drag group (the
+ * trees of the document whose models have it share their drags).
+ */
+const features = [
+    selection(),
+    dragAndDrop({ indicatorInset: styles.indicatorInset }),
+    dragGroup({ name: "lists" }),
+] as const;
 
 type Types = { items: { group: undefined; produce: undefined } };
 
@@ -153,20 +162,18 @@ export default function TwoTrees() {
     );
 }
 
-/** One list: a tree of the "lists" drag group. */
+/** One list: a tree of the "lists" drag group (its model's). */
 function List({ model, name }: { model: TreeModel<Types>; name: string }) {
     const [announce] = useState(() => announcer(model, name));
     return (
         <Tree.Root<Types>
             model={model}
-            dragGroup="lists"
             announce={announce}
-            indicatorInset={styles.indicatorInset}
             aria-label={name}
             className={styles.root}
         >
             <Tree.Items<Types>>{(item) => <Item item={item} />}</Tree.Items>
-            <Tree.DropIndicator className={styles.dropIndicator} />
+            <DropIndicator className={styles.dropIndicator} />
             <Tree.LiveRegion className={styles.liveRegion} />
         </Tree.Root>
     );

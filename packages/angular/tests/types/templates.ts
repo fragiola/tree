@@ -2,6 +2,7 @@
 // model into the root's inputs, the items template's context and the injection functions, with no
 // cast. `@ts-expect-error` marks what must not compile.
 import { Component, signal } from "@angular/core";
+import { TreeDropIndicatorDirective } from "../../drag-and-drop/public-api";
 import { TreeItemRenameDirective } from "../../rename/public-api";
 import type { SelectionFeature } from "../../selection/public-api";
 import {
@@ -54,7 +55,7 @@ void root.model.state;
 /** Typed by the model given to the root and to the items template. */
 @Component({
     selector: "fixture-typed",
-    imports: [TREE, TreeItemRenameDirective],
+    imports: [TREE, TreeItemRenameDirective, TreeDropIndicatorDirective],
     template: `
         <div
             [treeRoot]="model"

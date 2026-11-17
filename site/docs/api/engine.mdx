@@ -50,16 +50,7 @@ in an iframe or a popup window.
 | `announce` | `(event: AnnounceEvent) => string \| undefined` | none | the live region's text for a drag step or a failed load |
 | `keyMap` | `Partial<KeyMap>` | `DEFAULT_KEY_MAP` | the key bindings, over the defaults |
 | `expandOnClick` | `boolean` | `false` | a click on a parent's content also expands or collapses it |
-| `dragThreshold` | `number` | `4` | how far (px) a press moves before it is a drag |
-| `autoExpandDelay` | `number` | `800` | how long (ms) a drag hovers a collapsed parent before it expands |
-| `indentation` | `number` | `16` | one level's indentation (px): the pointer's inline offset at the end of a sublist picks the level |
-| `indicatorInset` | `number` | `0` | how far (px) a drop line (`before`, `after`) starts past its level's inline start; the `inside` box gets no inset (`(level - 1) * indentation`, its child level) |
-| `autoScroll` | `{ threshold?: number; speed?: number }` | engine defaults | how close (px) to a scroll container's edge a drag scrolls it, and how fast (px per frame) |
 | `resetLoadsOnDestroy` | `boolean` | `false` | with `asyncChildren()`: `destroy()` puts the items it was loading back to `unloaded`, so the next engine loads them again (adapters set it) |
-| `dragGroup` | `string` | none | joins the trees of the same document with the same group name: items drag between them by pointer and keyboard (below); without it a drag stays in its tree |
-| `transfer` | `TransferHandler` | the default transfer | what a drop from a tree of another model does here (the receiving tree's, else the source tree's): `(transfer: TreeTransfer) => boolean \| void` (below) |
-| `foreignDrop` | `TreeForeignDrop<T>` | none | takes files, links and text dragged on the tree from the desktop or another window: `createTreeForeignDrop(options)` (below); without it native drags are ignored |
-| `dropOutside` | `TreeDropOutside<T>` | none | hands your `onDrop` a pointer drag released outside every tree of its group: `createTreeDropOutside(options)` (below); without it such a release cancels |
 
 ## Members
 
@@ -101,10 +92,10 @@ An engine key never has a dot, so it never reads as a command (`EngineActionKey`
 | `"announcement"` | `string`: the latest text your `announce` returned (`""` before any) |
 | `"direction"` | `"ltr" \| "rtl"`: the root's writing direction; Right and Left swap in `rtl` |
 | `"virtual-window"` | `VirtualWindow`: the rows a virtualized tree renders (the `virtualization()` feature; a type error and `undefined` without it) |
-| `"drop-outside-element"` | `Element \| null`: the element under the pointer while this tree's pointer drag is outside every tree (the `dropOutside` option), for your own targets to show it; `null` otherwise |
+| `"drop-outside-element"` | `Element \| null`: the element under the pointer while this tree's pointer drag is outside every tree (`dropOutside()`), for your own targets to show it; `null` otherwise |
 
 A `DropTarget` is the `item.move` a drop would run and how it reads on screen; a `DropIndicator`
-is where `Tree.DropIndicator` goes, relative to the root's border box, in pixels and logical
+is where `DropIndicator` goes, relative to the root's border box, in pixels and logical
 sides:
 
 | field | of | description |
@@ -116,7 +107,7 @@ sides:
 | `level` | both | the level the dropped items take (1 for the root) |
 | `blockOffset` | `DropIndicator` | from the root's top to the line, or to the row's top for `inside`, scroll included |
 | `blockSize` | `DropIndicator` | the row's height for `inside`, 0 for a line |
-| `inlineOffset` | `DropIndicator` | from the root's inline-start edge: `(level - 1) * indentation`, plus `indicatorInset` for a line |
+| `inlineOffset` | `DropIndicator` | from the root's inline-start edge: `(level - 1) * indentation`, plus `dragAndDrop()`'s `indicatorInset` for a line |
 
 `DropContext` and `HoverPosition` are the inputs of the drop evaluation (what it reads of the
 tree, and where the pointer is over a row), exported for an adapter's tests.
@@ -183,22 +174,37 @@ is not virtualized leaves those keys to the browser.
 | `"item-dragging"` | `{ itemId }` | the item is being dragged |
 | `"item-drop-target"` | `{ itemId }` | the drop target is relative to the item |
 
+## Drag and drop
+
+The drags are features of the model ([Features](/docs/concepts/features)), each from its own
+entry; their options are the features', not the engine's:
+
+| feature | entry | options |
+| --- | --- | --- |
+| `dragAndDrop(options?)` | `@fragiola/tree/drag-and-drop` | `dragThreshold` (px, default `4`), `autoExpandDelay` (ms, default `800`), `indentation` (px, default `16`: the pointer's inline offset at the end of a sublist picks the level), `indicatorInset` (px, default `0`: how far a `before` / `after` line starts past its level; the `inside` box gets none), `autoScroll` (`{ threshold, speed }`) |
+| `dragGroup({ name, transfer? })` | `@fragiola/tree/drag-group` | the group `name`, and the app's `transfer` (below); needs `dragAndDrop()` |
+| `foreignDrop({ accept?, onDrop, dropEffect? })` | `@fragiola/tree/foreign-drop` | below, with the same `autoExpandDelay`, `indentation`, `indicatorInset` and `autoScroll` (drag and drop's win) |
+| `dropOutside({ onDrop })` | `@fragiola/tree/drop-outside` | below; needs `dragAndDrop()` |
+
+Without `dragAndDrop()` a press never drags and `start-keyboard-drag` is `not_found`; without a
+drag feature, the drag keys read nothing (`get` → `undefined`, `is` → `false`).
+
 ## Drag groups
 
-Trees in the same document with the same `dragGroup` share their drags. The drag stays its
-source tree's (its pointer capture, its keys, its `announce`); the tree under the pointer finds
-its own target, shows its `Tree.DropIndicator` and `data-drop-target`, expands a hovered
-collapsed parent and scrolls near its edges. The keyboard drag's Down and Up go on through the
-group's trees in document order. While a drag from another tree is under way, a tree's
-`is("dragging")` and `is("dragging-from-other-tree")` are true and `get("drop-target")` is its
-own target; `get("dragging-item-ids")` lists the dragged items when it shows the same model, and
-is empty otherwise.
+The trees in the same document whose models have the same `dragGroup({ name })` share their
+drags. The drag stays its source tree's (its pointer capture, its keys, its `announce`); the tree
+under the pointer finds its own target, shows its `DropIndicator` and `data-drop-target`, expands
+a hovered collapsed parent and scrolls near its edges. The keyboard drag's Down and Up go on
+through the group's trees in document order. While a drag from another tree is under way, a
+tree's `is("dragging")` and `is("dragging-from-other-tree")` are true and `get("drop-target")` is
+its own target; `get("dragging-item-ids")` lists the dragged items when it shows the same model,
+and is empty otherwise.
 
 A drop in a tree of the same model is one `item.move`. In a tree of another model it is a
 transfer: by default the target model runs one `batch` of `item.add` (each dragged item and its
 descendants, ids kept, children not loaded yet left to its loader) and the source model runs
 `item.remove`, each through its own middleware. A target shows only when the target model accepts
-the `batch` and the source model the removal (`model.can`). The `transfer` option replaces it,
+the `batch` and the source model the removal (`model.can`). `dragGroup({ transfer })` (a `TransferHandler`) replaces it,
 called with a `TreeTransfer`:
 
 | field | type | description |
@@ -218,15 +224,15 @@ the target is in the source tree. The guide is
 
 ## Foreign drops
 
-`createTreeForeignDrop(options)` (a `TreeForeignDrop`, the `foreignDrop` option) makes the tree
-take foreign content: files from the desktop, links and text from another window. It is the one
-case the package listens to native HTML5 drag events: the adapters forward the root's
-`dragenter`, `dragover`, `dragleave` and `drop` (`handleDragEvent`), and the engine finds the
-target under the pointer as for its own drags, shows it (`get("drop-target")`,
-`get("drop-indicator")`, `is("dragging")`; `get("dragging-item-ids")` is empty), expands a
-hovered collapsed folder and scrolls near the edges. The root is then a drop zone: the browser
-opens nothing dropped on it, and shows no drop where nothing is taken. A drag that leaves the
-root, drops, is cancelled (`run("cancel-drag")`) or goes a second without a `dragover` ends. `TreeForeignDropOptions`:
+`foreignDrop(options)` (`@fragiola/tree/foreign-drop`) makes the tree take foreign content: files
+from the desktop, links and text from another window, with or without `dragAndDrop()`. It is the
+one case the package listens to native HTML5 drag events: the adapters forward the root's
+`dragenter`, `dragover`, `dragleave` and `drop` (`handleDragEvent`) when it is installed, and the
+engine finds the target under the pointer as for its own drags, shows it (`get("drop-target")`,
+`get("drop-indicator")`, `is("dragging")`), expands a hovered collapsed folder and scrolls near the
+edges. The root is then a drop zone: the browser opens nothing dropped on it, and shows no drop
+where nothing is taken. A drag that leaves the root, drops, is cancelled (`run("cancel-drag")`) or
+goes a second without a `dragover` ends. `ForeignDropOptions`:
 
 | option | type | description |
 | --- | --- | --- |
@@ -240,20 +246,14 @@ the drop), the target `to` (a `DropTarget`) and the `model`; a `ForeignDrop` has
 
 ## Drops outside
 
-`createTreeDropOutside(options)` (a `TreeDropOutside`, the `dropOutside` option) hands a pointer
-drag of the tree's items released outside every tree of its group (outside its own tree without
-a group) to `TreeDropOutsideOptions.onDrop`, a `(drop: DropOutside<T>) => boolean` that returns
-`true` when it took the items. A `DropOutside` has the dragged `itemIds`, the `model`, the
-`element` under the pointer (from the root's document), the client point `x`, `y` and the
-`modifiers` of the release. While the drag is outside every tree, `get("drop-outside-element")`
-is that element. The keyboard drag has no place outside the trees.
-
-`ForeignDropController` and `DropOutsideController` are what each one's `connect` returns to the
-engine: an app never calls them.
-
-Both are opt-in factories, as the virtualizer is: the engine reaches their code only through the
-option, so an app that never imports `createTreeForeignDrop` or `createTreeDropOutside` does not
-ship it. The guide is [Drag and drop: foreign content](/docs/guides/drag-and-drop#foreign-content).
+`dropOutside(options)` (`@fragiola/tree/drop-outside`, with `dragAndDrop()`) hands a pointer drag
+of the tree's items released outside every tree of its group (outside its own tree without a
+group) to `DropOutsideOptions.onDrop`, a `(drop: DropOutside<T>) => boolean` that returns `true`
+when it took the items. A `DropOutside` has the dragged `itemIds`, the `model`, the `element` under
+the pointer (from the root's document), the client point `x`, `y` and the `modifiers` of the
+release. While the drag is outside every tree, `get("drop-outside-element")` is that element. The
+keyboard drag has no place outside the trees. The guide is
+[Drag and drop: foreign content](/docs/guides/drag-and-drop#foreign-content).
 
 ## Keys
 
@@ -265,7 +265,7 @@ listed on [Keyboard and type-ahead](/docs/guides/keyboard). A key handler reads 
 
 `AnnounceEvent` is what your `announce` receives: `drag-start` (with the keyboard drag's first
 `target`), `drag-over`, `drop`, `drag-cancel`, `drop-outside` (the `itemIds` and the `element`
-your `dropOutside` took them on), `foreign-drag-over` (the `types` and the `target`, `null` where
+your `dropOutside()` took them on), `foreign-drag-over` (the `types` and the `target`, `null` where
 nothing is taken), `foreign-drop` (the `types` and the `target`) or `load-error`
 ([Tree.LiveRegion](/docs/api/live-region)). `LoadChildren<T>` is
 the loader's type.
@@ -296,6 +296,6 @@ an app never needs it. The adapter forwards events; the core decides.
 | `handleClick(itemId, event)` | a click on an item's content (`PressInput`: its modifiers): focus, select, and expand with `expandOnClick` |
 | `handleToggleClick(itemId)` | a press on an item's toggle: expand or collapse |
 | `handleFocus(itemId)` | DOM focus entered an item's element: it becomes the focused item |
-| `handleDragEvent(event)` | a native drag event on the root (`dragenter`, `dragover`, `dragleave`, `drop`): foreign content with `foreignDrop`, ignored without it |
+| `handleDragEvent(event)` | a native drag event on the root (`dragenter`, `dragover`, `dragleave`, `drop`): foreign content with `foreignDrop()` (adapters forward them only then) |
 | `subscribe(listener)` | calls `listener` when adapters should re-render; returns its remover |
 | `getSnapshot()` | the render revision: a number that changes whenever adapters should re-render |

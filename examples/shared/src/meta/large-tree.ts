@@ -8,6 +8,7 @@ export default {
     order: 4,
     features: [
         "virtualization()",
+        "dragAndDrop()",
         "VirtualItems",
         "virtual-window",
         "tree.expand-all",

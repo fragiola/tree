@@ -5,25 +5,24 @@ import {
     useTree as useReactTree,
     useTreeItem as useReactTreeItem,
 } from "@fragiola/tree-react";
+import { DropIndicator as ReactDropIndicator } from "@fragiola/tree-react/drag-and-drop";
 import { useTreeItemRename as useReactTreeItemRename } from "@fragiola/tree-react/rename";
 import { VirtualItems as ReactVirtualItems } from "@fragiola/tree-react/virtualization";
 import * as React from "react";
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { describe, expect, it } from "vitest";
-import {
-    createTreeForeignDrop,
-    createTreeModel,
-    type TreeFeatures,
-    type TreeJson,
-} from "../src";
+import { createTreeModel, type TreeFeatures, type TreeJson } from "../src";
+import { dragAndDrop } from "../src/drag-and-drop";
+import { dragGroup } from "../src/drag-group";
+import { foreignDrop as foreignDropFeature } from "../src/foreign-drop";
 import { selection } from "../src/selection";
 import { bigFileTree, virtualModel } from "./big-tree";
 import {
     FEATURES,
     type FileTypes,
+    featuresWith,
     files,
-    filesModel,
     filesModelWith,
     fileTree,
     fire,
@@ -128,7 +127,7 @@ async function both(
                 r(ReactTree.Items, {
                     children: (item: Item) => reactItem(item),
                 } as never),
-                r(ReactTree.DropIndicator),
+                r(ReactDropIndicator),
                 r(ReactTree.LiveRegion),
             ),
         );
@@ -173,11 +172,20 @@ describe("parity with @fragiola/tree-react", () => {
 
 /** A second model for a drag between trees: one empty folder, "inbox". */
 const inboxModel = () =>
-    createTreeModel<FileTypes>({
-        version: 1,
-        rootItemIds: ["inbox"],
-        items: { inbox: { kind: "folder", label: "inbox", childItemIds: [] } },
-    });
+    createTreeModel<FileTypes, TreeFeatures>(
+        {
+            version: 1,
+            rootItemIds: ["inbox"],
+            items: {
+                inbox: { kind: "folder", label: "inbox", childItemIds: [] },
+            },
+        },
+        { features: [dragAndDrop(), dragGroup({ name: "files" })] },
+    );
+
+/** The files in the drag group "files". */
+const groupedFiles = () =>
+    filesModelWith(featuresWith([dragGroup({ name: "files" })]));
 
 /**
  * A keyboard drag of readme.md (Ctrl+Shift+D) on into the second tree, Down until it shows a drop
@@ -200,12 +208,8 @@ async function dragIntoInbox(
 describe("parity with @fragiola/tree-react across trees", () => {
     it("renders the same cross-tree drag state", async () => {
         await render(() => [
-            fileTree({ model: filesModel(), dragGroup: "files" }),
-            fileTree({
-                model: inboxModel(),
-                dragGroup: "files",
-                "aria-label": "Inbox",
-            }),
+            fileTree({ model: groupedFiles() }),
+            fileTree({ model: inboxModel(), "aria-label": "Inbox" }),
         ]);
         await dragIntoInbox((key, init) =>
             fire(itemElement("readme.md"), "keydown", { key, ...init }),
@@ -223,15 +227,11 @@ describe("parity with @fragiola/tree-react across trees", () => {
         const reactTree = (model: unknown, label: string) =>
             r(
                 ReactTree.Root,
-                {
-                    model: model as never,
-                    dragGroup: "files",
-                    "aria-label": label,
-                },
+                { model: model as never, "aria-label": label },
                 r(ReactTree.Items, {
                     children: (item: Item) => reactItem(item),
                 } as never),
-                r(ReactTree.DropIndicator),
+                r(ReactDropIndicator),
                 r(ReactTree.LiveRegion),
             );
         await act(async () => {
@@ -239,7 +239,7 @@ describe("parity with @fragiola/tree-react across trees", () => {
                 r(
                     React.Fragment,
                     null,
-                    reactTree(filesModel(), "Files"),
+                    reactTree(groupedFiles(), "Files"),
                     reactTree(inboxModel(), "Inbox"),
                 ),
             );
@@ -329,16 +329,19 @@ describe("parity with @fragiola/tree-react in a virtualized tree", () => {
 
 describe("parity with @fragiola/tree-react in a foreign drag", () => {
     it("renders the same target for files dragged on the tree", async () => {
-        const foreignDrop = createTreeForeignDrop<FileTypes>({
-            onDrop: () => {},
-        });
+        const withFiles = () =>
+            filesModelWith(
+                featuresWith([
+                    foreignDropFeature<FileTypes>({ onDrop: () => {} }),
+                ]),
+            );
         // the top of app.ts (the second row, 20px each): before it
         const over = {
             clientX: 40,
             clientY: 22,
             dataTransfer: { types: ["Files"], dropEffect: "none" },
         };
-        await render(() => fileTree({ model: filesModel(), foreignDrop }));
+        await render(() => fileTree({ model: withFiles() }));
         await fire(
             document.querySelector('[role="tree"]') as Element,
             "dragover",
@@ -358,14 +361,13 @@ describe("parity with @fragiola/tree-react in a foreign drag", () => {
                 r(
                     ReactTree.Root,
                     {
-                        model: filesModel() as never,
+                        model: withFiles() as never,
                         "aria-label": "Files",
-                        foreignDrop: foreignDrop as never,
                     },
                     r(ReactTree.Items, {
                         children: (item: Item) => reactItem(item),
                     } as never),
-                    r(ReactTree.DropIndicator),
+                    r(ReactDropIndicator),
                     r(ReactTree.LiveRegion),
                 ),
             );

@@ -8,6 +8,7 @@ import {
     useTreeState,
     validateTree,
 } from "@fragiola/tree-react";
+import { DropIndicator, dragAndDrop } from "@fragiola/tree-react/drag-and-drop";
 import { rename, useTreeItemRename } from "@fragiola/tree-react/rename";
 import { selection } from "@fragiola/tree-react/selection";
 import { ChevronRight, File, Folder, RotateCcw, Trash2 } from "lucide-react";
@@ -17,8 +18,12 @@ import { type FileTypes, fileSystem } from "../_kit/data";
 import { persistTree, restoreTree } from "../_kit/persist";
 import * as styles from "./styles";
 
-/** The opt-in features of the model: the selection and the rename (F2). */
-const features = [selection(), rename()] as const;
+/** The opt-in features of the model: the selection, the rename (F2) and the drags. */
+const features = [
+    selection(),
+    rename(),
+    dragAndDrop({ indicatorInset: styles.indicatorInset }),
+] as const;
 
 /** Where the document is saved: one key per tree. */
 const STORAGE_KEY = "fragiola-tree:examples:save-restore";
@@ -92,7 +97,6 @@ export default function SaveRestore() {
                 </Clickable.Button>
             </div>
             <Tree.Root<FileTypes, typeof features>
-                indicatorInset={styles.indicatorInset}
                 model={model}
                 aria-label="Project files"
                 className={styles.root}
@@ -100,7 +104,7 @@ export default function SaveRestore() {
                 <Tree.Items<FileTypes>>
                     {(item) => <FileItem item={item} />}
                 </Tree.Items>
-                <Tree.DropIndicator className={styles.dropIndicator} />
+                <DropIndicator className={styles.dropIndicator} />
             </Tree.Root>
             <p className={styles.hint}>
                 Expand, drag, rename (F2) or delete, then reload: the tree comes

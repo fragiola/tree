@@ -20,7 +20,6 @@ export function Files() {
     return (
         <Tree.Root<Types> model={model} aria-label="Project files" className="tree">
             <Tree.Items<Types>>{(item) => <FileItem item={item} />}</Tree.Items>
-            <Tree.DropIndicator className="drop-indicator" />
             <Tree.LiveRegion className="visually-hidden" />
         </Tree.Root>
     );
@@ -44,7 +43,6 @@ const model = createTreeModel<Types>(json);
 <template>
     <Tree.Root :model="model" aria-label="Project files" class="tree">
         <Tree.Items v-slot="{ item }"><FileItem :item="item" /></Tree.Items>
-        <Tree.DropIndicator class="drop-indicator" />
         <Tree.LiveRegion class="visually-hidden" />
     </Tree.Root>
 </template>
@@ -70,7 +68,6 @@ import { json, type Types } from "./tree";
                     <div treeGroup></div>
                 </div>
             </ng-template>
-            <div treeDropIndicator class="drop-indicator"></div>
             <div treeLiveRegion class="visually-hidden"></div>
         </div>
     `,
@@ -109,16 +106,8 @@ ship ([Feature props](#feature-props)). `F` comes from the `model` (`TreeModel<T
 | `announce` | `(event: AnnounceEvent) => string \| undefined` | none | the live region's text for a drag step or a failed load; no text is built in |
 | `keyMap` | `Partial<KeyMap>` | `DEFAULT_KEY_MAP` | key bindings, over the defaults ([Keyboard and type-ahead](/docs/guides/keyboard)) |
 | `expandOnClick` | `boolean` | `false` | a click on a parent's row also expands or collapses it |
-| `dragThreshold` | `number` | `4` | how far (px) a press moves before it is a drag |
-| `autoExpandDelay` | `number` | `800` | how long (ms) a drag hovers a collapsed parent before it expands |
-| `indentation` | `number` | `16` | the indentation of one level (px): the drop level at the end of a sublist, and the drop indicator's inline offset |
-| `indicatorInset` | `number` | `0` | how far (px) a drop line (`before`, `after`) starts past its level's inline start: the toggle, a grip or padding before the label ([Keeping drops in line](/docs/getting-started/depth#keeping-drops-in-line)) |
-| `dragGroup` | `string` | none | joins the trees of the document with the same group name: items drag between them by pointer and keyboard ([Between trees](/docs/guides/drag-and-drop#between-trees)). Another group creates another engine |
-| `transfer` | `TransferHandler` | the default transfer | what a drop from a tree of another model does here: run your commands (copy, convert kinds) and return `false` to refuse; asked first with `dryRun` for each target. Default: the target model adds the dragged subtrees, the source model removes them |
-| `foreignDrop` | `TreeForeignDrop<T>` | none | takes files, links and text dragged on the tree from the desktop or another window (`createTreeForeignDrop(options)`, [Foreign content](/docs/guides/drag-and-drop#foreign-content)): the target shows as for a tree drag, and its `onDrop` runs your commands. Create it once: another one creates another engine |
-| `dropOutside` | `TreeDropOutside<T>` | none | hands its `onDrop` the items of a pointer drag released outside every tree of the group (`createTreeDropOutside(options)`, [Dropping outside](/docs/guides/drag-and-drop#dropping-outside)), for your own targets. Create it once: another one creates another engine |
 | `treeRef` | `TreeRef<T, F>` | none | access to the model and the engine from outside the root (`useTreeRef`, `createTreeRef`) |
-| `children` | `ReactNode` | none | the tree: `Tree.Items`, `Tree.DropIndicator`, `Tree.LiveRegion`, and anything else |
+| `children` | `ReactNode` | none | the tree: `Tree.Items`, `Tree.LiveRegion`, a feature's parts (`DropIndicator`, `VirtualItems`), and anything else |
 
 The root names nothing: give it `aria-label` or `aria-labelledby`
 ([Accessible names](/docs/getting-started/accessible-names)).
@@ -128,8 +117,11 @@ The root names nothing: give it `aria-label` or `aria-labelledby`
 A feature ships its root props: a controlled list and its change callback, or the loader of
 `asyncChildren()`. They compile only when the feature is installed, and the root maps a list as it
 maps `expandedItemIds`. Given without the feature, a prop is ignored with a warning. Space toggles
-the focused item's check with `checkboxes()` (`checkboxes({ space })`), and the type-ahead's delay
-is `typeAhead({ timeout })`: options of the features, not props.
+the focused item's check with `checkboxes()` (`checkboxes({ space })`), the type-ahead's delay
+is `typeAhead({ timeout })`, and the drags are `dragAndDrop({ dragThreshold, autoExpandDelay,
+indentation, indicatorInset, autoScroll })`, `dragGroup({ name, transfer })`,
+`foreignDrop({ accept, onDrop })` and `dropOutside({ onDrop })`: options of the features, not
+props ([Drag and drop](/docs/guides/drag-and-drop)).
 
 | prop | feature | description |
 | --- | --- | --- |
@@ -148,7 +140,7 @@ is `typeAhead({ timeout })`: options of the features, not props.
 | `multiselectable` | `boolean` | the selection mode is `multiple` (`aria-multiselectable`, with `selection()`) |
 | `dragging` | `boolean` | a drag is under way (pointer or keyboard) |
 | `keyboardDragging` | `boolean` | a keyboard drag is under way |
-| `draggingFromOtherTree` | `boolean` | a drag from another tree of the drag group is under way (`dragGroup`) |
+| `draggingFromOtherTree` | `boolean` | a drag from another tree of the drag group is under way (`dragGroup()`) |
 | `empty` | `boolean` | the tree has no item |
 
 ## Attributes
@@ -158,12 +150,12 @@ is `typeAhead({ timeout })`: options of the features, not props.
 | `role="tree"` | always |
 | `aria-multiselectable` | `selection()` in `multiple` mode (the features' ARIA and `data-*` are model state: `model.get("root-attributes")`, a server render has them) |
 | `data-tree-part="root"` | always |
-| `data-dragging` | a drag is under way, or foreign content (`foreignDrop`) is dragged over the tree |
+| `data-dragging` | a drag is under way (`dragAndDrop()`), or foreign content (`foreignDrop()`) is dragged over the tree |
 | `data-keyboard-dragging` | a keyboard drag is under way |
 | `data-dragging-from-other-tree` | a drag from another tree of the drag group is under way |
 | `data-empty` | the tree has no item |
 
-Structural style: `position: relative`, the containing block `Tree.DropIndicator` is positioned
+Structural style: `position: relative`, the containing block `DropIndicator` is positioned
 in.
 
 ## Behaviour

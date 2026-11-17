@@ -16,6 +16,11 @@ import {
     type CheckboxesOptions,
     checkboxes,
 } from "../src/checkboxes/checkboxes";
+import {
+    type DragAndDropFeature,
+    type DragAndDropOptions,
+    dragAndDrop,
+} from "../src/drag-and-drop/drag-and-drop";
 import type { TreeFeatures } from "../src/features/types";
 import { type RenameFeature, rename } from "../src/rename/rename";
 import { type SelectionFeature, selection } from "../src/selection/selection";
@@ -75,19 +80,21 @@ export function bareFiles(
     return json;
 }
 
-/** Every feature with a model of its own: what a test model installs unless it says otherwise. */
+/** Every feature but the drag extensions: what a test model installs unless it says otherwise. */
 export type AllFeatures = readonly [
     SelectionFeature,
     CheckboxesFeature,
     RenameFeature,
     AsyncChildrenFeature,
     TypeAheadFeature,
+    DragAndDropFeature,
 ];
 
 export function allFeatures(
     options: {
         checkboxes?: CheckboxesOptions;
         typeAhead?: TypeAheadOptions;
+        dragAndDrop?: DragAndDropOptions;
     } = {},
 ): AllFeatures {
     return [
@@ -96,6 +103,7 @@ export function allFeatures(
         rename(),
         asyncChildren(),
         typeAhead(options.typeAhead),
+        dragAndDrop(options.dragAndDrop),
     ] as const;
 }
 

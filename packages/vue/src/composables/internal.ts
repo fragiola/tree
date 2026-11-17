@@ -1,11 +1,13 @@
 // The composables and helpers only the primitives call.
 import {
+    type AnyFeatures,
     type AnyTypes,
     type CheckState,
     type FeatureModel,
     type FeatureState,
     type ItemOf,
     TREE_ROOT_PROPS,
+    type TreeEngine,
     type TreeModel,
     type TreeRootProp,
 } from "@fragiola/tree";
@@ -25,7 +27,11 @@ export function treeItemState(
     const { model } = context;
     const state = context.state.value;
     context.revision.value;
-    const engine = context.engine.value;
+    // the drag keys are the drag features' (`engine.is` answers false without them)
+    const engine = context.engine.value as TreeEngine<
+        AnyTypes,
+        AnyFeatures
+    > | null;
     const itemId = item.id;
     const path = model.get("item-path-by", { itemId }) ?? "";
     const segments = path.split("/").filter((segment) => segment !== "");

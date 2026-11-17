@@ -1,5 +1,9 @@
 import { Component, computed, DestroyRef, inject, signal } from "@angular/core";
 import { createTreeModel, injectTreeState, TREE } from "@fragiola/tree-angular";
+import {
+    dragAndDrop,
+    TreeDropIndicatorDirective,
+} from "@fragiola/tree-angular/drag-and-drop";
 import { rename, TreeItemRenameDirective } from "@fragiola/tree-angular/rename";
 import { selection } from "@fragiola/tree-angular/selection";
 
@@ -16,8 +20,12 @@ import { type FileTypes, fileSystem } from "../_kit/data";
 import { UndoManager } from "../_kit/undo";
 import * as styles from "./styles";
 
-/** The opt-in features of the model: the selection and the rename (F2). */
-const features = [selection(), rename()] as const;
+/** The opt-in features of the model: the selection, the rename (F2) and the drags. */
+const features = [
+    selection(),
+    rename(),
+    dragAndDrop({ indicatorInset: styles.indicatorInset }),
+] as const;
 
 // Undo/redo is app code (`_kit/undo.ts`): it listens to the model's commits, keeps the document
 // before each step, and puts it back with `tree.load`. The package ships no history.
@@ -37,6 +45,7 @@ const stepName = (command: string) => STEP_NAMES[command] ?? command;
     selector: "example-undo-redo",
     imports: [
         TREE,
+        TreeDropIndicatorDirective,
         TreeItemRenameDirective,
         ClickableButton,
         LucideChevronRight,
@@ -73,7 +82,6 @@ const stepName = (command: string) => STEP_NAMES[command] ?? command;
             <div [class]="styles.body">
                 <div
                     [treeRoot]="model"
-                    [indicatorInset]="styles.indicatorInset"
                     aria-label="Project files"
                     [class]="styles.root"
                     (keydown)="onKeyDown($event)"

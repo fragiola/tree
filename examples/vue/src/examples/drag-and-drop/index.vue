@@ -6,6 +6,7 @@ import {
     type TreeJson,
     type TreeModel,
 } from "@fragiola/tree-vue";
+import { DropIndicator } from "@fragiola/tree-vue/drag-and-drop";
 import { Lock } from "@lucide/vue";
 import { useId } from "vue";
 import FileItem from "./file-item.vue";
@@ -87,7 +88,6 @@ const lockedId = useId();
 <template>
     <div :class="styles.frame">
         <Tree.Root
-            :indicator-inset="styles.indicatorInset"
             :model="model"
             :announce="announce"
             aria-label="Project files"
@@ -97,7 +97,7 @@ const lockedId = useId();
                 <FileItem :item="item" :locked-id="lockedId" />
             </Tree.Items>
             <!-- where the drop lands: a line before or after a row, or the box of a folder -->
-            <Tree.DropIndicator :class="styles.dropIndicator" />
+            <DropIndicator :class="styles.dropIndicator" />
             <Tree.LiveRegion :class="styles.liveRegion" />
         </Tree.Root>
         <span :id="lockedId" hidden>Locked</span>

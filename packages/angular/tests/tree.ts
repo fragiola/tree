@@ -11,6 +11,11 @@ import {
 import { type ComponentFixture, TestBed } from "@angular/core/testing";
 import { asyncChildren } from "../async-children/public-api";
 import { checkboxes } from "../checkboxes/public-api";
+import {
+    type DragAndDropOptions,
+    dragAndDrop,
+    TreeDropIndicatorDirective,
+} from "../drag-and-drop/public-api";
 import { rename, TreeItemRenameDirective } from "../rename/public-api";
 import { selection } from "../selection/public-api";
 import {
@@ -19,9 +24,7 @@ import {
     type KeyMap,
     type LoadChildren,
     TREE,
-    type TreeDropOutside,
     type TreeFeatures,
-    type TreeForeignDrop,
     type TreeJson,
     type TreeModel,
     type TreeRootDirective,
@@ -63,14 +66,31 @@ export function files(
     };
 }
 
-/** The features the tests' trees install: every feature with a model of its own. */
+/** The features the tests' trees install: every feature but the drag extensions. */
 export const FEATURES = [
     selection(),
     checkboxes(),
     rename(),
     asyncChildren(),
     typeAhead(),
+    dragAndDrop(),
 ] as const;
+
+/** The tests' features with drag and drop's options, and more features after them (a drag group). */
+export function featuresWith<const E extends TreeFeatures>(
+    extra: E,
+    drag: DragAndDropOptions = {},
+) {
+    return [
+        selection(),
+        checkboxes(),
+        rename(),
+        asyncChildren(),
+        typeAhead(),
+        dragAndDrop(drag),
+        ...extra,
+    ] as const;
+}
 
 export const filesModel = (patch: Partial<TreeJson<FileTypes>> = {}) =>
     createTreeModel<FileTypes, typeof FEATURES>(files(patch), {
@@ -115,12 +135,6 @@ export interface FileTreeInputs {
     announce?: ((event: AnnounceEvent) => string | undefined) | undefined;
     keyMap?: Partial<KeyMap> | undefined;
     expandOnClick?: boolean | undefined;
-    dragThreshold?: number | undefined;
-    autoExpandDelay?: number | undefined;
-    indentation?: number | undefined;
-    indicatorInset?: number | undefined;
-    foreignDrop?: TreeForeignDrop<FileTypes> | undefined;
-    dropOutside?: TreeDropOutside<FileTypes> | undefined;
 }
 
 /** What the root's change outputs reported, in order. */
@@ -129,7 +143,7 @@ export type Emitted = [list: string, itemIds: string[]];
 /** `[treeRoot]` with the file items (one recursive template), a drop indicator and a live region. */
 @Component({
     selector: "test-file-tree",
-    imports: [TREE, TreeItemRenameDirective],
+    imports: [TREE, TreeItemRenameDirective, TreeDropIndicatorDirective],
     template: `
         <div
             [treeRoot]="model()"
@@ -143,12 +157,6 @@ export type Emitted = [list: string, itemIds: string[]];
             [announce]="announce()"
             [keyMap]="keyMap()"
             [expandOnClick]="expandOnClick()"
-            [dragThreshold]="dragThreshold()"
-            [autoExpandDelay]="autoExpandDelay()"
-            [indentation]="indentation()"
-            [indicatorInset]="indicatorInset()"
-            [foreignDrop]="foreignDrop()"
-            [dropOutside]="dropOutside()"
             (expandedItemIdsChange)="emitted.push(['expandedItemIds', $event])"
             (selectedItemIdsChange)="emitted.push(['selectedItemIds', $event])"
             (checkedItemIdsChange)="emitted.push(['checkedItemIds', $event])"
@@ -197,16 +205,6 @@ export class FileTree {
     >(undefined);
     readonly keyMap = input<Partial<KeyMap> | undefined>(undefined);
     readonly expandOnClick = input<boolean | undefined>(undefined);
-    readonly dragThreshold = input<number | undefined>(undefined);
-    readonly autoExpandDelay = input<number | undefined>(undefined);
-    readonly indentation = input<number | undefined>(undefined);
-    readonly indicatorInset = input<number | undefined>(undefined);
-    readonly foreignDrop = input<TreeForeignDrop<FileTypes> | undefined>(
-        undefined,
-    );
-    readonly dropOutside = input<TreeDropOutside<FileTypes> | undefined>(
-        undefined,
-    );
     /** what the change outputs reported */
     readonly emitted: Emitted[] = [];
     /** the codes `(renameError)` reported */

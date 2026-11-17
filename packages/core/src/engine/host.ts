@@ -1,11 +1,7 @@
-// What the engine's parts (the drags, the loader) share of the engine: the model, the DOM it
-// registered, the options, and the way back to its state and its announcements.
+// What the engine tells the app: the announcements' events (a drag's steps, a failed load), and
+// the other tree of a drag group an announcement names.
 
-import type { DragGroup } from "../dnd/drag-group";
-import type { DropTarget } from "../dnd/drop-evaluation";
-import type { DropOutsideController } from "../dnd/drop-outside";
-import type { TransferHandler } from "../dnd/transfer";
-import type { Scheduler } from "../dom/owner";
+import type { DropTarget } from "../drop-target/drop-evaluation";
 import type { TreeModel } from "../state/model";
 
 /**
@@ -77,68 +73,3 @@ export type AnnounceEvent =
           readonly itemId: string;
           readonly error: unknown;
       };
-
-/** The engine's options, with their defaults applied. */
-export interface ResolvedEngineOptions {
-    /** how far (px) a press moves before it is a drag */
-    readonly dragThreshold: number;
-    /** how long (ms) a drag hovers a collapsed parent before it expands */
-    readonly autoExpandDelay: number;
-    /** the indentation of one level (px), which turns the pointer's inline offset into a level */
-    readonly indentation: number;
-    /** how far (px) a drop line starts past its level's inline start */
-    readonly indicatorInset: number;
-    /** how close (px) to a scroll container's edge a drag scrolls it, and how fast (px per frame) */
-    readonly autoScroll: { readonly threshold: number; readonly speed: number };
-    /** the app's transfer of items dropped here from a tree of another model (`transfer`) */
-    readonly transfer: TransferHandler | undefined;
-}
-
-/** A drag under way. */
-export interface DragState {
-    /** `foreign`: native drag of foreign content (`foreignDrop`), with no items */
-    readonly mode: "pointer" | "keyboard" | "foreign";
-    /** the dragged items (empty in another tree of the group whose model is not the source's) */
-    readonly itemIds: readonly string[];
-    readonly target: DropTarget | null;
-    /** set in the other trees of a drag group: the drag started in another tree, which this cancels */
-    readonly origin?: { cancel(): void };
-}
-
-export interface EngineHost {
-    readonly model: TreeModel;
-    readonly options: ResolvedEngineOptions;
-    /** the root element, once attached */
-    root(): HTMLElement | undefined;
-    /** an item's content element (its row: the pointer target and the hit-testing rect) */
-    contentOf(itemId: string): HTMLElement | undefined;
-    direction(): "ltr" | "rtl";
-    scheduler(): Scheduler;
-    /** the drag under way, or null */
-    drag(): DragState | null;
-    setDrag(drag: DragState | null): void;
-    announce(event: AnnounceEvent): void;
-    isDestroyed(): boolean;
-    /**
-     * the visible rows rendered (a virtualized tree renders a window of them, plus pinned rows);
-     * undefined when every visible row is
-     */
-    renderedRows():
-        | { readonly start: number; readonly end: number }
-        | undefined;
-    /**
-     * a virtualized tree's row that is not rendered: its box relative to the root (its scroll
-     * included), from the rows' offsets; undefined when the tree is not virtualized
-     */
-    unrenderedRowBox(
-        itemId: string,
-    ): { top: number; height: number } | undefined;
-    /** the element a drag scrolls near its edges: the virtualizer's, else the nearest scrolling one */
-    scrollContainer(): HTMLElement | undefined;
-    /** a virtualized tree scrolls an item's row into view (a keyboard drag's target); else nothing */
-    reveal(itemId: string): void;
-    /** the drag group the tree is in (the `dragGroup` option, once its root is attached) */
-    dragGroup(): DragGroup | undefined;
-    /** the app's drop outside every tree (the `dropOutside` option), if any */
-    dropOutside(): DropOutsideController | undefined;
-}

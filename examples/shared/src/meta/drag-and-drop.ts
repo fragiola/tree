@@ -8,6 +8,7 @@ export default {
     order: 2,
     features: [
         "selection()",
+        "dragAndDrop()",
         "DropIndicator",
         "item.move",
         "movable",

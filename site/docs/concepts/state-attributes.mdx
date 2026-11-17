@@ -29,13 +29,13 @@ the attributes it styles with on itself.
 | `data-dragging` | it is being dragged |
 | `data-drop-target` | the drop target of the drag under way is relative to it |
 | `data-drop-position` | while it is the drop target: `before`, `after` or `inside` |
-| `data-depth` | its depth: `0` for a root item (also on `Tree.DropIndicator`, the level the drop lands on) |
+| `data-depth` | its depth: `0` for a root item (also on `DropIndicator`, the level the drop lands on) |
 
 ## On the root
 
 | attribute | when |
 | --- | --- |
-| `data-dragging` | a drag is under way (pointer or keyboard), or foreign content (`foreignDrop`) is dragged over the tree |
+| `data-dragging` | a drag is under way (pointer or keyboard, `dragAndDrop()`), or foreign content (`foreignDrop()`) is dragged over the tree |
 | `data-keyboard-dragging` | a keyboard drag is under way |
 | `data-dragging-from-other-tree` | a drag from another tree of the drag group is under way |
 | `data-empty` | the tree has no item |
@@ -46,7 +46,7 @@ the attributes it styles with on itself.
 
 | attribute | on | when |
 | --- | --- | --- |
-| `data-drop-position` | `Tree.DropIndicator` | where the drop goes: `before`, `after` or `inside` |
+| `data-drop-position` | `DropIndicator` | where the drop goes: `before`, `after` or `inside` |
 | `data-invalid` | your input, from `useTreeItemRename`'s props | the last commit was refused (with `aria-invalid`) |
 
 ## ARIA

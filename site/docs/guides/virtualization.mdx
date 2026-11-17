@@ -31,7 +31,6 @@ export function Files() {
     return (
         <Tree.Root model={model} aria-label="Files" className="files">
             <VirtualItems<Types>>{(item) => <Row item={item} />}</VirtualItems>
-            <Tree.DropIndicator className="drop-indicator" />
         </Tree.Root>
     );
 }
@@ -75,7 +74,6 @@ const VirtualItems = typedVirtualItems<Types>();
                 </Tree.ItemContent>
             </Tree.Item>
         </VirtualItems>
-        <Tree.DropIndicator class="drop-indicator" />
     </Tree.Root>
 </template>
 ```
@@ -104,9 +102,6 @@ const features = [virtualization({ estimateRowSize: 28 })] as const;
                     </div>
                 </div>
             </ng-template>
-            @if (tree.state().dragging) {
-                <div treeDropIndicator class="drop-indicator"></div>
-            }
         </div>
     `,
 })

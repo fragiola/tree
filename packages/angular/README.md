@@ -7,8 +7,8 @@ children, inline rename and tri-state checkboxes.
 
 Fragiola Tree is **headless**. It ships the behaviour, the accessibility and the primitives, here
 standalone attribute directives you put on your own elements (`[treeRoot]`, `treeItems`,
-`[treeItem]`, `treeItemContent`, `treeGroup`, `treeToggle`, `treeDropIndicator`, `treeLiveRegion`,
-and `treeItemRename` on your rename input), and **no CSS, no icons and no text**: you style every
+`[treeItem]`, `treeItemContent`, `treeGroup`, `treeToggle`, `treeLiveRegion`, and from the
+features' entries `treeItemRename` on your rename input and `treeDropIndicator`), and **no CSS, no icons and no text**: you style every
 element with `class`, `style` and the `data-*` attributes the directives set, and every visible
 word and accessible name comes from you. The ARIA and the `data-*` are the same as
 `@fragiola/tree-react`'s and `@fragiola/tree-vue`'s.
@@ -86,6 +86,10 @@ import a feature does not ship it.
 | `asyncChildren()`: children from your `loadChildren`, `aria-busy` | `@fragiola/tree-angular/async-children` |
 | `typeAhead(options?)`: typed characters focus a matching label | `@fragiola/tree-angular/type-ahead` |
 | `virtualization(options?)`: a window of the rows in view, rendered by `TreeVirtualItemsDirective` (`ng-template[treeVirtualItems]`) | `@fragiola/tree-angular/virtualization` |
+| `dragAndDrop(options?)`: the pointer and keyboard drag, `TreeDropIndicatorDirective` (`[treeDropIndicator]`) | `@fragiola/tree-angular/drag-and-drop` |
+| `dragGroup({ name })`: drags between the trees of a group | `@fragiola/tree-angular/drag-group` |
+| `foreignDrop({ accept, onDrop })`: files, links and text dropped from outside | `@fragiola/tree-angular/foreign-drop` |
+| `dropOutside({ onDrop })`: rows dropped on your own targets | `@fragiola/tree-angular/drop-outside` |
 
 ```ts
 import { createTreeModel } from "@fragiola/tree-angular";

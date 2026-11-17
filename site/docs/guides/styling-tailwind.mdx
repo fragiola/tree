@@ -126,10 +126,13 @@ export class FileTree {
 
 ## The drop indicator and the live region
 
+The drop indicator comes with the drag features (`DropIndicator` from
+`@fragiola/tree-react/drag-and-drop`, and the Vue and Angular entries).
+
 <Framework name="react">
 
 ```tsx
-<Tree.DropIndicator
+<DropIndicator
     className={[
         "pointer-events-none z-10",
         "data-[drop-position=before]:-mt-px data-[drop-position=before]:border-t-2 data-[drop-position=before]:border-blue-600",
@@ -145,7 +148,7 @@ export class FileTree {
 <Framework name="vue">
 
 ```vue
-<Tree.DropIndicator
+<DropIndicator
     :class="[
         'pointer-events-none z-10',
         'data-[drop-position=before]:-mt-px data-[drop-position=before]:border-t-2 data-[drop-position=before]:border-blue-600',

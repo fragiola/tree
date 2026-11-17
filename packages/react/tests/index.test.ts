@@ -5,6 +5,10 @@ import { describe, expect, it } from "vitest";
 import { exportedNames } from "../../../scripts/exported-names.ts";
 import * as asyncChildrenEntry from "../src/async-children";
 import * as checkboxesEntry from "../src/checkboxes";
+import * as dragAndDropEntry from "../src/drag-and-drop";
+import * as dragGroupEntry from "../src/drag-group";
+import * as dropOutsideEntry from "../src/drop-outside";
+import * as foreignDropEntry from "../src/foreign-drop";
 import * as react from "../src/index";
 import * as renameEntry from "../src/rename";
 import * as selectionEntry from "../src/selection";
@@ -24,7 +28,6 @@ const OWN = [
     "useTreeState",
 ];
 const PRIMITIVES = [
-    "DropIndicator",
     "Group",
     "Item",
     "ItemContent",
@@ -73,7 +76,6 @@ describe("@fragiola/tree-react", () => {
             "src/parts.ts",
             "src/context.ts",
             ...[
-                "drop-indicator",
                 "group",
                 "item",
                 "item-content",
@@ -91,6 +93,7 @@ describe("@fragiola/tree-react", () => {
                 "use-tree-state",
             ].map((name) => `src/hooks/${name}.ts`),
             "src/rename/use-tree-item-rename.ts",
+            "src/drag-and-drop/drop-indicator.tsx",
             "src/utils/use-render.ts",
             "src/utils/merge-props.ts",
             "src/utils/engine-facade.ts",
@@ -130,10 +133,22 @@ describe("@fragiola/tree-react", () => {
             "useTreeVirtualWindow",
             "virtualization",
         ]);
+        expect(Object.keys(dragAndDropEntry).sort()).toEqual([
+            "DropIndicator",
+            "dragAndDrop",
+        ]);
+        expect(Object.keys(dragGroupEntry).sort()).toEqual(["dragGroup"]);
+        expect(Object.keys(foreignDropEntry).sort()).toEqual([
+            "DropIndicator",
+            "foreignDrop",
+        ]);
+        expect(Object.keys(dropOutsideEntry).sort()).toEqual(["dropOutside"]);
         for (const name of [
             "VirtualItems",
             "useTreeVirtualWindow",
             "useTreeItemRename",
+            "DropIndicator",
+            "dragAndDrop",
         ])
             expect(name in react).toBe(false);
     });

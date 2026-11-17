@@ -9,6 +9,7 @@ import {
     type TreeJson,
     type TreeModel,
 } from "@fragiola/tree-react";
+import { DropIndicator, dragAndDrop } from "@fragiola/tree-react/drag-and-drop";
 import { selection } from "@fragiola/tree-react/selection";
 import {
     ChevronRight,
@@ -21,8 +22,11 @@ import {
 import { useId, useState } from "react";
 import * as styles from "./styles";
 
-/** The opt-in features of the model: the selection. */
-const features = [selection()] as const;
+/** The opt-in features of the model: the selection and the drags (a drop line starts past the grip and the toggle). */
+const features = [
+    selection(),
+    dragAndDrop({ indicatorInset: styles.indicatorInset }),
+] as const;
 
 type Types = { items: { folder: undefined; file: undefined } };
 
@@ -100,8 +104,7 @@ export default function DragAndDrop() {
     const lockedId = useId();
     return (
         <div className={styles.frame}>
-            <Tree.Root<Types>
-                indicatorInset={styles.indicatorInset}
+            <Tree.Root<Types, typeof features>
                 model={model}
                 announce={announce}
                 aria-label="Project files"
@@ -111,7 +114,7 @@ export default function DragAndDrop() {
                     {(item) => <FileItem item={item} lockedId={lockedId} />}
                 </Tree.Items>
                 {/* where the drop lands: a line before or after a row, or the box of a folder */}
-                <Tree.DropIndicator className={styles.dropIndicator} />
+                <DropIndicator className={styles.dropIndicator} />
                 <Tree.LiveRegion className={styles.liveRegion} />
             </Tree.Root>
             <span id={lockedId} hidden>

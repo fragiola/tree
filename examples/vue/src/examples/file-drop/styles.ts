@@ -45,7 +45,7 @@ export const label = "min-w-0 flex-1 truncate";
 
 export const size = "shrink-0 text-palette-accent/85 text-xs tabular-nums";
 
-/** Where a drop line starts past its level (px), the root's `indicatorInset`: past the root's and
+/** Where a drop line starts past its level (px), drag and drop's `indicatorInset`: past the root's and
  * the row's padding (4px each), the toggle (16px) and its gap (6px), at the icon. */
 export const indicatorInset = 30;
 

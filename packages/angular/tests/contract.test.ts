@@ -4,6 +4,7 @@
 // bindings.
 import { Component, input, type Type, viewChildren } from "@angular/core";
 import { describe, expect, it, vi } from "vitest";
+import { TreeDropIndicatorDirective } from "../drag-and-drop/public-api";
 import {
     type ItemOf,
     TREE,
@@ -25,7 +26,7 @@ type Child = ItemOf<FileTypes>;
 /** Every part, and no text, no label. */
 @Component({
     selector: "test-bare",
-    imports: [TREE],
+    imports: [TREE, TreeDropIndicatorDirective],
     template: `
         <div [treeRoot]="model()">
             <ng-template treeItems let-item>
