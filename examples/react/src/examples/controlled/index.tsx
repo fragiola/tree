@@ -9,8 +9,8 @@ import { Switch } from "#/components/ui/switch";
 import { type FileTypes, fileSystem } from "../_kit/data";
 import * as styles from "./styles";
 
-/** The opt-in features of the root's model: the selection. */
-const features = [selection()];
+/** The opt-in features of the model: the selection. */
+const features = [selection()] as const;
 
 const json = fileSystem();
 /** Every folder: what "Expand all" opens. */
@@ -84,7 +84,7 @@ export default function Controlled() {
                 </span>
             </div>
             <div className={styles.body}>
-                <Tree.Root<FileTypes>
+                <Tree.Root<FileTypes, typeof features>
                     defaultTree={json}
                     features={features}
                     expandedItemIds={expandedItemIds}

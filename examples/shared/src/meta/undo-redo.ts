@@ -7,6 +7,7 @@ export default {
     category: "model-api",
     order: 1,
     features: [
+        "selection()",
         "model.subscribe",
         "tree-json",
         "tree.load",

@@ -10,10 +10,6 @@ import {
     TreeRootDirective,
 } from "@fragiola/tree-angular";
 import {
-    type SelectionFeature,
-    selection,
-} from "@fragiola/tree-angular/selection";
-import {
     LucideChevronRight,
     LucideFile,
     LucideFolder,
@@ -156,10 +152,7 @@ export default class FileDrop {
     protected readonly dropOutside = dropOutside;
     protected readonly formatSize = formatSize;
     // The model is the source of truth: create it once.
-    protected readonly model = createTreeModel<
-        FileTypes,
-        readonly [SelectionFeature]
-    >(fileSystem(), { features: [selection()] });
+    protected readonly model = createTreeModel<FileTypes>(fileSystem());
     protected readonly announce = announcer(this.model);
     /** whether the tree's drag is over the trash */
     protected readonly overTrash = signal(false);

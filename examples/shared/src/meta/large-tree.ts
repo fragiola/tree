@@ -7,7 +7,7 @@ export default {
     category: "data",
     order: 4,
     features: [
-        "createTreeVirtualizer",
+        "virtualization()",
         "VirtualItems",
         "virtual-window",
         "tree.expand-all",

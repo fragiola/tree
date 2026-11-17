@@ -1,6 +1,5 @@
 import { Component } from "@angular/core";
 import { TREE, type TreeJson } from "@fragiola/tree-angular";
-import { selection } from "@fragiola/tree-angular/selection";
 import { LucideChevronRight, LucideFile, LucideFolder } from "@lucide/angular";
 import * as styles from "./styles";
 
@@ -44,7 +43,7 @@ const json: TreeJson<Types> = {
                 السهم الأيسر <kbd [class]="styles.kbd">←</kbd> يفتح المجلد،
                 والسهم الأيمن <kbd [class]="styles.kbd">→</kbd> يغلقه.
             </p>
-            <div treeRoot [defaultTree]="json" [features]="features" aria-label="الملفات" [class]="styles.root">
+            <div treeRoot [defaultTree]="json" aria-label="الملفات" [class]="styles.root">
                 <ng-template [treeItems]="json" let-item>
                     <div [treeItem]="item" [class]="styles.item">
                         <div treeItemContent [class]="styles.row">
@@ -67,8 +66,6 @@ const json: TreeJson<Types> = {
     `,
 })
 export default class RightToLeft {
-    /** the opt-in features of the root's model: the selection */
-    protected readonly features = [selection()];
     protected readonly styles = styles;
     protected readonly json = json;
 }

@@ -5,12 +5,11 @@ import {
     type DropTarget,
     type TreeModel,
 } from "@fragiola/tree-vue";
-import { type SelectionFeature, selection } from "@fragiola/tree-vue/selection";
 import { useId } from "vue";
 import { type FileTypes, fileSystem } from "../_kit/data";
 import FileItem from "./file-item.vue";
 import * as styles from "./styles";
-import { Tree } from "./tree";
+import { features, Tree } from "./tree";
 
 // Every key is the engine's (the WAI-ARIA APG tree view, `DEFAULT_KEY_MAP`): the example only
 // lists them. `key-map` on the root would change any of them.
@@ -70,12 +69,12 @@ function announcer(model: TreeModel<FileTypes>) {
 }
 
 // The model is the source of truth: create it once (never in a ref).
-const model = createTreeModel<FileTypes, readonly [SelectionFeature]>(
+const model = createTreeModel<FileTypes, typeof features>(
     {
         ...fileSystem(),
         settings: { selectionMode: "multiple" },
     },
-    { features: [selection()] },
+    { features },
 );
 const announce = announcer(model);
 const legendId = useId();

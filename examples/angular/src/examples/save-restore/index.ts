@@ -4,13 +4,9 @@ import {
     injectTreeState,
     TREE,
     type TreeModel,
-    type TreeStateOf,
     validateTree,
 } from "@fragiola/tree-angular";
-import {
-    type SelectionFeature,
-    selection,
-} from "@fragiola/tree-angular/selection";
+import { selection } from "@fragiola/tree-angular/selection";
 import {
     LucideChevronRight,
     LucideFile,
@@ -23,27 +19,24 @@ import { type FileTypes, fileSystem } from "../_kit/data";
 import { persistTree, restoreTree } from "../_kit/persist";
 import * as styles from "./styles";
 
-/** The state of a model with the selection feature. */
-type Selected = TreeStateOf<FileTypes, readonly [SelectionFeature]>;
+/** The opt-in features of the model: the selection. */
+const features = [selection()] as const;
 
 /** Where the document is saved: one key per tree. */
 const STORAGE_KEY = "fragiola-tree:examples:save-restore";
 
 /** A model of the saved document when there is a valid one, else of the default. */
 function restore(): {
-    model: TreeModel<FileTypes, readonly [SelectionFeature]>;
+    model: TreeModel<FileTypes, typeof features>;
     restored: boolean;
 } {
     const saved = restoreTree<FileTypes>(STORAGE_KEY);
     // a document saved by an older version of the app may no longer be valid
     const restored =
-        saved !== undefined &&
-        validateTree(saved, { features: [selection()] }).length === 0;
+        saved !== undefined && validateTree(saved, { features }).length === 0;
     const json = restored ? saved : fileSystem();
     return {
-        model: createTreeModel<FileTypes, readonly [SelectionFeature]>(json, {
-            features: [selection()],
-        }),
+        model: createTreeModel<FileTypes, typeof features>(json, { features }),
         restored,
     };
 }
@@ -118,10 +111,11 @@ export default class SaveRestore {
     private readonly restored = restore();
     protected readonly model = this.restored.model;
     protected readonly savedAt = signal<Date | undefined>(undefined);
-    protected readonly selected = injectTreeState<FileTypes, number>(
-        (state) => (state as Selected).selectedItemIds.length,
-        { model: this.model },
-    );
+    protected readonly selected = injectTreeState<
+        FileTypes,
+        number,
+        typeof features
+    >((state) => state.selectedItemIds.length, { model: this.model });
     protected readonly status = computed(() => {
         const savedAt = this.savedAt();
         if (savedAt) return `Saved at ${savedAt.toLocaleTimeString()}`;

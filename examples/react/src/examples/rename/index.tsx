@@ -10,10 +10,6 @@ import {
     useTreeItemRename,
     veto,
 } from "@fragiola/tree-react";
-import {
-    type SelectionFeature,
-    selection,
-} from "@fragiola/tree-react/selection";
 import { ChevronRight, File, Folder, FolderOpen } from "lucide-react";
 import { useEffect, useId, useState } from "react";
 import { type FileTypes, fileSystem } from "../_kit/data";
@@ -49,11 +45,7 @@ function namingRules(model: TreeModel<FileTypes>) {
 }
 
 export default function Rename() {
-    const [model] = useState(() =>
-        createTreeModel<FileTypes, readonly [SelectionFeature]>(fileSystem(), {
-            features: [selection()],
-        }),
-    );
+    const [model] = useState(() => createTreeModel<FileTypes>(fileSystem()));
     // the reason the last rename was refused, until the label changes or the rename ends
     const [error, setError] = useState<string>();
     const errorId = useId();

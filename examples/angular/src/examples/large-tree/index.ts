@@ -5,13 +5,14 @@ import {
     type DropTarget,
     injectTreeState,
     TREE,
-    type TreeEngine,
     type TreeJson,
     type TreeModel,
     TreeRootDirective,
 } from "@fragiola/tree-angular";
-import { selection } from "@fragiola/tree-angular/selection";
-import { virtualization } from "@fragiola/tree-angular/virtualization";
+import {
+    TreeVirtualItemsDirective,
+    virtualization,
+} from "@fragiola/tree-angular/virtualization";
 import { LucideChevronRight, LucideFile, LucideFolder } from "@lucide/angular";
 import { ClickableButton } from "#/components/atoms/clickable";
 import * as styles from "./styles";
@@ -46,7 +47,6 @@ function largeTree(): TreeJson<Types> {
 // The virtualization feature: the engine renders only the rows in view, plus 10 on each side. Each
 // theme sizes the rows, so they are measured (estimated at 28px until then).
 const features = [
-    selection(),
     virtualization({ estimateRowSize: 28, overscan: 10 }),
 ] as const;
 
@@ -84,6 +84,7 @@ function announcer(model: TreeModel<Types>) {
     selector: "example-large-tree",
     imports: [
         TREE,
+        TreeVirtualItemsDirective,
         ClickableButton,
         LucideChevronRight,
         LucideFile,
@@ -153,7 +154,10 @@ export default class LargeTree {
     );
     /** how many rows the DOM holds: the engine's window */
     protected readonly rendered = signal(0);
-    private readonly root = viewChild.required(TreeRootDirective);
+    private readonly root =
+        viewChild.required<TreeRootDirective<Types, typeof features>>(
+            TreeRootDirective,
+        );
 
     constructor() {
         // the window is read again on a scroll (the engine's listeners) and on a change of the
@@ -162,9 +166,7 @@ export default class LargeTree {
             const { engine } = this.root();
             const read = () =>
                 this.rendered.set(
-                    (
-                        engine as unknown as TreeEngine<Types, typeof features>
-                    ).get("virtual-window")?.rows.length ?? 0,
+                    engine.get("virtual-window")?.rows.length ?? 0,
                 );
             read();
             const stopEngine = engine.subscribe(read);

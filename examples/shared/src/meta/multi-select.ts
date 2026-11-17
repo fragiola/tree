@@ -7,6 +7,7 @@ export default {
     category: "selection",
     order: 1,
     features: [
+        "selection()",
         "selectionMode",
         "item.select",
         "tree.select-all",

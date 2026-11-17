@@ -1,15 +1,11 @@
 <script setup lang="ts">
-import { selection } from "@fragiola/tree-vue/selection";
 import { ref, useId } from "vue";
 import { Clickable } from "#/components/atoms/clickable";
 import { Switch } from "#/components/ui/switch";
 import { fileSystem } from "../_kit/data";
 import FileItem from "./file-item.vue";
 import * as styles from "./styles";
-import { Tree } from "./tree";
-
-/** The opt-in features of the root's model: the selection. */
-const features = [selection()];
+import { features, Tree } from "./tree";
 
 const json = fileSystem();
 /** Every folder: what "Expand all" opens. */

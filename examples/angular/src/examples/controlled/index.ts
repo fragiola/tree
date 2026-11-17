@@ -7,6 +7,9 @@ import { SWITCH } from "#/components/ui/switch";
 import { fileSystem } from "../_kit/data";
 import * as styles from "./styles";
 
+/** The opt-in features of the model: the selection. */
+const features = [selection()] as const;
+
 const json = fileSystem();
 /** Every folder: what "Expand all" opens. */
 const FOLDER_IDS = Object.entries(json.items).flatMap(([id, item]) =>
@@ -111,8 +114,8 @@ let nextId = 0;
     `,
 })
 export default class Controlled {
-    /** the opt-in features of the root's model: the selection */
-    protected readonly features = [selection()];
+    /** the opt-in features of the root's model */
+    protected readonly features = features;
     protected readonly styles = styles;
     protected readonly json = json;
     protected readonly folderIds = FOLDER_IDS;

@@ -1,14 +1,6 @@
 import { Component, computed, DestroyRef, inject, signal } from "@angular/core";
-import {
-    createTreeModel,
-    injectTreeState,
-    TREE,
-    type TreeStateOf,
-} from "@fragiola/tree-angular";
-import {
-    type SelectionFeature,
-    selection,
-} from "@fragiola/tree-angular/selection";
+import { createTreeModel, injectTreeState, TREE } from "@fragiola/tree-angular";
+import { selection } from "@fragiola/tree-angular/selection";
 import {
     LucideChevronRight,
     LucideFile,
@@ -22,8 +14,8 @@ import { type FileTypes, fileSystem } from "../_kit/data";
 import { UndoManager } from "../_kit/undo";
 import * as styles from "./styles";
 
-/** The state of a model with the selection feature. */
-type Selected = TreeStateOf<FileTypes, readonly [SelectionFeature]>;
+/** The opt-in features of the model: the selection. */
+const features = [selection()] as const;
 
 // Undo/redo is app code (`_kit/undo.ts`): it listens to the model's commits, keeps the document
 // before each step, and puts it back with `tree.load`. The package ships no history.
@@ -125,10 +117,10 @@ const stepName = (command: string) => STEP_NAMES[command] ?? command;
 export default class UndoRedo {
     protected readonly styles = styles;
     protected readonly stepName = stepName;
-    protected readonly model = createTreeModel<
-        FileTypes,
-        readonly [SelectionFeature]
-    >(fileSystem(), { features: [selection()] });
+    protected readonly model = createTreeModel<FileTypes, typeof features>(
+        fileSystem(),
+        { features },
+    );
     protected readonly history = new UndoManager(this.model);
     /** the history's snapshot, as a signal that changes with it */
     protected readonly snapshot = signal(this.history.getSnapshot());
@@ -136,10 +128,11 @@ export default class UndoRedo {
     protected readonly undone = computed(() =>
         [...this.snapshot().redoSteps].reverse(),
     );
-    protected readonly selected = injectTreeState<FileTypes, number>(
-        (state) => (state as Selected).selectedItemIds.length,
-        { model: this.model },
-    );
+    protected readonly selected = injectTreeState<
+        FileTypes,
+        number,
+        typeof features
+    >((state) => state.selectedItemIds.length, { model: this.model });
 
     constructor() {
         inject(DestroyRef).onDestroy(

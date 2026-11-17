@@ -6,10 +6,6 @@ import {
     type TreeJson,
 } from "@fragiola/tree-angular";
 import {
-    type SelectionFeature,
-    selection,
-} from "@fragiola/tree-angular/selection";
-import {
     LucideChevronRight,
     LucideFile,
     LucideFolder,
@@ -109,10 +105,7 @@ let nextId = 0;
 export default class AsyncLoading {
     protected readonly styles = styles;
     protected readonly formatSize = formatSize;
-    protected readonly model = createTreeModel<
-        FileTypes,
-        readonly [SelectionFeature]
-    >(json, { features: [selection()] });
+    protected readonly model = createTreeModel<FileTypes>(json);
     // an app's loader fetches from its back-end; this fake answers after 500 ms, and fails the
     // first load of "documents"
     protected readonly loadChildren = createFakeLoader({

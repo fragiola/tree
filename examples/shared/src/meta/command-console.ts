@@ -7,6 +7,7 @@ export default {
     category: "model-api",
     order: 2,
     features: [
+        "selection()",
         'model.get("commands")',
         "model.dispatch",
         "meta",

@@ -1,33 +1,25 @@
 <script setup lang="ts">
-import {
-    createTreeModel,
-    type TreeStateOf,
-    useTreeState,
-} from "@fragiola/tree-vue";
-import { type SelectionFeature, selection } from "@fragiola/tree-vue/selection";
+import { createTreeModel, useTreeState } from "@fragiola/tree-vue";
 import { computed } from "vue";
 import { Clickable } from "#/components/atoms/clickable";
 import { type OrgTypes, orgChart } from "../_kit/data";
 import PersonItem from "./person-item.vue";
 import * as styles from "./styles";
-import { Tree } from "./tree";
-
-/** The state of a model with the selection feature. */
-type Selected = TreeStateOf<OrgTypes, readonly [SelectionFeature]>;
+import { features, Tree } from "./tree";
 
 // The kit's organization chart has `settings.selectionMode: "multiple"`: a click selects one
 // person, Ctrl/⌘ + click adds or removes one, Shift + click selects the range from the last one.
 
 // the app owns the model (created once, never in a ref), so the summary outside the root can read it
-const model = createTreeModel<OrgTypes, readonly [SelectionFeature]>(
-    orgChart(),
-    { features: [selection()] },
-);
+const model = createTreeModel<OrgTypes, typeof features>(orgChart(), {
+    features,
+});
 // the selected ids keep their identity until the selection changes: no extra render
-const selectedItemIds = useTreeState<OrgTypes, readonly string[]>(
-    (state) => (state as Selected).selectedItemIds,
-    { model },
-);
+const selectedItemIds = useTreeState<
+    OrgTypes,
+    readonly string[],
+    typeof features
+>((state) => state.selectedItemIds, { model });
 const names = computed(() =>
     selectedItemIds.value.map(
         (itemId) => model.get("item-by", { id: itemId })?.label ?? itemId,

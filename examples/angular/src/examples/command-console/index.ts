@@ -5,10 +5,7 @@ import {
     TREE,
     veto,
 } from "@fragiola/tree-angular";
-import {
-    type SelectionFeature,
-    selection,
-} from "@fragiola/tree-angular/selection";
+import { selection } from "@fragiola/tree-angular/selection";
 import {
     LucideChevronRight,
     LucideFile,
@@ -18,6 +15,9 @@ import {
 import { ClickableButton } from "#/components/atoms/clickable";
 import { type FileTypes, fileSystem } from "../_kit/data";
 import * as styles from "./styles";
+
+/** The opt-in features of the model: the selection. */
+const features = [selection()] as const;
 
 // An assistant, a script or a remote control drives the tree with the same JSON commands a key
 // or a click runs: `model.get("commands")` describes each one (its JSON Schemas are ready to be
@@ -147,10 +147,10 @@ let nextId = 0;
 export default class CommandConsole {
     protected readonly styles = styles;
     protected readonly presets = PRESETS;
-    protected readonly model = createTreeModel<
-        FileTypes,
-        readonly [SelectionFeature]
-    >(fileSystem(), { features: [selection()] });
+    protected readonly model = createTreeModel<FileTypes, typeof features>(
+        fileSystem(),
+        { features },
+    );
     protected readonly commands = this.model.get("commands");
     protected readonly text = signal(format(PRESETS[0]?.input));
     protected readonly outcome = signal<Outcome>(undefined);

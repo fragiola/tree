@@ -6,6 +6,9 @@ import { fileSystem, formatSize } from "../_kit/data";
 import { ItemIcon } from "./item-icon";
 import * as styles from "./styles";
 
+/** The opt-in features of the model: the selection. */
+const features = [selection()] as const;
+
 // The kit's file system: folders, and files whose `data` is `{ size }` (typed by `FileTypes`).
 const json = fileSystem();
 
@@ -53,8 +56,8 @@ let nextId = 0;
     `,
 })
 export default class FileExplorer {
-    /** the opt-in features of the root's model: the selection */
-    protected readonly features = [selection()];
+    /** the opt-in features of the root's model */
+    protected readonly features = features;
     protected readonly styles = styles;
     protected readonly json = json;
     protected readonly formatSize = formatSize;

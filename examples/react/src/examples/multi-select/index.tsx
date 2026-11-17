@@ -4,21 +4,17 @@ import {
     createTreeModel,
     type ItemOf,
     Tree,
-    type TreeStateOf,
     useTreeState,
 } from "@fragiola/tree-react";
-import {
-    type SelectionFeature,
-    selection,
-} from "@fragiola/tree-react/selection";
+import { selection } from "@fragiola/tree-react/selection";
 import { ChevronRight, UserRound } from "lucide-react";
 import { useId, useState } from "react";
 import { Clickable } from "#/components/atoms/clickable";
 import { type OrgTypes, orgChart } from "../_kit/data";
 import * as styles from "./styles";
 
-/** The state of a model with the selection feature. */
-type Selected = TreeStateOf<OrgTypes, readonly [SelectionFeature]>;
+/** The opt-in features of the model: the selection. */
+const features = [selection()] as const;
 
 // The kit's organization chart has `settings.selectionMode: "multiple"`: a click selects one
 // person, Ctrl/⌘ + click adds or removes one, Shift + click selects the range from the last one.
@@ -26,15 +22,14 @@ type Selected = TreeStateOf<OrgTypes, readonly [SelectionFeature]>;
 export default function MultiSelect() {
     // the app owns the model, so the summary outside the root can read it
     const [model] = useState(() =>
-        createTreeModel<OrgTypes, readonly [SelectionFeature]>(orgChart(), {
-            features: [selection()],
-        }),
+        createTreeModel<OrgTypes, typeof features>(orgChart(), { features }),
     );
     // the selected ids keep their identity until the selection changes: no extra render
-    const selectedItemIds = useTreeState<OrgTypes, readonly string[]>(
-        (state) => (state as Selected).selectedItemIds,
-        { model },
-    );
+    const selectedItemIds = useTreeState<
+        OrgTypes,
+        readonly string[],
+        typeof features
+    >((state) => state.selectedItemIds, { model });
     const names = selectedItemIds.map(
         (itemId) => model.get("item-by", { id: itemId })?.label ?? itemId,
     );

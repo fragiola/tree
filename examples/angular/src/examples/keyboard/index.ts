@@ -6,13 +6,13 @@ import {
     TREE,
     type TreeModel,
 } from "@fragiola/tree-angular";
-import {
-    type SelectionFeature,
-    selection,
-} from "@fragiola/tree-angular/selection";
+import { selection } from "@fragiola/tree-angular/selection";
 import { LucideChevronRight, LucideFile, LucideFolder } from "@lucide/angular";
 import { type FileTypes, fileSystem } from "../_kit/data";
 import * as styles from "./styles";
+
+/** The opt-in features of the model: the selection. */
+const features = [selection()] as const;
 
 // Every key is the engine's (the WAI-ARIA APG tree view, `DEFAULT_KEY_MAP`): the example only
 // lists them. `[keyMap]` on the root would change any of them.
@@ -131,15 +131,12 @@ export default class Keyboard {
     protected readonly styles = styles;
     protected readonly keys = KEYS;
     // The model is the source of truth: create it once.
-    protected readonly model = createTreeModel<
-        FileTypes,
-        readonly [SelectionFeature]
-    >(
+    protected readonly model = createTreeModel<FileTypes, typeof features>(
         {
             ...fileSystem(),
             settings: { selectionMode: "multiple" },
         },
-        { features: [selection()] },
+        { features },
     );
     protected readonly announce = announcer(this.model);
     protected readonly legendId = `keyboard-legend-${nextId++}`;

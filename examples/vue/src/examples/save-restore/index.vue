@@ -2,11 +2,9 @@
 import {
     createTreeModel,
     type TreeModel,
-    type TreeStateOf,
     useTreeState,
     validateTree,
 } from "@fragiola/tree-vue";
-import { type SelectionFeature, selection } from "@fragiola/tree-vue/selection";
 import { RotateCcw, Trash2 } from "@lucide/vue";
 import { onMounted, onUnmounted, ref } from "vue";
 import { Clickable } from "#/components/atoms/clickable";
@@ -14,29 +12,23 @@ import { type FileTypes, fileSystem } from "../_kit/data";
 import { persistTree, restoreTree } from "../_kit/persist";
 import FileItem from "./file-item.vue";
 import * as styles from "./styles";
-import { Tree } from "./tree";
-
-/** The state of a model with the selection feature. */
-type Selected = TreeStateOf<FileTypes, readonly [SelectionFeature]>;
+import { features, Tree } from "./tree";
 
 /** Where the document is saved: one key per tree. */
 const STORAGE_KEY = "fragiola-tree:examples:save-restore";
 
 /** A model of the saved document when there is a valid one, else of the default. */
 function restore(): {
-    model: TreeModel<FileTypes, readonly [SelectionFeature]>;
+    model: TreeModel<FileTypes, typeof features>;
     restored: boolean;
 } {
     const saved = restoreTree<FileTypes>(STORAGE_KEY);
     // a document saved by an older version of the app may no longer be valid
     const restored =
-        saved !== undefined &&
-        validateTree(saved, { features: [selection()] }).length === 0;
+        saved !== undefined && validateTree(saved, { features }).length === 0;
     const json = restored ? saved : fileSystem();
     return {
-        model: createTreeModel<FileTypes, readonly [SelectionFeature]>(json, {
-            features: [selection()],
-        }),
+        model: createTreeModel<FileTypes, typeof features>(json, { features }),
         restored,
     };
 }
@@ -54,8 +46,8 @@ onMounted(() => {
 });
 onUnmounted(() => stop?.());
 
-const selected = useTreeState<FileTypes, number>(
-    (state) => (state as Selected).selectedItemIds.length,
+const selected = useTreeState<FileTypes, number, typeof features>(
+    (state) => state.selectedItemIds.length,
     { model },
 );
 

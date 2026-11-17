@@ -1,12 +1,8 @@
 "use client";
 
 import { type ItemOf, Tree, type TreeJson } from "@fragiola/tree-react";
-import { selection } from "@fragiola/tree-react/selection";
 import { ChevronRight, File, Folder } from "lucide-react";
 import * as styles from "./styles";
-
-/** The opt-in features of the root's model: the selection. */
-const features = [selection()];
 
 type Types = { items: { folder: undefined; file: undefined } };
 
@@ -47,7 +43,6 @@ export default function RightToLeft() {
             </p>
             <Tree.Root<Types>
                 defaultTree={json}
-                features={features}
                 aria-label="الملفات"
                 className={styles.root}
             >

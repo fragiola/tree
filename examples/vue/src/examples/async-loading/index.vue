@@ -4,7 +4,6 @@ import {
     createTreeModel,
     type TreeJson,
 } from "@fragiola/tree-vue";
-import { type SelectionFeature, selection } from "@fragiola/tree-vue/selection";
 import type { FileTypes } from "../_kit/data";
 import { createFakeLoader } from "../_kit/loader";
 import DriveItem from "./drive-item.vue";
@@ -31,9 +30,7 @@ const json: TreeJson<FileTypes> = {
     },
 };
 
-const model = createTreeModel<FileTypes, readonly [SelectionFeature]>(json, {
-    features: [selection()],
-});
+const model = createTreeModel<FileTypes>(json);
 // an app's loader fetches from its back-end; this fake answers after 500 ms, and fails the
 // first load of "documents"
 const loadChildren = createFakeLoader({

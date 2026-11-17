@@ -1,10 +1,6 @@
 import { Component, DestroyRef, inject, signal } from "@angular/core";
 import { createTreeModel, TREE } from "@fragiola/tree-angular";
 import {
-    type SelectionFeature,
-    selection,
-} from "@fragiola/tree-angular/selection";
-import {
     LucideChevronRight,
     LucideFile,
     LucideFolder,
@@ -77,10 +73,7 @@ let nextId = 0;
 })
 export default class Rename {
     protected readonly styles = styles;
-    protected readonly model = createTreeModel<
-        FileTypes,
-        readonly [SelectionFeature]
-    >(fileSystem(), { features: [selection()] });
+    protected readonly model = createTreeModel<FileTypes>(fileSystem());
     /** the reason the last rename was refused, until the label changes or the rename ends */
     protected readonly error = signal<string | undefined>(undefined);
     protected readonly errorId = `rename-error-${nextId++}`;

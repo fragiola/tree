@@ -7,6 +7,7 @@ export default {
     category: "editing",
     order: 2,
     features: [
+        "selection()",
         "DropIndicator",
         "item.move",
         "movable",

@@ -16,8 +16,8 @@ import { useId } from "react";
 import { type FileTypes, fileSystem, formatSize } from "../_kit/data";
 import * as styles from "./styles";
 
-/** The opt-in features of the root's model: the selection. */
-const features = [selection()];
+/** The opt-in features of the model: the selection. */
+const features = [selection()] as const;
 
 // The kit's file system: folders, and files whose `data` is `{ size }` (typed by `FileTypes`).
 const json = fileSystem();
@@ -26,7 +26,7 @@ export default function FileExplorer() {
     return (
         <div className={styles.frame}>
             {/* expandOnClick: a click on a folder's row also opens or closes it */}
-            <Tree.Root<FileTypes>
+            <Tree.Root<FileTypes, typeof features>
                 defaultTree={json}
                 features={features}
                 expandOnClick

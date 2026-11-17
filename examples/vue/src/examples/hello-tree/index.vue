@@ -1,12 +1,8 @@
 <script setup lang="ts">
 import type { TreeJson } from "@fragiola/tree-vue";
-import { selection } from "@fragiola/tree-vue/selection";
 import ItemNode from "./item-node.vue";
 import * as styles from "./styles";
 import { Tree, type Types } from "./tree";
-
-/** The opt-in features of the root's model: the selection. */
-const features = [selection()];
 
 // A tree is JSON: the root items, then every item by its id. A parent lists its children.
 const json: TreeJson<Types> = {
@@ -30,7 +26,7 @@ const json: TreeJson<Types> = {
 <template>
     <div :class="styles.frame">
         <!-- the root keeps its own model from `default-tree`; the name is yours -->
-        <Tree.Root :default-tree="json" :features="features" aria-label="Documents" :class="styles.root">
+        <Tree.Root :default-tree="json" aria-label="Documents" :class="styles.root">
             <Tree.Items v-slot="{ item }">
                 <ItemNode :item="item" />
             </Tree.Items>
