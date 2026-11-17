@@ -1,11 +1,13 @@
 // The hooks and helpers only the primitives call.
 import {
+    type AnyFeatures,
     type AnyTypes,
     type CheckState,
     type FeatureModel,
     type FeatureState,
     type ItemOf,
     TREE_ROOT_PROPS,
+    type TreeEngine,
     type TreeModel,
     type TreeRootProp,
     type TreeTypes,
@@ -24,7 +26,9 @@ export function useTreeItemState<T extends TreeTypes = AnyTypes>(
     item: ItemOf<T>,
 ): TreeItemState {
     const context = useTreeContext("Item");
-    const { model, engine, state } = context;
+    const { model, state } = context;
+    // the drag keys are the drag features' (`engine.is` answers false without them)
+    const engine = context.engine as TreeEngine<AnyTypes, AnyFeatures> | null;
     const itemId = item.id;
     const path = model.get("item-path-by", { itemId }) ?? "";
     const segments = path.split("/").filter((segment) => segment !== "");

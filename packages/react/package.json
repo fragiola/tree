@@ -72,6 +72,30 @@
             "import": "./dist/virtualization.js",
             "default": "./dist/virtualization.js"
         },
+        "./drag-and-drop": {
+            "@fragiola/source": "./src/drag-and-drop/index.ts",
+            "types": "./dist/drag-and-drop.d.ts",
+            "import": "./dist/drag-and-drop.js",
+            "default": "./dist/drag-and-drop.js"
+        },
+        "./drag-group": {
+            "@fragiola/source": "./src/drag-group/index.ts",
+            "types": "./dist/drag-group.d.ts",
+            "import": "./dist/drag-group.js",
+            "default": "./dist/drag-group.js"
+        },
+        "./foreign-drop": {
+            "@fragiola/source": "./src/foreign-drop/index.ts",
+            "types": "./dist/foreign-drop.d.ts",
+            "import": "./dist/foreign-drop.js",
+            "default": "./dist/foreign-drop.js"
+        },
+        "./drop-outside": {
+            "@fragiola/source": "./src/drop-outside/index.ts",
+            "types": "./dist/drop-outside.d.ts",
+            "import": "./dist/drop-outside.js",
+            "default": "./dist/drop-outside.js"
+        },
         "./package.json": "./package.json"
     },
     "files": [
@@ -116,6 +140,26 @@
                 "types": "./dist/virtualization.d.ts",
                 "import": "./dist/virtualization.js",
                 "default": "./dist/virtualization.js"
+            },
+            "./drag-and-drop": {
+                "types": "./dist/drag-and-drop.d.ts",
+                "import": "./dist/drag-and-drop.js",
+                "default": "./dist/drag-and-drop.js"
+            },
+            "./drag-group": {
+                "types": "./dist/drag-group.d.ts",
+                "import": "./dist/drag-group.js",
+                "default": "./dist/drag-group.js"
+            },
+            "./foreign-drop": {
+                "types": "./dist/foreign-drop.d.ts",
+                "import": "./dist/foreign-drop.js",
+                "default": "./dist/foreign-drop.js"
+            },
+            "./drop-outside": {
+                "types": "./dist/drop-outside.d.ts",
+                "import": "./dist/drop-outside.js",
+                "default": "./dist/drop-outside.js"
             },
             "./package.json": "./package.json"
         }

@@ -2,6 +2,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import * as React from "react";
 import { describe, expect, it, vi } from "vitest";
 import { type RenderedProps, Tree, type TreeItemState } from "../src";
+import { DropIndicator } from "../src/drag-and-drop";
 import { FEATURES, files, filesModel, itemElement } from "./tree";
 
 /** A tree whose items are rendered with `itemProps`, and nothing else. */
@@ -49,7 +50,7 @@ describe("the primitive contract", () => {
                         </Tree.Item>
                     )}
                 </Tree.Items>
-                <Tree.DropIndicator />
+                <DropIndicator />
                 <Tree.LiveRegion />
             </Tree.Root>,
         );

@@ -1,4 +1,10 @@
-import type { DropPosition, DropIndicator as Indicator } from "@fragiola/tree";
+import type {
+    AnyFeatures,
+    AnyTypes,
+    DropPosition,
+    DropIndicator as Indicator,
+    TreeEngine,
+} from "@fragiola/tree";
 import { useTreeContext } from "../context";
 import {
     type DivPrimitiveProps,
@@ -25,7 +31,10 @@ export interface DropIndicatorProps
  * the box yourself. Hidden from assistive technology (the live region announces the drag).
  */
 export function DropIndicator(props: DropIndicatorProps) {
-    const { engine } = useTreeContext("DropIndicator");
+    const engine = useTreeContext("DropIndicator").engine as TreeEngine<
+        AnyTypes,
+        AnyFeatures
+    > | null;
     const indicator = engine?.get("drop-indicator") ?? null;
     if (!indicator) return null;
     return <DropIndicatorElement {...props} indicator={indicator} />;

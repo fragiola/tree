@@ -12,6 +12,11 @@ import {
 } from "../src";
 import { asyncChildren } from "../src/async-children";
 import { checkboxes } from "../src/checkboxes";
+import {
+    type DragAndDropOptions,
+    DropIndicator,
+    dragAndDrop,
+} from "../src/drag-and-drop";
 import { rename, useTreeItemRename } from "../src/rename";
 import { selection } from "../src/selection";
 import { typeAhead } from "../src/type-ahead";
@@ -51,14 +56,31 @@ export function files(
     };
 }
 
-/** The features the tests' trees install: every feature with a model of its own. */
+/** The features the tests' trees install: every feature but the drag extensions. */
 export const FEATURES = [
     selection(),
     checkboxes(),
     rename(),
     asyncChildren(),
     typeAhead(),
+    dragAndDrop(),
 ] as const;
+
+/** The tests' features with drag and drop's options, and more features after them (a drag group). */
+export function featuresWith<const E extends TreeFeatures>(
+    extra: E,
+    drag: DragAndDropOptions = {},
+) {
+    return [
+        selection(),
+        checkboxes(),
+        rename(),
+        asyncChildren(),
+        typeAhead(),
+        dragAndDrop(drag),
+        ...extra,
+    ] as const;
+}
 
 export const filesModel = (patch: Partial<TreeJson<FileTypes>> = {}) =>
     createTreeModel<FileTypes, typeof FEATURES>(files(patch), {
@@ -138,7 +160,7 @@ export function FileTree<F extends TreeFeatures = typeof FEATURES>(
             <Tree.Items<FileTypes>>
                 {(item) => <FileItem item={item} />}
             </Tree.Items>
-            <Tree.DropIndicator />
+            <DropIndicator />
             <Tree.LiveRegion />
         </Tree.Root>
     );

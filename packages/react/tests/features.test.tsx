@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { Tree } from "../src";
 import { asyncChildren } from "../src/async-children";
 import { checkboxes } from "../src/checkboxes";
+import { dragAndDrop } from "../src/drag-and-drop";
 import { rename } from "../src/rename";
 import { selection } from "../src/selection";
 import { typeAhead } from "../src/type-ahead";
@@ -95,6 +96,7 @@ describe("features on the root", () => {
                     rename(),
                     asyncChildren(),
                     typeAhead(),
+                    dragAndDrop(),
                 ]}
             />,
         );
