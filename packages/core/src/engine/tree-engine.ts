@@ -1,30 +1,15 @@
 // The tree engine: one tree on screen. It owns DOM focus, the keyboard (the WAI-ARIA APG Tree View
-// model), the Pointer Events drag and the keyboard drag and the announcements, behind the same
-// verbs as the model; the installed features add theirs (type-ahead, the children loader, …). It changes the tree only by
-// running the model's commands, so every middleware sees what a key, a click or a drop does.
+// model) and the announcements, behind the same verbs as the model; the installed features add
+// theirs (drag and drop, type-ahead, the children loader, …). It changes the tree only by running
+// the model's commands, so every middleware sees what a key, a click or a drop does.
 import { fail, ok } from "../commands/define";
-import type { CommandResult, NoPayload } from "../commands/types";
-import { type DragGroup, joinDragGroup } from "../dnd/drag-group";
-import { dragSetOf } from "../dnd/drag-set";
-import type {
-    DropOutsideController,
-    TreeDropOutside,
-} from "../dnd/drop-outside";
-import { indicatorOf } from "../dnd/drop-target";
-import type {
-    ForeignDropController,
-    TreeForeignDrop,
-} from "../dnd/foreign-drop";
-import { KeyboardDrag } from "../dnd/keyboard-drag";
-import { PointerDrag } from "../dnd/pointer-drag";
-import { modifiersOf, type TransferHandler } from "../dnd/transfer";
+import type { CommandResult } from "../commands/types";
 import {
     asElement,
     directionOf,
     isDragExempt,
     PART_ATTRIBUTE,
     schedulerOf,
-    windowOf,
 } from "../dom/owner";
 import type { OwnedBy } from "../features/keys";
 import { featuresOf, requiresFeature } from "../features/registry";
@@ -52,12 +37,7 @@ import type { AnyTypes, TreeTypes } from "../state/types";
 import { visibleIndex } from "../state/visible-items";
 import type { ScrollAlign } from "../virtual/scroll-target";
 import type { KeyEventInput, PressInput, TreeEngineAdapter } from "./adapter";
-import type {
-    AnnounceEvent,
-    DragState,
-    EngineHost,
-    ResolvedEngineOptions,
-} from "./host";
+import type { AnnounceEvent } from "./host";
 import type { LoadChildren } from "./load-children";
 import type {
     EngineActionKey,
@@ -84,21 +64,6 @@ export interface TreeEngineOptions<T extends TreeTypes = AnyTypes> {
     keyMap?: Partial<KeyMap> | undefined;
     /** a click on a parent's content also expands or collapses it (default false: only its toggle does) */
     expandOnClick?: boolean | undefined;
-    /** how far (px) a press moves before it is a drag (default 4) */
-    dragThreshold?: number | undefined;
-    /** how long (ms) a drag hovers a collapsed parent before it expands (default 800) */
-    autoExpandDelay?: number | undefined;
-    /** the indentation of one level (px): the pointer's inline offset at the end of a sublist picks the level (default 16) */
-    indentation?: number | undefined;
-    /**
-     * how far (px) a drop line (`before`, `after`) starts past its level's inline start, for rows
-     * whose label starts after a toggle, a grip or padding (default 0); the `inside` box gets no
-     * inset (it starts at its child level, `(level - 1) * indentation`).
-     * `engine.get("drop-indicator").inlineOffset` includes it
-     */
-    indicatorInset?: number | undefined;
-    /** how close (px) to a scroll container's edge a drag scrolls it, and how fast (px per frame) */
-    autoScroll?: { threshold?: number; speed?: number } | undefined;
     /**
      * with `asyncChildren()`: `destroy()` puts the items whose children it was loading back to `unloaded`
      * (`item.reset-children`), so the next engine on the model loads them again (default false:
@@ -106,31 +71,6 @@ export interface TreeEngineOptions<T extends TreeTypes = AnyTypes> {
      * change) must not leave an item loading forever
      */
     resetLoadsOnDestroy?: boolean | undefined;
-    /**
-     * joins the trees of the same document with the same group name: items drag between them, by
-     * pointer and keyboard. Over one model a drop is one `item.move`; over two it is a transfer
-     * (`transfer`). Without it, a drag stays in its tree
-     */
-    dragGroup?: string | undefined;
-    /**
-     * what a drop from a tree of another model does here (the receiving tree's, else the source
-     * tree's): run the app's commands (copy, convert kinds, …) and return false to refuse; asked
-     * first with `dryRun` for each target, which it hides by returning false. Without it, the
-     * target model adds the dragged subtrees (`item.add` in a `batch`) and the source model removes
-     * them (`item.remove`)
-     */
-    transfer?: TransferHandler | undefined;
-    /**
-     * takes foreign content (files, links, text) dragged on the tree from the desktop or another
-     * window (`createTreeForeignDrop(options)`): the target shows as for a tree drag, and the app's
-     * `onDrop` reads the data and runs its commands. Without it, native drags are ignored
-     */
-    foreignDrop?: TreeForeignDrop<T> | undefined;
-    /**
-     * hands the app a pointer drag of the tree's items released outside every tree of its group
-     * (`createTreeDropOutside(options)`), for its own targets. Without it, such a release cancels
-     */
-    dropOutside?: TreeDropOutside<T> | undefined;
 }
 
 /**
@@ -177,17 +117,17 @@ type ActionHandler = (
 ) => CommandResult<unknown>;
 
 class Engine<T extends TreeTypes, F extends TreeFeatures>
-    implements TreeEngine<T, F>, EngineHost
+    implements TreeEngine<T, F>
 {
     readonly model: TreeModel;
-    readonly options: ResolvedEngineOptions;
     readonly adapter: TreeEngineAdapter<T>;
     private readonly keyMap: KeyMap;
     private readonly settings: TreeEngineOptions<T>;
     private rootElement: HTMLElement | undefined;
     private readonly items = new Map<string, HTMLElement>();
     private readonly contents = new Map<string, HTMLElement>();
-    private dragState: DragState | null = null;
+    /** what the features of this engine share (`host.shared`) */
+    private readonly shared = new Map<string, unknown>();
     /** the tree had DOM focus at the last change: the focused item's new element takes it */
     private refocus = false;
     private announcement = "";
@@ -195,8 +135,6 @@ class Engine<T extends TreeTypes, F extends TreeFeatures>
     private destroyed = false;
     private readonly listeners = new Set<() => void>();
     private readonly adapterListeners = new Set<() => void>();
-    private readonly pointerDrag: PointerDrag;
-    private readonly keyboardDrag: KeyboardDrag;
     private readonly unsubscribeModel: () => void;
     private readonly actions: Record<
         Exclude<EngineActionKey, OwnedBy<"engineRun">>,
@@ -207,25 +145,10 @@ class Engine<T extends TreeTypes, F extends TreeFeatures>
     private readonly virtual: FeatureViewport | undefined;
     /** a virtualized tree focuses this item once its row is rendered */
     private pendingFocus: string | undefined;
-    /** the drag group joined with the root (`dragGroup`) */
-    private group: { group: DragGroup; leave: () => void } | undefined;
-    private readonly foreign: ForeignDropController | undefined;
-    private readonly outside: DropOutsideController | undefined;
 
     constructor(model: TreeModel<T, F>, options: TreeEngineOptions<T>) {
         this.model = model as unknown as TreeModel;
         this.settings = options;
-        this.options = {
-            dragThreshold: options.dragThreshold ?? 4,
-            autoExpandDelay: options.autoExpandDelay ?? 800,
-            indentation: options.indentation ?? 16,
-            indicatorInset: options.indicatorInset ?? 0,
-            autoScroll: {
-                threshold: options.autoScroll?.threshold ?? 40,
-                speed: options.autoScroll?.speed ?? 12,
-            },
-            transfer: options.transfer,
-        };
         const host: FeatureEngineHost = {
             model: this.model as unknown as FeatureModel,
             root: () => this.rootElement,
@@ -238,7 +161,6 @@ class Engine<T extends TreeTypes, F extends TreeFeatures>
                     contribution.pinnedItemId?.(),
                 ),
                 this.pendingFocus,
-                this.pointerDrag.pressedItemId,
             ],
             changed: () => this.changed(),
             focus: (itemId) => this.focus({ itemId }, false).ok,
@@ -249,6 +171,12 @@ class Engine<T extends TreeTypes, F extends TreeFeatures>
             announce: (event) => this.announce(event),
             isDestroyed: () => this.destroyed,
             options: options as Readonly<Record<string, unknown>>,
+            direction: () => this.direction(),
+            viewport: () => this.virtual,
+            shared: <V>(key: string, create: () => V): V => {
+                if (!this.shared.has(key)) this.shared.set(key, create());
+                return this.shared.get(key) as V;
+            },
         };
         this.contributions = featuresOf(model).list.flatMap((feature) => {
             const contribution = feature.engine?.(host);
@@ -268,23 +196,13 @@ class Engine<T extends TreeTypes, F extends TreeFeatures>
                       ...options.keyMap,
                   },
         );
-        this.pointerDrag = new PointerDrag(this);
-        this.keyboardDrag = new KeyboardDrag(this);
         this.actions = {
             focus: (payload, dryRun) =>
                 this.focus(payload as { itemId: string }, dryRun),
             "scroll-to": (payload, dryRun) =>
                 this.scrollTo(payload as { itemId: string }, dryRun),
-            "start-keyboard-drag": (payload, dryRun) =>
-                this.startKeyboardDrag(
-                    payload as { itemIds: string[] },
-                    dryRun,
-                ),
-            "cancel-drag": (_payload, dryRun) => this.cancelDrag(dryRun),
         };
         this.adapter = this.createAdapter(model as unknown as TreeModel<T>);
-        this.foreign = options.foreignDrop?.connect(this);
-        this.outside = options.dropOutside?.connect(this, () => this.changed());
         this.unsubscribeModel = model.subscribe(() => this.modelChanged());
         if (options.root) this.attachRoot(options.root);
         for (const contribution of this.contributions) contribution.settled?.();
@@ -354,17 +272,9 @@ class Engine<T extends TreeTypes, F extends TreeFeatures>
         key: K,
         ...payload: QueryArgs<EngineGetPayload<K>>
     ): EngineGetResult<K> {
-        void payload;
         const values = {
-            "drop-target": () => this.dragState?.target ?? null,
-            "dragging-item-ids": () => this.dragState?.itemIds ?? [],
-            "drop-indicator": () => {
-                const target = this.dragState?.target;
-                return target ? indicatorOf(this, target) : null;
-            },
             announcement: () => this.announcement,
             direction: () => this.direction(),
-            "drop-outside-element": () => this.outside?.element() ?? null,
         } satisfies {
             [G in Exclude<
                 EngineGetKey,
@@ -383,27 +293,7 @@ class Engine<T extends TreeTypes, F extends TreeFeatures>
         key: K,
         ...payload: QueryArgs<EngineIsPayload<K>>
     ): boolean {
-        const itemId = (payload[0] as { itemId?: string } | undefined)?.itemId;
-        switch (key) {
-            case "dragging":
-                return this.dragState !== null;
-            case "keyboard-dragging":
-                return this.dragState?.mode === "keyboard";
-            case "dragging-from-other-tree":
-                return this.dragState?.origin !== undefined;
-            case "item-dragging":
-                return (
-                    itemId !== undefined &&
-                    (this.dragState?.itemIds.includes(itemId) ?? false)
-                );
-            case "item-drop-target":
-                return (
-                    itemId !== undefined &&
-                    this.dragState?.target?.itemId === itemId
-                );
-            default:
-                return this.contributed("is", key)?.(payload[0] ?? {}) ?? false;
-        }
+        return this.contributed("is", key)?.(payload[0] ?? {}) ?? false;
     }
 
     subscribe(listener: () => void): () => void {
@@ -416,10 +306,9 @@ class Engine<T extends TreeTypes, F extends TreeFeatures>
 
     destroy(): void {
         if (this.destroyed) return;
-        this.pointerDrag.cancel();
-        this.keyboardDrag.cancel();
-        this.foreign?.cancel();
-        this.leaveGroup();
+        // what is under way (a drag) ends while the engine can still announce it
+        for (const contribution of this.contributions)
+            contribution.detached?.();
         this.destroyed = true;
         for (const contribution of this.contributions) contribution.destroy?.();
         this.pendingFocus = undefined;
@@ -429,7 +318,6 @@ class Engine<T extends TreeTypes, F extends TreeFeatures>
         this.items.clear();
         this.contents.clear();
         this.rootElement = undefined;
-        this.dragState = null;
     }
 
     // ---------------------------------------------------------------------------------------------
@@ -490,129 +378,24 @@ class Engine<T extends TreeTypes, F extends TreeFeatures>
         return ok({ itemId });
     }
 
-    private startKeyboardDrag(
-        { itemIds }: { itemIds: string[] },
-        dryRun: boolean,
-    ): CommandResult<unknown> {
-        if (!Array.isArray(itemIds) || itemIds.length === 0) {
-            return fail(
-                "invalid_payload",
-                "must have at least 1 item(s)",
-                "/itemIds",
-            );
-        }
-        for (const [i, itemId] of itemIds.entries()) {
-            if (!this.model.get("item-by", { id: itemId })) {
-                return fail(
-                    "not_found",
-                    `"${itemId}" is not an item`,
-                    `/itemIds/${i}`,
-                );
-            }
-            if (!this.model.is("item-movable", { itemId })) {
-                return fail(
-                    "refused",
-                    `"${itemId}" cannot move`,
-                    `/itemIds/${i}`,
-                );
-            }
-        }
-        if (this.dragState || this.pointerDrag.pressed) {
-            return fail("refused", "a drag is under way");
-        }
-        if (dryRun) return ok({ itemIds: [...itemIds] });
-        return this.keyboardDrag.start(itemIds)
-            ? ok({ itemIds: [...itemIds] })
-            : fail("refused", "the items have nowhere to go");
-    }
-
-    private cancelDrag(dryRun: boolean): CommandResult<NoPayload> {
-        if (!this.dragState) return fail("refused", "no drag is under way");
-        if (!dryRun) {
-            // a drag from another tree of the group is that tree's to cancel
-            this.dragState.origin?.cancel();
-            this.pointerDrag.cancel();
-            this.keyboardDrag.cancel();
-            this.foreign?.cancel();
-        }
-        return ok({});
-    }
-
     // ---------------------------------------------------------------------------------------------
-    // the host the drags and the loader share
+    // what the features share
     // ---------------------------------------------------------------------------------------------
 
-    root(): HTMLElement | undefined {
-        return this.rootElement;
-    }
-
-    contentOf(itemId: string): HTMLElement | undefined {
-        return this.contents.get(itemId);
-    }
-
-    direction(): "ltr" | "rtl" {
+    private direction(): "ltr" | "rtl" {
         return directionOf(this.rootElement);
     }
 
-    scheduler() {
+    private scheduler() {
         return schedulerOf(this.rootElement);
     }
 
-    drag(): DragState | null {
-        return this.dragState;
-    }
-
-    setDrag(drag: DragState | null): void {
-        this.dragState = drag;
-        this.changed();
-    }
-
-    renderedRows():
-        | { readonly start: number; readonly end: number }
-        | undefined {
-        return this.virtual?.rendered();
-    }
-
-    unrenderedRowBox(
-        itemId: string,
-    ): { top: number; height: number } | undefined {
-        return this.virtual?.unrenderedRowBox(itemId);
-    }
-
-    scrollContainer(): HTMLElement | undefined {
-        if (this.virtual) return this.virtual.scrollElement();
-        return this.rootElement && scrollParent(this.rootElement);
-    }
-
-    reveal(itemId: string): void {
-        this.virtual?.reveal(itemId);
-    }
-
-    dragGroup(): DragGroup | undefined {
-        return this.group?.group;
-    }
-
-    dropOutside(): DropOutsideController | undefined {
-        return this.outside;
-    }
-
-    private leaveGroup(): void {
-        const group = this.group;
-        this.group = undefined;
-        group?.leave();
-        if (this.dragState?.origin) this.setDrag(null);
-    }
-
-    announce(event: AnnounceEvent): void {
+    private announce(event: AnnounceEvent): void {
         if (this.destroyed) return;
         const message = this.settings.announce?.(event);
         if (message === undefined) return;
         this.announcement = message;
         this.changed();
-    }
-
-    isDestroyed(): boolean {
-        return this.destroyed;
     }
 
     private changed(): void {
@@ -687,19 +470,16 @@ class Engine<T extends TreeTypes, F extends TreeFeatures>
         this.detachRoot();
         this.rootElement = element;
         this.virtual?.attach(element);
-        const name = this.settings.dragGroup;
-        if (name !== undefined)
-            this.group = joinDragGroup(this, name, element.ownerDocument);
+        for (const contribution of this.contributions)
+            contribution.attached?.(element);
     }
 
     private detachRoot(): void {
         if (!this.rootElement) return;
-        this.pointerDrag.cancel();
-        this.keyboardDrag.cancel();
-        this.foreign?.cancel();
-        for (const contribution of this.contributions)
+        for (const contribution of this.contributions) {
+            contribution.detached?.();
             contribution.keysReset?.();
-        this.leaveGroup();
+        }
         this.virtual?.detach();
         this.rootElement = undefined;
     }
@@ -770,8 +550,9 @@ class Engine<T extends TreeTypes, F extends TreeFeatures>
             handleKeyDown: (event) => this.keyDown(event),
             handlePointerDown: (itemId, event) => {
                 const content = this.contents.get(itemId);
-                if (!this.destroyed && content)
-                    this.pointerDrag.pointerDown(itemId, event, content);
+                if (this.destroyed || !content) return;
+                for (const contribution of this.contributions)
+                    contribution.press?.(itemId, event, content);
             },
             handleClick: (itemId, event) => this.click(itemId, event),
             handleToggleClick: (itemId) => {
@@ -784,7 +565,9 @@ class Engine<T extends TreeTypes, F extends TreeFeatures>
                 this.model.run("item.focus", { itemId });
             },
             handleDragEvent: (event) => {
-                if (!this.destroyed) this.foreign?.handle(event);
+                if (this.destroyed) return;
+                for (const contribution of this.contributions)
+                    contribution.nativeDrag?.(event);
             },
             subscribe: (listener) => {
                 const wrapper = () => listener();
@@ -802,7 +585,12 @@ class Engine<T extends TreeTypes, F extends TreeFeatures>
     // ---------------------------------------------------------------------------------------------
 
     private click(itemId: string, event: PressInput): void {
-        if (this.destroyed || this.pointerDrag.consumeClick()) return;
+        if (this.destroyed) return;
+        // a drag's release is not a click (every feature hears it, so each resets its flag)
+        let swallowed = false;
+        for (const contribution of this.contributions)
+            if (contribution.consumeClick?.()) swallowed = true;
+        if (swallowed) return;
         const { model } = this;
         if ((model as unknown as FeatureModel).is("item-renaming", { itemId }))
             return;
@@ -829,12 +617,14 @@ class Engine<T extends TreeTypes, F extends TreeFeatures>
         const target = asElement(event.target);
         const item = target?.closest(`[${PART_ATTRIBUTE}="item"]`);
         if (target && item && isDragExempt(target, item)) return false;
-        if (this.keyboardDrag.active) {
-            const handled = this.keyboardDragKey(event);
-            if (handled) event.preventDefault();
-            return handled;
+        // a drag under way takes the keys (a keyboard drag's arrows) or leaves them alone
+        for (const contribution of this.contributions) {
+            const intercepted = contribution.interceptKey?.(event);
+            if (intercepted !== undefined) {
+                if (intercepted) event.preventDefault();
+                return intercepted;
+            }
         }
-        if (this.pointerDrag.active) return false;
         const key = directional(event.key, this.direction());
         const action = actionOf(this.keyMap, { ...pick(event), key });
         if (action !== undefined) {
@@ -853,25 +643,6 @@ class Engine<T extends TreeTypes, F extends TreeFeatures>
             }
         }
         return false;
-    }
-
-    private keyboardDragKey(event: KeyEventInput): boolean {
-        switch (event.key) {
-            case "ArrowDown":
-                this.keyboardDrag.step(1);
-                return true;
-            case "ArrowUp":
-                this.keyboardDrag.step(-1);
-                return true;
-            case "Enter":
-                this.keyboardDrag.drop(modifiersOf(event));
-                return true;
-            case "Escape":
-                this.keyboardDrag.cancel();
-                return true;
-            default:
-                return false;
-        }
     }
 
     /** Runs a key's action on the focused item; false when it did nothing (the key is not used). */
@@ -925,11 +696,6 @@ class Engine<T extends TreeTypes, F extends TreeFeatures>
             case "expand-siblings":
                 return model.run("item.expand-siblings", { itemId: current })
                     .ok;
-            case "start-drag":
-                return this.startKeyboardDrag(
-                    { itemIds: dragSetOf(model, current) },
-                    false,
-                ).ok;
             default:
                 return this.featureKey(action, { current, visible, at });
         }
@@ -951,17 +717,6 @@ class Engine<T extends TreeTypes, F extends TreeFeatures>
     private focusAt(itemId: string | undefined): boolean {
         return itemId !== undefined && this.focus({ itemId }, false).ok;
     }
-}
-
-/** The nearest scroll container of the root (the root itself when it scrolls). */
-function scrollParent(root: HTMLElement): HTMLElement | undefined {
-    const view = windowOf(root);
-    if (!view) return undefined;
-    for (let node: HTMLElement | null = root; node; node = node.parentElement) {
-        const { overflowY } = view.getComputedStyle(node);
-        if (overflowY === "auto" || overflowY === "scroll") return node;
-    }
-    return undefined;
 }
 
 function pick(event: KeyEventInput) {

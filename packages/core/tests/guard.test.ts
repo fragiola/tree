@@ -31,7 +31,7 @@ const GLOBAL_CRYPTO = /(?<![.\w$])crypto\b(?!\s*:)/;
  * The files ported from React Complex Tree (`../references/react-complex-tree`, MIT, © Lukas
  * Bach): they keep a header naming it, its copyright and its licence.
  */
-const PORTED: readonly string[] = ["src/dnd/drop-evaluation.ts"];
+const PORTED: readonly string[] = ["src/drop-target/drop-evaluation.ts"];
 
 /**
  * The exported declarations of a source (comments and strings already blanked): each `export`
@@ -145,30 +145,24 @@ describe("core package guard", () => {
         expect(missing).toEqual([]);
     });
 
-    it("reaches the features and the opt-in parts only through their entries or options: the main entry imports none of their code", () => {
-        // a feature's folder (selection/, virtual/) is imported, as code, only from inside it;
-        // createTreeForeignDrop and createTreeDropOutside only by the main entry, every other file
-        // imports their types (the built entries are checked by scripts/check-features.ts)
-        const FEATURE_CODE =
-            /^import\s+(?!type\b)[^;]*?from\s+"[^"]*\/(?:selection|virtual)\/[^"]*"/m;
-        const OPT_IN =
-            /^import\s+(?!type\b)[^;]*?from\s+"[^"]*\/(?:dnd\/foreign-drop|dnd\/drop-outside)"/m;
-        const offenders = listFiles(src).filter((file) => {
+    it("reaches the features only through their entries: no folder imports another's code", () => {
+        // a feature's folder is imported, as code, only from inside it; the drag features' shared
+        // folder (drop-target/) only from theirs. Every other file imports their types (the built
+        // entries are checked by scripts/check-features.ts)
+        const offenders = listFiles(src).flatMap((file) => {
             const relative = file.slice(src.length + 1);
-            if (
-                relative.startsWith("selection/") ||
-                relative.startsWith("virtual/")
-            )
-                return false;
+            const folder = relative.split("/")[0] ?? "";
             const source = readFileSync(file, "utf8");
-            if (FEATURE_CODE.test(source)) return true;
-            if (
-                relative === "index.ts" ||
-                relative === "dnd/foreign-drop.ts" ||
-                relative === "dnd/drop-outside.ts"
-            )
-                return false;
-            return OPT_IN.test(source);
+            return [...source.matchAll(CODE_IMPORT)].flatMap((match) => {
+                const target = match[1] ?? "";
+                const into = FEATURE_FOLDERS.find((feature) =>
+                    target.includes(`/${feature}/`),
+                );
+                if (into === undefined || into === folder) return [];
+                if (into === "drop-target" && DRAG_FOLDERS.includes(folder))
+                    return [];
+                return [`${relative} -> ${target}`];
+            });
         });
         expect(offenders).toEqual([]);
     });
@@ -181,6 +175,26 @@ describe("core package guard", () => {
         expect(readFileSync(join(root, "LICENSE"), "utf8")).toBe(rootLicence);
     });
 });
+
+/** The folders of the features, and the drag features' shared one. */
+const DRAG_FOLDERS: readonly string[] = [
+    "drag-and-drop",
+    "drag-group",
+    "foreign-drop",
+    "drop-outside",
+];
+const FEATURE_FOLDERS: readonly string[] = [
+    "selection",
+    "virtual",
+    "checkboxes",
+    "rename",
+    "async-children",
+    "type-ahead",
+    ...DRAG_FOLDERS,
+    "drop-target",
+];
+/** An import of code (not `import type`), with its module path. */
+const CODE_IMPORT = /^import\s+(?!type\b)[^;]*?from\s+"([^"]*)"/gm;
 
 // The checks above must catch what they are written for: each pattern against a sample.
 describe("the guard's own patterns", () => {
@@ -222,6 +236,16 @@ describe("the guard's own patterns", () => {
         expect(
             exportedDeclarations("export type X = any;\nconst y: any = 1;"),
         ).toEqual(["export type X = any;"]);
+    });
+
+    it("detects an import of code, not of types", () => {
+        const paths = (code: string) =>
+            [...code.matchAll(CODE_IMPORT)].map((match) => match[1]);
+        expect(
+            paths(
+                'import { a } from "../drag-and-drop/x";\nimport type { B } from "../selection/y";',
+            ),
+        ).toEqual(["../drag-and-drop/x"]);
     });
 
     it("reads the upstream header", () => {

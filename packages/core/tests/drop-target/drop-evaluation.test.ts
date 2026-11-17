@@ -6,7 +6,7 @@ import {
     evaluateDrop,
     hoverOffset,
     viablePositions,
-} from "../../src/dnd/drop-evaluation";
+} from "../../src/drop-target/drop-evaluation";
 import type { VisibleItem } from "../../src/state/types";
 
 // root

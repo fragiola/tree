@@ -8,6 +8,7 @@ import {
     type TreeEngineOptions,
 } from "../../src/engine/tree-engine";
 import { featuresOf } from "../../src/features/registry";
+import type { TreeFeatures } from "../../src/features/types";
 import type { TreeJson } from "../../src/state/json";
 import { createTreeModel, type TreeModel } from "../../src/state/model";
 import {
@@ -40,6 +41,7 @@ function rect(top: number, left: number, width: number, height: number) {
 export function flatModel(
     count: number,
     label: (index: number) => string = (index) => `item ${index}`,
+    features: TreeFeatures = allFeatures(),
 ): TreeModel<FileTypes, AllFeatures> {
     const items: TreeJson<FileTypes>["items"] = {};
     const rootItemIds: string[] = [];
@@ -49,7 +51,7 @@ export function flatModel(
     }
     return createTreeModel<FileTypes, AllFeatures>(
         { version: 1, rootItemIds, items, expandedItemIds: [] },
-        { features: allFeatures() },
+        { features: features as AllFeatures },
     );
 }
 
@@ -77,9 +79,12 @@ export function mountVirtual(
     virtual: TreeVirtualizerOptions,
     {
         viewport = 200,
+        features = [],
         ...options
     }: TreeEngineOptions<FileTypes> & {
         viewport?: number;
+        /** features installed beside the source's and the virtualization (a foreign drop) */
+        features?: TreeFeatures;
     } = {},
 ): VirtualMounted {
     const root = document.createElement("div");
@@ -92,6 +97,7 @@ export function mountVirtual(
         {
             features: [
                 ...featuresOf(source).list,
+                ...features,
                 virtualization(virtual),
             ] as unknown as VirtualFeatures,
         },

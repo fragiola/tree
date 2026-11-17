@@ -1,15 +1,19 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it } from "vitest";
+import { dragGroup } from "../../src/drag-group/drag-group";
 import {
-    createTreeDropOutside,
     type DropOutside,
-} from "../../src/dnd/drop-outside";
+    type DropOutsideFeature,
+    dropOutside as dropOutsideFeature,
+} from "../../src/drop-outside/drop-outside";
 import type { AnnounceEvent } from "../../src/engine/host";
 import type { TreeEngineOptions } from "../../src/engine/tree-engine";
+import type { TreeFeatures } from "../../src/features/types";
+import type { TreeModel } from "../../src/state/model";
 import { type Mounted, mount, pointer } from "../engine/dom";
-import { type FileTypes, filesModel } from "../fixture";
+import { allFeatures, type FileTypes, filesModel } from "../fixture";
 
-let trees: Mounted[] = [];
+let trees: Mounted<TreeFeatures>[] = [];
 let zone: HTMLElement | undefined;
 afterEach(() => {
     for (const tree of trees) tree.unmount();
@@ -32,9 +36,29 @@ function trash(): HTMLElement {
     return found;
 }
 
+/** A model of every feature, the drop outside when given, and the drag group `group` when given. */
+function modelWith(
+    dropOutside?: DropOutsideFeature,
+    group?: string,
+): TreeModel<FileTypes, TreeFeatures> {
+    return filesModel<TreeFeatures>(
+        {},
+        {
+            features: [
+                ...allFeatures(),
+                ...(dropOutside ? [dropOutside] : []),
+                ...(group ? [dragGroup({ name: group })] : []),
+            ],
+        },
+    );
+}
+
 function setup(
-    options: TreeEngineOptions<FileTypes> = {},
-    model = filesModel(),
+    {
+        dropOutside,
+        ...options
+    }: TreeEngineOptions<FileTypes> & { dropOutside?: DropOutsideFeature } = {},
+    model = modelWith(dropOutside),
     left = 0,
 ) {
     const announced: AnnounceEvent[] = [];
@@ -57,7 +81,7 @@ function setup(
 /** A drop outside that removes the items dropped on the trash. */
 function removing() {
     const dropped: DropOutside<FileTypes>[] = [];
-    const dropOutside = createTreeDropOutside<FileTypes>({
+    const dropOutside = dropOutsideFeature<FileTypes>({
         onDrop: (drop) => {
             dropped.push(drop);
             return (
@@ -69,7 +93,7 @@ function removing() {
     return { dropOutside, dropped };
 }
 
-function drag(m: Mounted, itemId: string, x: number, y: number) {
+function drag(m: Mounted<TreeFeatures>, itemId: string, x: number, y: number) {
     const content = m.content(itemId);
     pointer(content, "pointerdown", 40, m.rowY(itemId));
     pointer(content, "pointermove", 40, m.rowY(itemId) + 10);
@@ -82,7 +106,8 @@ describe("a drop outside the tree", () => {
         trash();
         const { m, announced } = setup();
         const content = drag(m, "readme", 600, 50);
-        expect(m.engine.get("drop-outside-element")).toBeNull();
+        // not installed: the key reads nothing
+        expect(m.engine.get("drop-outside-element")).toBeUndefined();
         pointer(content, "pointerup", 600, 50);
         expect(announced.at(-1)).toEqual({
             type: "drag-cancel",
@@ -187,9 +212,9 @@ describe("a drop outside the tree", () => {
     it("in a drag group, a release over another tree of the group is not outside", () => {
         trash();
         const { dropOutside, dropped } = removing();
-        const model = filesModel();
-        const { m } = setup({ dropOutside, dragGroup: "files" }, model);
-        const { m: other } = setup({ dragGroup: "files" }, model, 400);
+        const model = modelWith(dropOutside, "files");
+        const { m } = setup({}, model);
+        const { m: other } = setup({}, model, 400);
         const content = drag(m, "readme", 440, other.rowY("app", 0.1));
         expect(m.engine.get("drop-outside-element")).toBeNull();
         pointer(content, "pointerup", 440, other.rowY("app", 0.1));

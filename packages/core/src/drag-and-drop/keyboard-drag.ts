@@ -6,20 +6,21 @@
 // on through the group's trees in document order (each tree's listed when the drag reaches it), so
 // Down past the last position of one tree reaches the first of the next; the keys stay the source
 // tree's, and a drop in another tree lands as transfer.ts says.
-import type { EngineHost } from "../engine/host";
-import { GroupDrag, treeOf } from "./drag-group";
+
 import {
     type DropContext,
     type DropTarget,
     evaluateDrop,
     viablePositions,
-} from "./drop-evaluation";
-import { dropContext, lastVisibleOf } from "./drop-target";
-import { type DragModifiers, NO_MODIFIERS } from "./transfer";
+} from "../drop-target/drop-evaluation";
+import { dropContext, lastVisibleOf } from "../drop-target/drop-target";
+import type { DragHost } from "../drop-target/host";
+import { type DragModifiers, NO_MODIFIERS } from "../drop-target/host";
+import { GroupDrag, treeOf } from "./group-drag";
 
 /** One tree's positions: listed when the drag reaches the tree, each asked once. */
 interface Segment {
-    readonly host: EngineHost;
+    readonly host: DragHost;
     targets: DropTarget[] | undefined;
     readonly valid: Map<number, boolean>;
 }
@@ -35,7 +36,7 @@ export class KeyboardDrag {
     private itemIds: readonly string[] = [];
     private drag: GroupDrag | undefined;
 
-    constructor(private readonly host: EngineHost) {}
+    constructor(private readonly host: DragHost) {}
 
     get active(): boolean {
         const drag = this.host.drag();
@@ -141,7 +142,7 @@ export class KeyboardDrag {
     }
 
     /** The tree of the target. */
-    private currentHost(): EngineHost {
+    private currentHost(): DragHost {
         return this.segments[this.segment]?.host ?? this.host;
     }
 

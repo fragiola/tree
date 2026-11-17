@@ -5,92 +5,16 @@
 // option replaces it (copy, convert kinds, refuse). Every target is asked of the models (or the
 // app) before it shows, as a move's is.
 import type { BatchEntry } from "../commands/types";
-import type { EngineHost } from "../engine/host";
+import type { DropTarget } from "../drop-target/drop-evaluation";
+import {
+    type DragHost,
+    type DragModifiers,
+    type Landing,
+    NO_MODIFIERS,
+    type TreeTransfer,
+} from "../drop-target/host";
 import { cloneJson, itemToJson, type TreeItemInit } from "../state/json";
 import type { TreeModel } from "../state/model";
-import type { TreeItem } from "../state/types";
-import type { DropTarget } from "./drop-evaluation";
-
-/** The modifier keys of a drop (the pointer's release, the keyboard drag's Enter). */
-export interface DragModifiers {
-    readonly altKey: boolean;
-    readonly ctrlKey: boolean;
-    readonly metaKey: boolean;
-    readonly shiftKey: boolean;
-}
-
-export const NO_MODIFIERS: DragModifiers = Object.freeze({
-    altKey: false,
-    ctrlKey: false,
-    metaKey: false,
-    shiftKey: false,
-});
-
-/**
- * Items dropped in a tree of another model (the `transfer` option): what is dragged, from where,
- * to where, and the default transfer's commands for the target model.
- */
-export interface TreeTransfer {
-    /** the dragged items' ids in the source model: the outermost ones, in tree order */
-    readonly itemIds: readonly string[];
-    /** the dragged items, as the source model has them */
-    readonly items: readonly TreeItem[];
-    /** the source model (where the drag started) */
-    readonly from: TreeModel;
-    /** the target model, and where the items go in it (as `item.add`'s `to`) */
-    readonly to: {
-        readonly model: TreeModel;
-        readonly parentItemId: string | null;
-        readonly index: number;
-    };
-    /**
-     * the default transfer's commands for the target model, for a `batch`: an `item.add` for each
-     * dragged item and each of its descendants (parents first, ids kept, children not loaded yet
-     * left to the loader), then an `item.expand` for each one expanded in the source. Map them to
-     * copy with new ids or to convert kinds
-     */
-    readonly commands: readonly BatchEntry[];
-    /** the modifier keys of the drop (or of the pointer's last move, when `dryRun`) */
-    readonly modifiers: DragModifiers;
-    /**
-     * true while the drag asks whether this target takes the items: change nothing, return false to
-     * refuse it (it never shows), true to accept it, nothing for the default answer (the target
-     * model accepts the `commands`, the source model their removal). False for the drop: run your
-     * commands and return true, false when nothing happened, nothing for the default transfer
-     */
-    readonly dryRun: boolean;
-}
-
-/**
- * The app's transfer of items dropped in a tree of another model: runs its own commands for the
- * drop, or answers a dry run. Returning false refuses (the target hides, the drop is cancelled).
- */
-// biome-ignore lint/suspicious/noConfusingVoidType: a handler that runs its commands returns nothing
-export type TransferHandler = (transfer: TreeTransfer) => boolean | void;
-
-/** How a drop lands in one tree of the drag. */
-export interface Landing {
-    /** the dragged items among the tree's items (their positions are not targets) */
-    readonly excludedItemIds: readonly string[];
-    /** whether the tree's model takes the drop at `target` */
-    accepts(target: DropTarget, modifiers?: DragModifiers): boolean;
-    /** drops at `target`; false when it did not happen */
-    drop(
-        target: DropTarget,
-        modifiers: DragModifiers,
-        source: "drag" | "keyboard-drag",
-    ): boolean;
-}
-
-/** The modifier keys of an event. */
-export function modifiersOf(event: DragModifiers): DragModifiers {
-    return {
-        altKey: event.altKey,
-        ctrlKey: event.ctrlKey,
-        metaKey: event.metaKey,
-        shiftKey: event.shiftKey,
-    };
-}
 
 /** Whether a model takes moving `itemIds` to `target`. */
 export function movable(
@@ -106,8 +30,8 @@ export function movable(
 
 /** How a drag of `itemIds` from `from` lands in `to`. */
 export function landingOf(
-    from: EngineHost,
-    to: EngineHost,
+    from: DragHost,
+    to: DragHost,
     itemIds: readonly string[],
 ): Landing {
     if (to.model === from.model) {
@@ -133,8 +57,8 @@ export function landingOf(
 
 /** A drop in a tree of another model: the app's transfer, or the default one. */
 function transferLanding(
-    from: EngineHost,
-    to: EngineHost,
+    from: DragHost,
+    to: DragHost,
     itemIds: readonly string[],
 ): Landing {
     const handler = to.options.transfer ?? from.options.transfer;

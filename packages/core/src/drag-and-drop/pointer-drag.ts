@@ -9,14 +9,18 @@
 // shows, expands and scrolls its target; a drop there lands as transfer.ts says.
 
 import { isDragExempt } from "../dom/owner";
-import type { EngineHost } from "../engine/host";
+import type { DropTarget } from "../drop-target/drop-evaluation";
+import { overRoot, rowAt, targetAt } from "../drop-target/drop-target";
+import type { DragHost } from "../drop-target/host";
+import {
+    type DragModifiers,
+    modifiersOf,
+    NO_MODIFIERS,
+} from "../drop-target/host";
 import type { FeatureModel } from "../features/types";
 import { rectOf } from "../geometry/rect";
-import { GroupDrag, treeOf } from "./drag-group";
 import { dragSetOf } from "./drag-set";
-import type { DropTarget } from "./drop-evaluation";
-import { overRoot, rowAt, targetAt } from "./drop-target";
-import { type DragModifiers, modifiersOf, NO_MODIFIERS } from "./transfer";
+import { GroupDrag, treeOf } from "./group-drag";
 
 interface Press {
     readonly itemId: string;
@@ -33,7 +37,7 @@ interface Session {
     y: number;
     modifiers: DragModifiers;
     /** the tree under the pointer (the source when none of the group is) */
-    over: EngineHost;
+    over: DragHost;
     target: DropTarget | null;
     hoveredItemId: string | undefined;
     cancelExpand: (() => void) | undefined;
@@ -62,7 +66,7 @@ export class PointerDrag {
     /** a drag just ended: the click its release causes is not a click */
     private suppressClick = false;
 
-    constructor(private readonly host: EngineHost) {}
+    constructor(private readonly host: DragHost) {}
 
     /** Whether the click that follows a drag's release must be ignored (it resets the flag). */
     consumeClick(): boolean {
@@ -203,7 +207,7 @@ export class PointerDrag {
     }
 
     /** The tree of the drag under a point: the source's, another of its group's, or none. */
-    private treeAt(session: Session): EngineHost | undefined {
+    private treeAt(session: Session): DragHost | undefined {
         const { x, y } = session;
         if (overRoot(this.host, x, y)) return this.host;
         return session.drag

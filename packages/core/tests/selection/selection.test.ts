@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it } from "vitest";
+import { dragAndDrop } from "../../src/drag-and-drop/drag-and-drop";
 import type { FeatureModel } from "../../src/features/types";
 import { selection } from "../../src/selection/selection";
 import { type Mounted, mount } from "../engine/dom";
@@ -127,7 +128,7 @@ describe("the selection feature", () => {
                     settings: { selectionMode: "multiple" },
                     selectedItemIds: ["app", "readme"],
                 },
-                { features: [selection()] },
+                { features: [selection(), dragAndDrop()] },
             ),
         );
         mounted = m;

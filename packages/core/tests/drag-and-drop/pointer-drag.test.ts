@@ -2,9 +2,10 @@
 import { afterEach, describe, expect, it } from "vitest";
 import type { CommandEvent } from "../../src/commands/types";
 import { veto } from "../../src/commands/types";
+import type { DragAndDropOptions } from "../../src/drag-and-drop/drag-and-drop";
 import type { AnnounceEvent } from "../../src/engine/host";
 import { type Mounted, mount, pointer, ROW, wait } from "../engine/dom";
-import { type FileTypes, filesModel } from "../fixture";
+import { allFeatures, type FileTypes, filesModel } from "../fixture";
 
 let mounted: Mounted | undefined;
 afterEach(() => {
@@ -15,8 +16,16 @@ afterEach(() => {
 function setup(
     patch: Parameters<typeof filesModel>[0] = {},
     options: Parameters<typeof mount>[1] = {},
+    dragAndDrop: DragAndDropOptions = {},
 ) {
-    mounted = mount(filesModel(patch), { autoExpandDelay: 20, ...options });
+    mounted = mount(
+        filesModel(patch, {
+            features: allFeatures({
+                dragAndDrop: { autoExpandDelay: 20, ...dragAndDrop },
+            }),
+        }),
+        options,
+    );
     const events: CommandEvent<FileTypes>[] = [];
     mounted.model.subscribe((event) => events.push(event));
     return { m: mounted, events };
@@ -210,7 +219,7 @@ describe("a pointer drag", () => {
     });
 
     it("starts a drop line past its level by the indicatorInset option, not the inside box", () => {
-        const { m } = setup({}, { indicatorInset: 28 });
+        const { m } = setup({}, {}, { indicatorInset: 28 });
         startDrag(m, "readme");
         // the top of src: a line before it, at level 1
         pointer(m.content("readme"), "pointermove", 40, m.rowY("src", 0.1));

@@ -110,6 +110,15 @@ export interface FeatureEngineHost {
     isDestroyed(): boolean;
     /** the options the engine was created with (`loadChildren`, `resetLoadsOnDestroy`, …) */
     readonly options: Readonly<Record<string, unknown>>;
+    /** the root's writing direction */
+    direction(): "ltr" | "rtl";
+    /** the feature that renders only some rows (virtualization), if one is installed */
+    viewport(): FeatureViewport | undefined;
+    /**
+     * a value the features of this engine share, made by the first one that asks (the drag
+     * features' session): features share state through it without importing each other
+     */
+    shared<V>(key: string, create: () => V): V;
 }
 
 /** What a key action sees: the focused item and its place among the visible items. */
@@ -175,6 +184,21 @@ export interface FeatureEngine {
     pinnedItemId?(): string | null | undefined;
     /** a click on an item's content, after the engine focused it */
     click?(itemId: string, event: PressInput): void;
+    /** a pointer pressed an item's content element (a drag may start) */
+    press?(itemId: string, event: PointerEvent, content: HTMLElement): void;
+    /** whether the click that follows a press is not one (a drag's release): true swallows it */
+    consumeClick?(): boolean;
+    /**
+     * a key on the tree, before the key map is asked: true when the feature used it, false when
+     * the tree must leave it alone (a pointer drag under way), undefined when it is not its own
+     */
+    interceptKey?(event: KeyEventInput): boolean | undefined;
+    /** a native drag event on the root (`dragenter`, `dragover`, `dragleave`, `drop`) */
+    nativeDrag?(event: DragEvent): void;
+    /** the root element was attached */
+    attached?(root: HTMLElement): void;
+    /** the root goes away, or the engine is destroyed: what is under way (a drag) ends */
+    detached?(): void;
     /** engine actions (`engine.run`), each with its dry run */
     readonly run?: {
         readonly [key: string]: (

@@ -1,20 +1,21 @@
-// Foreign drops (the engine's `foreignDrop` option, `createTreeForeignDrop`): files, links and text
-// from the desktop or another window dropped on the tree. It is the one case
+// Foreign drops (`foreignDrop(options)`, `@fragiola/tree/foreign-drop`): files, links and text from
+// the desktop or another window dropped on the tree. It is the one case
 // ../guidelines/decisions.md#drag-and-drop allows native HTML5 drag events: receiving foreign
 // content. The adapters forward the root's `dragenter`, `dragover`, `dragleave` and `drop`
 // (`engine.adapter.handleDragEvent`); the target comes from the same evaluation as a tree drag
-// (drop-target.ts), shows with the same state and indicator, a collapsed parent hovered long enough
+// (drop-target/), shows with the same state and indicator, a collapsed parent hovered long enough
 // expands, and the scroll container scrolls near its edges. Only the types are readable before the
 // drop, so `accept` decides from them; the data is the app's to read in `onDrop`: the package
-// reads no file and makes no network call. The engine reaches this file only through the option,
-// so a bundle that never imports `createTreeForeignDrop` leaves it out.
-import type { EngineHost } from "../engine/host";
+// reads no file and makes no network call. It works with or without `dragAndDrop()`.
+
+import type { DropTarget } from "../drop-target/drop-evaluation";
+import { rowAt, targetAt } from "../drop-target/drop-target";
+import type { DragHost, DropTuning, Landing } from "../drop-target/host";
+import { dragSessionOf } from "../drop-target/session";
+import type { FeatureEngine, TreeFeature } from "../features/types";
 import { rectOf } from "../geometry/rect";
 import type { TreeModel } from "../state/model";
 import type { AnyTypes, TreeTypes } from "../state/types";
-import type { DropTarget } from "./drop-evaluation";
-import { rowAt, targetAt } from "./drop-target";
-import type { Landing } from "./transfer";
 
 /** A foreign drag over a target: what `accept` is asked. */
 export interface ForeignDrag<T extends TreeTypes = AnyTypes> {
@@ -34,8 +35,9 @@ export interface ForeignDrop<T extends TreeTypes = AnyTypes> {
     readonly model: TreeModel<T>;
 }
 
-/** Options of {@link createTreeForeignDrop}. */
-export interface TreeForeignDropOptions<T extends TreeTypes = AnyTypes> {
+/** Options of {@link foreignDrop}: what it takes, what a drop does, and how its target shows. */
+export interface ForeignDropOptions<T extends TreeTypes = AnyTypes>
+    extends DropTuning {
     /**
      * whether the tree takes the drag at a target, from its types (default: every type). Asked
      * once per target and drag; a target it refuses does not show. A disabled or non-droppable
@@ -56,20 +58,18 @@ export interface ForeignDropController {
     cancel(): void;
 }
 
-/** A foreign drop description: the engine's (and every root's) `foreignDrop` option. */
-export interface TreeForeignDrop<T extends TreeTypes = AnyTypes> {
-    readonly options: Readonly<TreeForeignDropOptions<T>>;
-    /** called by the engine: this foreign drop's state for one engine */
-    connect(host: EngineHost): ForeignDropController;
-}
+/** The foreign drop feature, as `features` holds it. */
+export type ForeignDropFeature = TreeFeature<"foreign-drop">;
 
 /**
- * Describes how a tree takes foreign content: files, links and text dragged from the desktop or
- * another window. The engine (or the root primitive) handles the native drag events and shows the
- * target as for a tree drag; `onDrop` reads the data and runs the app's commands.
+ * The foreign drop feature: the tree takes files, links and text dragged from the desktop or
+ * another window. The engine handles the native drag events and shows the target as for a tree
+ * drag (`engine.get("drop-target")`, `Tree.DropIndicator`); `onDrop` reads the data and runs the
+ * app's commands. It needs no `dragAndDrop()`: a tree can take files without dragging its items.
  *
  * ```ts
- * const foreignDrop = createTreeForeignDrop({
+ * import { foreignDrop } from "@fragiola/tree/foreign-drop";
+ * const files = foreignDrop({
  *     accept: ({ types }) => types.includes("Files"),
  *     onDrop: ({ dataTransfer, to: { parentItemId, index }, model }) => {
  *         for (const file of dataTransfer.files)
@@ -79,21 +79,29 @@ export interface TreeForeignDrop<T extends TreeTypes = AnyTypes> {
  *             });
  *     },
  * });
- * const engine = createTreeEngine(model, { root, foreignDrop });
+ * const model = createTreeModel(json, { features: [files] });
  * ```
  */
-export function createTreeForeignDrop<T extends TreeTypes = AnyTypes>(
-    options: TreeForeignDropOptions<T>,
-): TreeForeignDrop<T> {
-    const frozen = Object.freeze({ ...options });
+export function foreignDrop<T extends TreeTypes = AnyTypes>(
+    options: ForeignDropOptions<T>,
+): ForeignDropFeature {
+    const frozen = Object.freeze({
+        ...options,
+    }) as unknown as Readonly<ForeignDropOptions>;
     return Object.freeze({
-        options: frozen,
-        connect: (host: EngineHost) =>
-            new ForeignDragSession(
-                host,
-                frozen as unknown as TreeForeignDropOptions,
-            ),
-    });
+        name: "foreign-drop",
+        engine: (host): FeatureEngine => {
+            const session = dragSessionOf(host);
+            session.tune(frozen);
+            const controller = new ForeignDragSession(session, frozen);
+            session.onCancel(() => controller.cancel());
+            return {
+                ...session.verbs("foreign-drop"),
+                nativeDrag: (event) => controller.handle(event),
+                detached: () => controller.cancel(),
+            };
+        },
+    } satisfies ForeignDropFeature);
 }
 
 /** How long (ms) a foreign drag stays without a `dragover` before it is over (browsers fire one at least every 350 ms). */
@@ -120,8 +128,8 @@ class ForeignDragSession implements ForeignDropController {
     private cancelLeave: (() => void) | undefined;
 
     constructor(
-        private readonly host: EngineHost,
-        private readonly options: TreeForeignDropOptions,
+        private readonly host: DragHost,
+        private readonly options: ForeignDropOptions,
     ) {
         this.landing = {
             excludedItemIds: [],

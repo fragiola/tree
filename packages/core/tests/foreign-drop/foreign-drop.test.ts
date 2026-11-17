@@ -1,12 +1,14 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from "vitest";
-import {
-    createTreeForeignDrop,
-    type ForeignDrag,
-    type ForeignDrop,
-} from "../../src/dnd/foreign-drop";
 import type { AnnounceEvent } from "../../src/engine/host";
 import type { TreeEngineOptions } from "../../src/engine/tree-engine";
+import type { TreeFeatures } from "../../src/features/types";
+import {
+    type ForeignDrag,
+    type ForeignDrop,
+    type ForeignDropFeature,
+    foreignDrop as foreignDropFeature,
+} from "../../src/foreign-drop/foreign-drop";
 import {
     dataTransfer,
     type Mounted,
@@ -15,22 +17,43 @@ import {
     pointer,
     wait,
 } from "../engine/dom";
-import { type FileTypes, files as filesJson, filesModel } from "../fixture";
+import {
+    allFeatures,
+    type FileTypes,
+    files as filesJson,
+    filesModel,
+} from "../fixture";
 
-let mounted: Mounted | undefined;
+let mounted: Mounted<TreeFeatures> | undefined;
 afterEach(() => {
     mounted?.unmount();
     mounted = undefined;
     vi.useRealTimers();
 });
 
+/**
+ * A mounted tree with every feature and, when given, the foreign drop (`dragAndDrop: false`: with
+ * no drag and drop, the foreign drop alone).
+ */
 function setup(
-    options: TreeEngineOptions<FileTypes> = {},
+    {
+        foreignDrop,
+        dragAndDrop = true,
+        ...options
+    }: TreeEngineOptions<FileTypes> & {
+        foreignDrop?: ForeignDropFeature;
+        dragAndDrop?: boolean;
+    } = {},
     patch: Parameters<typeof filesModel>[0] = {},
 ) {
     const announced: AnnounceEvent[] = [];
-    mounted = mount(filesModel(patch), {
-        autoExpandDelay: 20,
+    const features: TreeFeatures = [
+        ...allFeatures({ dragAndDrop: { autoExpandDelay: 20 } }).filter(
+            (feature) => dragAndDrop || feature.name !== "drag-and-drop",
+        ),
+        ...(foreignDrop ? [foreignDrop] : []),
+    ];
+    mounted = mount(filesModel<TreeFeatures>(patch, { features }), {
         announce: (event) => {
             announced.push(event);
             return event.type;
@@ -44,7 +67,7 @@ function setup(
 function recording(accept?: (drag: ForeignDrag<FileTypes>) => boolean) {
     const asked: ForeignDrag<FileTypes>[] = [];
     const dropped: ForeignDrop<FileTypes>[] = [];
-    const foreignDrop = createTreeForeignDrop<FileTypes>({
+    const foreignDrop = foreignDropFeature<FileTypes>({
         accept: (drag) => {
             asked.push(drag);
             return accept?.(drag) ?? true;
@@ -309,6 +332,38 @@ describe("a foreign drop", () => {
         nativeDrag(m.root, "drop", 40, 10, files());
         expect(dropped).toHaveLength(1);
         expect(m.model.state.rootItemIds).toEqual(["notes.txt"]);
+    });
+
+    it("works without drag and drop: the target shows and the drop lands, a press never drags", () => {
+        const { foreignDrop, dropped } = recording();
+        const { m } = setup({ foreignDrop, dragAndDrop: false });
+        expect(
+            nativeDrag(m.root, "dragover", 40, m.rowY("app", 0.1), files()),
+        ).toBe(true);
+        expect(m.engine.get("drop-target")).toMatchObject({
+            itemId: "app",
+            position: "before",
+        });
+        expect(m.engine.get("drop-indicator")).not.toBeNull();
+        expect(m.engine.is("item-drop-target", { itemId: "app" })).toBe(true);
+        nativeDrag(m.root, "drop", 40, m.rowY("app", 0.1), files());
+        expect(dropped).toHaveLength(1);
+        expect(m.engine.is("dragging")).toBe(false);
+        // no drag and drop: a press past the threshold is no drag
+        const content = m.content("readme");
+        pointer(content, "pointerdown", 40, m.rowY("readme"));
+        pointer(content, "pointermove", 40, m.rowY("readme") + 20);
+        expect(m.engine.is("dragging")).toBe(false);
+        expect(m.engine.get("dragging-item-ids")).toBeUndefined();
+        pointer(content, "pointerup", 40, m.rowY("readme") + 20);
+    });
+
+    it("cancel-drag ends it without drag and drop", () => {
+        const { foreignDrop } = recording();
+        const { m } = setup({ foreignDrop, dragAndDrop: false });
+        nativeDrag(m.root, "dragover", 40, m.rowY("app", 0.1), files());
+        expect(m.engine.run("cancel-drag").ok).toBe(true);
+        expect(m.engine.is("dragging")).toBe(false);
     });
 
     it("destroy ends the foreign drag", () => {

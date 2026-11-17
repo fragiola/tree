@@ -2,7 +2,7 @@
 // rows' rects), the target it gives (drop-evaluation.ts) once the tree's model accepts it
 // (`model.can("item.move", …)`, or a transfer's: transfer.ts), and where the indicator of a target
 // goes.
-import type { EngineHost } from "../engine/host";
+
 import type { DropIndicator } from "../engine/verbs";
 import {
     bottomOf,
@@ -20,11 +20,12 @@ import {
     evaluateDrop,
     hoverOffset,
 } from "./drop-evaluation";
-import { type DragModifiers, type Landing, NO_MODIFIERS } from "./transfer";
+import type { DragHost } from "./host";
+import { type DragModifiers, type Landing, NO_MODIFIERS } from "./host";
 
 /** What the drop evaluation reads of the model, for a drag of `itemIds`. */
 export function dropContext(
-    host: EngineHost,
+    host: DragHost,
     itemIds: readonly string[],
 ): DropContext {
     const { model } = host;
@@ -45,7 +46,7 @@ export function dropContext(
 
 /** The visible row under a point: its index and how far down it the point is (0 to 1). */
 export function rowAt(
-    host: EngineHost,
+    host: DragHost,
     visible: readonly VisibleItem[],
     y: number,
 ): { index: number; fraction: number } | undefined {
@@ -71,7 +72,7 @@ export function rowAt(
 
 /** Whether a point is over a tree's root (`inView`: over the part its scroll container shows). */
 export function overRoot(
-    host: EngineHost,
+    host: DragHost,
     x: number,
     y: number,
     inView = false,
@@ -95,7 +96,7 @@ export function overRoot(
  * non-droppable parent, …).
  */
 export function targetAt(
-    host: EngineHost,
+    host: DragHost,
     landing: Landing,
     x: number,
     y: number,
@@ -148,7 +149,7 @@ export function targetAt(
 }
 
 /** The last visible row of an item's subtree (itself when it shows no children). */
-export function lastVisibleOf(host: EngineHost, itemId: string): string {
+export function lastVisibleOf(host: DragHost, itemId: string): string {
     const visible = host.model.get("visible-items");
     const start = visibleIndex(host.model.state).get(itemId) ?? -1;
     const level = visible[start]?.level ?? 0;
@@ -163,7 +164,7 @@ export function lastVisibleOf(host: EngineHost, itemId: string): string {
 
 /** Where the indicator of a drop target goes, relative to the root (its scroll included). */
 export function indicatorOf(
-    host: EngineHost,
+    host: DragHost,
     target: DropTarget,
 ): DropIndicator | null {
     const root = host.root();

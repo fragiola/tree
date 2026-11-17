@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it } from "vitest";
+import { dragAndDrop } from "../../src/drag-and-drop/drag-and-drop";
 import { createTreeEngine } from "../../src/engine/tree-engine";
 import type { AnyTreeFeature } from "../../src/features/types";
 import { selection } from "../../src/selection/selection";
@@ -176,8 +177,24 @@ describe("a bare tree (no feature)", () => {
         expect(m.model.get("root-attributes")).toEqual({});
     });
 
-    it("drags the pressed item alone", () => {
+    it("never drags: the start-drag key does nothing, a drag key reads nothing", () => {
         const m = mount(bare());
+        mounted = m;
+        m.item("app").focus();
+        expect(m.key("d", { ctrlKey: true, shiftKey: true })).toBe(false);
+        // @ts-expect-error: a key of drag and drop, not installed
+        expect(m.engine.get("dragging-item-ids")).toBeUndefined();
+        expect(
+            // @ts-expect-error: an action of drag and drop, not installed
+            m.engine.run("start-keyboard-drag", { itemIds: ["app"] }),
+        ).toMatchObject({
+            ok: false,
+            error: { code: "not_found" },
+        });
+    });
+
+    it("with drag and drop alone, drags the pressed item alone", () => {
+        const m = mount(filesModel({}, { features: [dragAndDrop()] }));
         mounted = m;
         m.item("app").focus();
         expect(m.key("d", { ctrlKey: true, shiftKey: true })).toBe(true);

@@ -1,5 +1,6 @@
 // What each opt-in feature owns, by name only: its commands, its `get` / `is` keys on the model and
-// the engine, its document fields and settings. The core reads this table to refuse what belongs to
+// the engine, its document fields and settings. A key two features own (`drop-target`: drag and
+// drop's and a foreign drop's) is there with either installed. The core reads this table to refuse what belongs to
 // a feature that is not installed (a `not_found` result, a document issue) and to type the verbs
 // from the installed features; the code of a feature lives only in its own entry
 // (`@fragiola/tree/<feature>`), which nothing in the main entry imports.
@@ -87,6 +88,59 @@ export const FEATURE_KEYS = Object.freeze({
         settings: [],
         rootProps: [],
     },
+    "drag-and-drop": {
+        commands: [],
+        get: [],
+        is: [],
+        engineRun: ["start-keyboard-drag", "cancel-drag"],
+        engineGet: ["drop-target", "dragging-item-ids", "drop-indicator"],
+        engineIs: [
+            "dragging",
+            "keyboard-dragging",
+            "item-dragging",
+            "item-drop-target",
+        ],
+        fields: [],
+        itemFields: [],
+        settings: [],
+        rootProps: [],
+    },
+    "drag-group": {
+        commands: [],
+        get: [],
+        is: [],
+        engineRun: [],
+        engineGet: [],
+        engineIs: ["dragging-from-other-tree"],
+        fields: [],
+        itemFields: [],
+        settings: [],
+        rootProps: [],
+    },
+    "foreign-drop": {
+        commands: [],
+        get: [],
+        is: [],
+        engineRun: ["cancel-drag"],
+        engineGet: ["drop-target", "drop-indicator"],
+        engineIs: ["dragging", "item-drop-target"],
+        fields: [],
+        itemFields: [],
+        settings: [],
+        rootProps: [],
+    },
+    "drop-outside": {
+        commands: [],
+        get: [],
+        is: [],
+        engineRun: [],
+        engineGet: ["drop-outside-element"],
+        engineIs: [],
+        fields: [],
+        itemFields: [],
+        settings: [],
+        rootProps: [],
+    },
 } as const);
 
 /** The name of an opt-in feature (`@fragiola/tree/<name>`). */
@@ -107,8 +161,11 @@ for (const [name, keys] of Object.entries(FEATURE_KEYS) as [
     (typeof FEATURE_KEYS)[FeatureName],
 ][]) {
     for (const [kind, list] of Object.entries(keys)) {
+        // a key two features own (a foreign drop's `drop-target`, drag and drop's too) names the
+        // first one in a message
         for (const key of list as readonly string[])
-            owners.set(`${kind}:${key}`, name);
+            if (!owners.has(`${kind}:${key}`))
+                owners.set(`${kind}:${key}`, name);
     }
 }
 

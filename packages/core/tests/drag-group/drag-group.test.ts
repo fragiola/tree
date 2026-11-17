@@ -2,17 +2,15 @@
 import { afterEach, describe, expect, it } from "vitest";
 import type { CommandEvent } from "../../src/commands/types";
 import { veto } from "../../src/commands/types";
-import type { TreeTransfer } from "../../src/dnd/transfer";
+import { dragGroup } from "../../src/drag-group/drag-group";
+import { dropOutside } from "../../src/drop-outside/drop-outside";
+import type { TransferHandler, TreeTransfer } from "../../src/drop-target/host";
 import type { AnnounceEvent } from "../../src/engine/host";
 import type { TreeEngineOptions } from "../../src/engine/tree-engine";
-import { createTreeModel } from "../../src/state/model";
+import type { TreeFeatures } from "../../src/features/types";
+import { createTreeModel, type TreeModel } from "../../src/state/model";
 import { type Mounted, mount, pointer, WIDTH } from "../engine/dom";
-import {
-    type AllFeatures,
-    allFeatures,
-    type FileTypes,
-    filesModel,
-} from "../fixture";
+import { allFeatures, type FileTypes, filesModel } from "../fixture";
 
 // tree A at x 0-300, tree B at x 400-700
 const B_LEFT = WIDTH + 100;
@@ -25,25 +23,38 @@ afterEach(() => {
     trees = [];
 });
 
-function tree(
-    model: ReturnType<typeof filesModel>,
+function tree<F extends TreeFeatures>(
+    model: TreeModel<FileTypes, F>,
     options: TreeEngineOptions<FileTypes> = {},
     left = 0,
     doc: Document = document,
-): Mounted {
-    const mounted = mount(
-        model,
-        { autoExpandDelay: 20, ...options },
-        doc,
-        left,
-    );
-    trees.push(mounted);
+): Mounted<F> {
+    const mounted = mount(model, options, doc, left);
+    trees.push(mounted as unknown as Mounted);
     return mounted;
 }
 
+/** Every feature, and the drag group `name` (its trees of one document share their drags). */
+const groupFeatures = (name = "g", transfer?: TransferHandler) =>
+    [
+        ...allFeatures({ dragAndDrop: { autoExpandDelay: 20 } }),
+        dragGroup({ name, transfer }),
+    ] as const;
+type GroupFeatures = ReturnType<typeof groupFeatures>;
+
+/** `filesModel()` in the drag group `name`. */
+function groupedFiles(
+    patch: Parameters<typeof filesModel>[0] = {},
+    name = "g",
+) {
+    return filesModel<GroupFeatures>(patch, {
+        features: groupFeatures(name),
+    });
+}
+
 /** A second model: one folder, `inbox`, and a file. */
-function inboxModel() {
-    return createTreeModel<FileTypes, AllFeatures>(
+function inboxModel(transfer?: TransferHandler) {
+    return createTreeModel<FileTypes, GroupFeatures>(
         {
             version: 1,
             rootItemIds: ["inbox", "note"],
@@ -52,11 +63,11 @@ function inboxModel() {
                 note: { kind: "file", label: "note", data: { size: 9 } },
             },
         },
-        { features: allFeatures() },
+        { features: groupFeatures("g", transfer) },
     );
 }
 
-function recorded(model: ReturnType<typeof filesModel>) {
+function recorded<F extends TreeFeatures>(model: TreeModel<FileTypes, F>) {
     const events: CommandEvent<FileTypes>[] = [];
     model.subscribe((event) => events.push(event));
     return events;
@@ -90,17 +101,16 @@ describe("a drag group", () => {
     });
 
     it("over one model, a pointer drop in the other tree is one item.move", () => {
-        const model = filesModel();
+        const model = groupedFiles();
         const events = recorded(model);
         const announced: AnnounceEvent[] = [];
         const a = tree(model, {
-            dragGroup: "files",
             announce: (event) => {
                 announced.push(event);
                 return event.type;
             },
         });
-        const b = tree(model, { dragGroup: "files" }, B_LEFT);
+        const b = tree(model, {}, B_LEFT);
         startDrag(a, "readme");
         // the other tree knows of the drag, and drags the same item
         expect(b.engine.is("dragging")).toBe(true);
@@ -136,9 +146,9 @@ describe("a drag group", () => {
     });
 
     it("back over its own tree, the target is the source's again", () => {
-        const model = filesModel();
-        const a = tree(model, { dragGroup: "files" });
-        const b = tree(model, { dragGroup: "files" }, B_LEFT);
+        const model = groupedFiles();
+        const a = tree(model, {});
+        const b = tree(model, {}, B_LEFT);
         startDrag(a, "readme");
         pointer(a.content("readme"), "pointermove", inB, b.rowY("app", 0.1));
         expect(describeTarget(b)).toBe("before app");
@@ -153,12 +163,12 @@ describe("a drag group", () => {
     });
 
     it("over two models, the target adds the subtree and the source removes it", () => {
-        const files = filesModel({ expandedItemIds: ["src", "utils"] });
+        const files = groupedFiles({ expandedItemIds: ["src", "utils"] });
         const inbox = inboxModel();
         const fromEvents = recorded(files);
         const toEvents = recorded(inbox);
-        const a = tree(files, { dragGroup: "g" });
-        const b = tree(inbox, { dragGroup: "g" }, B_LEFT);
+        const a = tree(files, {});
+        const b = tree(inbox, {}, B_LEFT);
         startDrag(a, "utils");
         // another model: no item of its own is dragged
         expect(b.engine.get("dragging-item-ids")).toEqual([]);
@@ -184,15 +194,15 @@ describe("a drag group", () => {
     });
 
     it("a target the target model refuses never shows", () => {
-        const files = filesModel();
+        const files = groupedFiles();
         const inbox = inboxModel();
         inbox.use((ctx, next) =>
             ctx.command === "item.add" && ctx.payload.to.parentItemId === null
                 ? veto("only into folders")
                 : next(),
         );
-        const a = tree(files, { dragGroup: "g" });
-        const b = tree(inbox, { dragGroup: "g" }, B_LEFT);
+        const a = tree(files, {});
+        const b = tree(inbox, {}, B_LEFT);
         startDrag(a, "readme");
         pointer(a.content("readme"), "pointermove", inB, b.rowY("note", 0.1));
         expect(b.engine.get("drop-target")).toBeNull();
@@ -206,18 +216,17 @@ describe("a drag group", () => {
     });
 
     it("an id the target model has refuses the default transfer", () => {
-        const files = filesModel();
-        const other = filesModel();
-        const a = tree(files, { dragGroup: "g" });
-        const b = tree(other, { dragGroup: "g" }, B_LEFT);
+        const files = groupedFiles();
+        const other = groupedFiles();
+        const a = tree(files, {});
+        const b = tree(other, {}, B_LEFT);
         startDrag(a, "readme");
         pointer(a.content("readme"), "pointermove", inB, b.rowY("app", 0.1));
         expect(b.engine.get("drop-target")).toBeNull();
     });
 
     it("the app's transfer decides: a copy with new ids, the modifiers, a refusal", () => {
-        const files = filesModel();
-        const inbox = inboxModel();
+        const files = groupedFiles();
         const calls: TreeTransfer[] = [];
         const transfer = (event: TreeTransfer) => {
             calls.push(event);
@@ -241,8 +250,9 @@ describe("a drag group", () => {
             });
             return true;
         };
-        const a = tree(files, { dragGroup: "g" });
-        const b = tree(inbox, { dragGroup: "g", transfer }, B_LEFT);
+        const inbox = inboxModel(transfer);
+        const a = tree(files, {});
+        const b = tree(inbox, {}, B_LEFT);
         startDrag(a, "readme");
         pointer(a.content("readme"), "pointermove", inB, b.rowY("note", 0.9));
         expect(b.engine.get("drop-target")).toBeNull();
@@ -266,11 +276,11 @@ describe("a drag group", () => {
     });
 
     it("transfers a subtree with a disabled expanded folder, which stays collapsed", () => {
-        const files = filesModel({ expandedItemIds: ["src", "utils"] });
+        const files = groupedFiles({ expandedItemIds: ["src", "utils"] });
         files.run("item.set-flags", { itemId: "utils", disabled: true });
         const inbox = inboxModel();
-        const a = tree(files, { dragGroup: "g" });
-        const b = tree(inbox, { dragGroup: "g" }, B_LEFT);
+        const a = tree(files, {});
+        const b = tree(inbox, {}, B_LEFT);
         startDrag(a, "src");
         pointer(a.content("src"), "pointermove", inB, b.rowY("inbox", 0.5));
         expect(describeTarget(b)).toBe("inside inbox");
@@ -282,14 +292,10 @@ describe("a drag group", () => {
     });
 
     it("a transfer handler that returns nothing at the drop gets the default transfer", () => {
-        const files = filesModel();
-        const inbox = inboxModel();
-        const a = tree(files, { dragGroup: "g" });
-        const b = tree(
-            inbox,
-            { dragGroup: "g", transfer: () => undefined },
-            B_LEFT,
-        );
+        const files = groupedFiles();
+        const inbox = inboxModel(() => undefined);
+        const a = tree(files, {});
+        const b = tree(inbox, {}, B_LEFT);
         startDrag(a, "readme");
         pointer(a.content("readme"), "pointermove", inB, b.rowY("inbox", 0.5));
         pointer(a.content("readme"), "pointerup", inB, b.rowY("inbox", 0.5));
@@ -298,13 +304,13 @@ describe("a drag group", () => {
     });
 
     it("a source that refuses the removal refuses the transfer", () => {
-        const files = filesModel();
+        const files = groupedFiles();
         files.use((ctx, next) =>
             ctx.command === "item.remove" ? veto("kept") : next(),
         );
         const inbox = inboxModel();
-        const a = tree(files, { dragGroup: "g" });
-        const b = tree(inbox, { dragGroup: "g" }, B_LEFT);
+        const a = tree(files, {});
+        const b = tree(inbox, {}, B_LEFT);
         startDrag(a, "readme");
         pointer(a.content("readme"), "pointermove", inB, b.rowY("inbox", 0.5));
         expect(b.engine.get("drop-target")).toBeNull();
@@ -313,9 +319,9 @@ describe("a drag group", () => {
     });
 
     it("hovers a collapsed parent of the other tree long enough: it expands", async () => {
-        const model = filesModel({ expandedItemIds: [] });
-        const a = tree(model, { dragGroup: "files" });
-        const b = tree(model, { dragGroup: "files" }, B_LEFT);
+        const model = groupedFiles({ expandedItemIds: [] });
+        const a = tree(model, {});
+        const b = tree(model, {}, B_LEFT);
         startDrag(a, "readme");
         pointer(a.content("readme"), "pointermove", inB, b.rowY("src", 0.5));
         await new Promise((resolve) => setTimeout(resolve, 40));
@@ -324,14 +330,13 @@ describe("a drag group", () => {
     });
 
     it("drops into an empty tree of the group", () => {
-        const files = filesModel();
-        const empty = createTreeModel<FileTypes>({
-            version: 1,
-            rootItemIds: [],
-            items: {},
-        });
-        const a = tree(files, { dragGroup: "g" });
-        const b = tree(empty, { dragGroup: "g" }, B_LEFT);
+        const files = groupedFiles();
+        const empty = createTreeModel<FileTypes, GroupFeatures>(
+            { version: 1, rootItemIds: [], items: {} },
+            { features: groupFeatures() },
+        );
+        const a = tree(files, {});
+        const b = tree(empty, {}, B_LEFT);
         startDrag(a, "readme");
         pointer(a.content("readme"), "pointermove", inB, 30);
         expect(b.engine.get("drop-target")).toEqual({
@@ -347,9 +352,9 @@ describe("a drag group", () => {
     });
 
     it("Escape and cancel-drag on either tree cancel it in both", () => {
-        const model = filesModel();
-        const a = tree(model, { dragGroup: "files" });
-        const b = tree(model, { dragGroup: "files" }, B_LEFT);
+        const model = groupedFiles();
+        const a = tree(model, {});
+        const b = tree(model, {}, B_LEFT);
         startDrag(a, "readme");
         pointer(a.content("readme"), "pointermove", inB, b.rowY("app", 0.1));
         expect(b.engine.run("cancel-drag").ok).toBe(true);
@@ -368,9 +373,9 @@ describe("a drag group", () => {
     });
 
     it("the other tree is not pressable during the drag", () => {
-        const model = filesModel();
-        const a = tree(model, { dragGroup: "files" });
-        const b = tree(model, { dragGroup: "files" }, B_LEFT);
+        const model = groupedFiles();
+        const a = tree(model, {});
+        const b = tree(model, {}, B_LEFT);
         startDrag(a, "readme");
         expect(b.engine.can("start-keyboard-drag", { itemIds: ["app"] })).toBe(
             false,
@@ -378,9 +383,9 @@ describe("a drag group", () => {
     });
 
     it("the target tree unmounted mid-drag: the drag goes on in the source", () => {
-        const model = filesModel();
-        const a = tree(model, { dragGroup: "files" });
-        const b = tree(model, { dragGroup: "files" }, B_LEFT);
+        const model = groupedFiles();
+        const a = tree(model, {});
+        const b = tree(model, {}, B_LEFT);
         startDrag(a, "readme");
         pointer(a.content("readme"), "pointermove", inB, b.rowY("app", 0.1));
         expect(describeTarget(b)).toBe("before app");
@@ -396,9 +401,9 @@ describe("a drag group", () => {
     });
 
     it("the source tree destroyed mid-drag: the other tree forgets it", () => {
-        const model = filesModel();
-        const a = tree(model, { dragGroup: "files" });
-        const b = tree(model, { dragGroup: "files" }, B_LEFT);
+        const model = groupedFiles();
+        const a = tree(model, {});
+        const b = tree(model, {}, B_LEFT);
         startDrag(a, "readme");
         pointer(a.content("readme"), "pointermove", inB, b.rowY("app", 0.1));
         a.unmount();
@@ -408,10 +413,10 @@ describe("a drag group", () => {
     });
 
     it("trees of two documents never join, whatever their group", () => {
-        const model = filesModel();
+        const model = groupedFiles();
         const other = document.implementation.createHTMLDocument("other");
-        const a = tree(model, { dragGroup: "files" });
-        const b = tree(model, { dragGroup: "files" }, B_LEFT, other);
+        const a = tree(model, {});
+        const b = tree(model, {}, B_LEFT, other);
         startDrag(a, "readme");
         expect(b.engine.is("dragging")).toBe(false);
         pointer(a.content("readme"), "pointermove", inB, b.rowY("app", 0.1));
@@ -419,9 +424,8 @@ describe("a drag group", () => {
     });
 
     it("trees of another group never join", () => {
-        const model = filesModel();
-        const a = tree(model, { dragGroup: "files" });
-        const b = tree(model, { dragGroup: "other" }, B_LEFT);
+        const a = tree(groupedFiles({}, "files"), {});
+        const b = tree(groupedFiles({}, "other"), {}, B_LEFT);
         startDrag(a, "readme");
         expect(b.engine.is("dragging")).toBe(false);
     });
@@ -429,18 +433,17 @@ describe("a drag group", () => {
 
 describe("a keyboard drag in a group", () => {
     function keyboardSetup(options: TreeEngineOptions<FileTypes> = {}) {
-        const files = filesModel({ expandedItemIds: ["src"] });
+        const files = groupedFiles({ expandedItemIds: ["src"] });
         const inbox = inboxModel();
         const announced: AnnounceEvent[] = [];
         const a = tree(files, {
-            dragGroup: "g",
             announce: (event) => {
                 announced.push(event);
                 return event.type;
             },
             ...options,
         });
-        const b = tree(inbox, { dragGroup: "g" }, B_LEFT);
+        const b = tree(inbox, {}, B_LEFT);
         return { files, inbox, a, b, announced };
     }
 
@@ -523,5 +526,19 @@ describe("a keyboard drag in a group", () => {
         expect(describeTarget(a)).toBe(start);
         a.key("Enter");
         expect(a.engine.is("dragging")).toBe(false);
+    });
+});
+
+describe("the drag extensions' requirements", () => {
+    it("dragGroup() and dropOutside() without dragAndDrop() fail at creation", () => {
+        expect(() =>
+            filesModel({}, { features: [dragGroup({ name: "g" })] }),
+        ).toThrow(/drag-and-drop/);
+        expect(() =>
+            filesModel(
+                {},
+                { features: [dropOutside({ onDrop: () => false })] },
+            ),
+        ).toThrow(/drag-and-drop/);
     });
 });
