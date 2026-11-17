@@ -1,0 +1,249 @@
+import { describe, expect, it } from "vitest";
+import { TreeValidationError, validateTree } from "../../src/state/load";
+import { createTreeModel } from "../../src/state/model";
+import { DEFAULT_SETTINGS } from "../../src/state/types";
+import { files, filesModel } from "../fixture";
+
+/** The issues of a document that should not load, as `path: message`. */
+function issues(json: unknown): string[] {
+    return validateTree(json).map((issue) => `${issue.path}: ${issue.message}`);
+}
+
+describe("loading a document", () => {
+    it("loads in plain Node, with no DOM", () => {
+        expect(typeof globalThis.document).toBe("undefined");
+        const model = filesModel();
+        expect(model.state.rootItemIds).toEqual(["src", "readme"]);
+        expect(model.state.items.app).toEqual({
+            id: "app",
+            kind: "file",
+            label: "app.ts",
+            data: { size: 120 },
+        });
+    });
+
+    it("fills in the defaults", () => {
+        const model = filesModel();
+        expect(model.state.settings).toEqual(DEFAULT_SETTINGS);
+        expect(model.state.selectedItemIds).toEqual([]);
+        expect(model.state.focusedItemId).toBeNull();
+        expect(model.state.renamingItemId).toBeNull();
+        expect(createTreeModel().state.rootItemIds).toEqual([]);
+    });
+
+    it("freezes the state, and never the caller's document", () => {
+        const json = files();
+        const model = createTreeModel(json);
+        expect(Object.isFrozen(model.state)).toBe(true);
+        expect(Object.isFrozen(model.state.items.app)).toBe(true);
+        expect(Object.isFrozen(model.state.items.app?.data)).toBe(true);
+        expect(Object.isFrozen(json.items.app)).toBe(false);
+        expect(Object.isFrozen(json.items.app?.data)).toBe(false);
+    });
+
+    it("writes the document back, and the round trip is stable", () => {
+        const json = files({
+            settings: { selectionMode: "multiple" },
+            selectedItemIds: ["app", "readme"],
+            checkedItemIds: ["utils"],
+            focusedItemId: "app",
+        });
+        const first = createTreeModel(json).get("tree-json");
+        const second = createTreeModel(first).get("tree-json");
+        expect(second).toEqual(first);
+        expect(first.settings).toEqual({
+            ...DEFAULT_SETTINGS,
+            selectionMode: "multiple",
+        });
+        expect(first.items.src).toEqual({
+            id: "src",
+            kind: "folder",
+            label: "src",
+            childItemIds: ["app", "lib", "utils"],
+        });
+        // a copy: changing it changes nothing in the model
+        first.rootItemIds.push("x");
+        expect(createTreeModel(json).get("tree-json").rootItemIds).toEqual([
+            "src",
+            "readme",
+        ]);
+    });
+
+    it("makes the cascade checks consistent: a checked parent checks its descendants, a parent follows its children", () => {
+        const parent = filesModel({ checkedItemIds: ["utils"] });
+        expect([...parent.state.checkedItemIds].sort()).toEqual([
+            "a",
+            "b",
+            "utils",
+        ]);
+        const children = filesModel({ checkedItemIds: ["a", "b"] });
+        expect(children.state.checkedItemIds).toContain("utils");
+        const independent = filesModel({
+            settings: { checkMode: "independent" },
+            checkedItemIds: ["utils"],
+        });
+        expect(independent.state.checkedItemIds).toEqual(["utils"]);
+    });
+
+    it("drops an expanded leaf, and makes the focused item visible", () => {
+        const model = filesModel({
+            expandedItemIds: ["app", "src"],
+            focusedItemId: "a",
+        });
+        expect(model.state.expandedItemIds).toEqual(["src"]);
+        expect(model.state.focusedItemId).toBe("utils");
+    });
+
+    it("gives a loaded parent its list, and drops the children of one waiting for the loader", () => {
+        const model = createTreeModel({
+            version: 1,
+            rootItemIds: ["x", "y"],
+            items: {
+                x: { kind: "folder", label: "x", childrenStatus: "loaded" },
+                y: {
+                    kind: "folder",
+                    label: "y",
+                    childrenStatus: "error",
+                    childItemIds: [],
+                },
+            },
+        });
+        expect(model.state.items.x?.childItemIds).toEqual([]);
+        expect(model.state.items.y?.childItemIds).toBeUndefined();
+    });
+});
+
+describe("an invalid document", () => {
+    it("throws a TreeValidationError with every issue and its JSON path", () => {
+        let thrown: unknown;
+        try {
+            createTreeModel({
+                version: 1,
+                rootItemIds: ["a"],
+                items: { a: { kind: "", label: "a" } },
+            });
+        } catch (error) {
+            thrown = error;
+        }
+        expect(thrown).toBeInstanceOf(TreeValidationError);
+        const error = thrown as TreeValidationError;
+        expect(error.issues).toEqual([
+            {
+                path: "/items/a/kind",
+                message: "must have at least 1 character(s)",
+            },
+        ]);
+        expect(error.message).toContain("/items/a/kind");
+    });
+
+    it("reports the same issues through validateTree", () => {
+        const json = { version: 2, rootItemIds: [], items: {} };
+        expect(validateTree(json)).toEqual([
+            { path: "/version", message: "must be 1" },
+        ]);
+        expect(() => createTreeModel(json as never)).toThrow(
+            TreeValidationError,
+        );
+        expect(validateTree(files())).toEqual([]);
+    });
+
+    it("refuses unknown fields and wrong types", () => {
+        expect(
+            issues({
+                version: 1,
+                rootItemIds: ["a"],
+                items: { a: { kind: "k", label: 3, extra: true } },
+                expandedItemIds: ["a", "a"],
+            }),
+        ).toEqual([
+            "/items/a/label: must be a string",
+            "/items/a/extra: is not allowed",
+            "/expandedItemIds: must not repeat an item",
+        ]);
+    });
+
+    it("refuses references to missing items, items with two parents, orphans, cycles and a wrong id", () => {
+        expect(
+            issues({
+                version: 1,
+                rootItemIds: ["a", "ghost"],
+                items: {
+                    a: { kind: "k", label: "a", childItemIds: ["b", "c"] },
+                    b: { kind: "k", label: "b", childItemIds: ["c"] },
+                    c: { kind: "k", label: "c" },
+                    orphan: { kind: "k", label: "o" },
+                    x: { kind: "k", label: "x", childItemIds: ["y"] },
+                    y: { id: "z", kind: "k", label: "y", childItemIds: ["x"] },
+                },
+                selectedItemIds: ["nope"],
+                focusedItemId: "nope",
+            }),
+        ).toEqual([
+            '/rootItemIds/1: "ghost" is not an item',
+            '/items/b/childItemIds/0: "c" is already a child of "a"',
+            '/items/y/id: must be "y", the item\'s key',
+            "/items/orphan: is not in the tree: no parent and not a root item",
+            "/items/x: is inside a cycle: it is not reachable from the root",
+            "/items/y: is inside a cycle: it is not reachable from the root",
+            '/selectedItemIds/0: "nope" is not an item',
+            '/focusedItemId: "nope" is not an item',
+        ]);
+    });
+
+    it("refuses children on a parent still waiting for the loader", () => {
+        expect(
+            issues({
+                version: 1,
+                rootItemIds: ["a", "b"],
+                items: {
+                    a: {
+                        kind: "k",
+                        label: "a",
+                        childrenStatus: "unloaded",
+                        childItemIds: ["b"],
+                    },
+                    b: { kind: "k", label: "b" },
+                },
+            }),
+        ).toEqual([
+            "/items/a/childItemIds: must be empty while the children are unloaded",
+            '/items/a/childItemIds/0: "b" is already a child of the root',
+        ]);
+    });
+
+    it("refuses a selection the selection mode does not allow", () => {
+        expect(issues(files({ selectedItemIds: ["app", "readme"] }))).toEqual([
+            '/selectedItemIds: must hold at most one item when the selection mode is "single"',
+        ]);
+        expect(
+            issues(
+                files({
+                    settings: { selectionMode: "none" },
+                    selectedItemIds: ["app"],
+                }),
+            ),
+        ).toEqual([
+            '/selectedItemIds: must be empty when the selection mode is "none"',
+        ]);
+    });
+
+    it("validates each item's data against its kind's schema", () => {
+        const dataSchemas = {
+            file: {
+                type: "object",
+                properties: { size: { type: "number" } },
+                required: ["size"],
+            },
+        } as const;
+        expect(
+            validateTree(
+                {
+                    version: 1,
+                    rootItemIds: ["a"],
+                    items: { a: { kind: "file", label: "a", data: {} } },
+                },
+                { dataSchemas },
+            ),
+        ).toEqual([{ path: "/items/a/data/size", message: "is required" }]);
+    });
+});
