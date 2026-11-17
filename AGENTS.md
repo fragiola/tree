@@ -86,6 +86,31 @@ Do not "fix" these. A change that breaks one is a decision for the maintainer.
 11. **No virtualization in this release.** `model.get("visible-items")` is the flat render order a
     virtualizer will consume later without an API break.
 
+## The engine (`createTreeEngine(model, options)`)
+
+- **Verbs** (`src/engine/verbs.ts`): `run` `focus`, `scroll-to`, `load-children`,
+  `start-keyboard-drag`, `cancel-drag`; `get` `drop-target`, `dragging-item-ids`,
+  `drop-indicator`, `announcement`, `direction`; `is` `dragging`, `keyboard-dragging`,
+  `item-dragging`, `item-drop-target`. The engine object is exactly the verbs plus `adapter`,
+  `subscribe` and `destroy` (a guard test).
+- **`engine.adapter`** (`src/engine/adapter.ts`): the root and item element registration, the
+  forwarded events (`handleKeyDown`, `handlePointerDown`, `handleClick`, `handleToggleClick`,
+  `handleCheckboxClick`, `handleFocus`), the rename input (`commitRename`, `cancelRename`) and the
+  render revision (`subscribe` / `getSnapshot`). An adapter forwards events; the core decides.
+- **Keys** (`src/keyboard/key-map.ts`): the APG Tree View model with type-ahead, overridable
+  through the `keyMap` option; Right and Left swap in `rtl`. Adapters never hard-code a key.
+- **Drag and drop** (`src/dnd/`): Pointer Events with pointer capture and a threshold; the target
+  comes from `drop-evaluation.ts` (ported from React Complex Tree: thirds of a row, the pointer's
+  inline offset for the level at the end of a sublist) and shows only when
+  `model.can("item.move", …)` accepts it; a hovered collapsed parent auto-expands (a transient
+  `item.expand`); the nearest scroll container auto-scrolls; a drop runs one `item.move`. The
+  keyboard drag steps through the same positions.
+- **Async children** (`src/engine/children-loader.ts`): the app's `loadChildren(item, { signal })`
+  runs when an `unloaded` item is expanded and visible; `destroy()` aborts it, and an aborted or
+  stale load runs no command.
+- **Announcements**: the app's `announce(event)` returns the live region's text; the engine keeps
+  the latest one (`get("announcement")`). No text is built in.
+
 ## Glossary
 
 The words never swap meaning, in code, docs and examples.
