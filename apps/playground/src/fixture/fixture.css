@@ -1,0 +1,68 @@
+/* The fixtures' only styles: plain rows of a known height, indented by their depth, so Playwright
+   can point at them. No palette, no theme: the fixtures are not examples. */
+body {
+    margin: 0;
+    font:
+        14px / 1.4 system-ui,
+        sans-serif;
+}
+
+[data-tree-part="root"] {
+    width: 360px;
+    margin: 16px;
+    padding: 4px 0;
+    border: 1px solid #888;
+}
+
+[data-tree-part="item"] {
+    outline: none;
+}
+
+[data-tree-part="content"] {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    height: 24px;
+    padding-inline-start: calc(var(--tree-depth) * 16px + 4px);
+    user-select: none;
+}
+
+[data-tree-part="item"]:focus-visible > [data-tree-part="content"] {
+    outline: 2px solid #36c;
+    outline-offset: -2px;
+}
+
+[data-tree-part="content"][data-selected] {
+    background: #dde6ff;
+}
+
+[data-tree-part="content"][data-drop-target][data-drop-position="inside"] {
+    background: #ffe9b3;
+}
+
+[data-tree-part="toggle"] {
+    width: 16px;
+    text-align: center;
+}
+
+[data-tree-part="toggle"][data-leaf] {
+    visibility: hidden;
+}
+
+[data-tree-part="drop-indicator"] {
+    height: 2px;
+    background: #c60;
+}
+
+[data-tree-part="drop-indicator"][data-drop-position="inside"] {
+    height: auto;
+    background: none;
+}
+
+[data-tree-part="live-region"] {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+}

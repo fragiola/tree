@@ -1,0 +1,115 @@
+import { readdirSync } from "node:fs";
+import { resolve } from "node:path";
+import { describe, expect, it } from "vitest";
+import {
+    examplesApp,
+    listExampleSlugs,
+    loadExamples,
+} from "../../../examples/shared/scripts/examples-lib.ts";
+import { CATEGORIES } from "../../../examples/shared/src/meta-types.ts";
+import {
+    entries,
+    exampleSlug,
+    findEntry,
+    fixtures,
+    repositoryPath,
+    sections,
+} from "../src/shell/catalog";
+
+// The catalog reads examples/react where it lives: every example it lists is one the site shows,
+// none is missing, and there is no second list to keep in step.
+
+const react = examplesApp("react");
+const examples = await loadExamples(react);
+
+describe("the catalog", () => {
+    it("lists every example of examples/react once, and no `_` folder", () => {
+        const listed = entries
+            .filter((e) => e.kind === "example")
+            .map((e) => e.id)
+            .sort();
+        expect(listed).toEqual(listExampleSlugs(react));
+        expect(listed.some((id) => id.startsWith("_"))).toBe(false);
+    });
+
+    it("groups the examples by category, in CATEGORIES order", () => {
+        const section = sections.find((s) => s.kind === "example");
+        const categories = section?.groups.map((g) => g.key) ?? [];
+        expect(categories).toEqual(
+            CATEGORIES.filter((c) => categories.includes(c)),
+        );
+    });
+
+    it("orders examples within a category by `order`", () => {
+        const section = sections.find((s) => s.kind === "example");
+        for (const group of section?.groups ?? []) {
+            const orders = group.entries.map(
+                (e) => examples.find((x) => x.slug === e.id)?.meta.order ?? 0,
+            );
+            expect(orders).toEqual([...orders].sort((a, b) => a - b));
+        }
+    });
+
+    it("carries each example's meta: title, category, features and layout", () => {
+        for (const example of examples) {
+            const entry = findEntry({ kind: "example", id: example.slug });
+            expect(entry?.title).toBe(example.meta.title);
+            expect(entry?.group).toBe(example.meta.category);
+            expect(entry?.features).toEqual(example.meta.features);
+            expect(entry?.layout).toBe(example.meta.layout ?? "fill");
+        }
+    });
+
+    it("shows each example's own files, entry first", async () => {
+        for (const entry of entries.filter((e) => e.kind === "example")) {
+            const [first, ...rest] = entry.files;
+            expect(first?.path, entry.id).toBe(
+                `examples/react/src/examples/${entry.id}/index.tsx`,
+            );
+            expect(await first?.load(), entry.id).toContain("export default");
+            for (const file of rest) {
+                expect(file.path).toMatch(
+                    new RegExp(`^examples/react/src/examples/${entry.id}/`),
+                );
+            }
+        }
+    });
+
+    it("finds an entry by kind and id, and nothing for an unknown one", () => {
+        expect(findEntry({ kind: "example", id: "hello-tree" })?.title).toBe(
+            "Hello tree",
+        );
+        expect(findEntry({ kind: "example", id: "nope" })).toBeUndefined();
+        expect(findEntry(null)).toBeUndefined();
+    });
+});
+
+describe("the fixtures", () => {
+    it("links every fixture page, titled by its <title>", () => {
+        const dirs = readdirSync(resolve(import.meta.dirname, "../fixtures"));
+        expect(fixtures.map((f) => f.name).sort()).toEqual(dirs.sort());
+        expect(fixtures.find((f) => f.name === "basic")).toEqual({
+            name: "basic",
+            title: "Basic fixture",
+            href: "/fixtures/basic/",
+        });
+    });
+});
+
+describe("paths", () => {
+    it("reads the example of a file, skipping `_` folders and loose files", () => {
+        const base = "../../../examples/react/src/examples";
+        expect(exampleSlug(`${base}/hello-tree/index.tsx`)).toBe("hello-tree");
+        expect(exampleSlug(`${base}/_kit/card.tsx`)).toBeUndefined();
+        expect(exampleSlug(`${base}/README.md`)).toBeUndefined();
+    });
+
+    it("writes glob keys from the repository root", () => {
+        expect(repositoryPath("../../../examples/react/src/x.ts")).toBe(
+            "examples/react/src/x.ts",
+        );
+        expect(repositoryPath("./scenarios/api/commands.tsx")).toBe(
+            "apps/playground/src/scenarios/api/commands.tsx",
+        );
+    });
+});
