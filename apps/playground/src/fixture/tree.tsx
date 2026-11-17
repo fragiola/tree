@@ -3,6 +3,7 @@ import {
     type RootProps,
     Tree,
     type TreeJson,
+    useTreeItemRename,
 } from "@fragiola/tree-react";
 
 // The unstyled tree every fixture renders: each primitive, the labels as text, the names inline.
@@ -45,7 +46,7 @@ function Item({ item }: { item: ItemOf<Types> }) {
             <Tree.ItemContent>
                 <Tree.Toggle>▸</Tree.Toggle>
                 {item.label}
-                <Tree.RenameInput aria-label={`Rename ${item.label}`} />
+                <RenameField item={item} />
             </Tree.ItemContent>
             <Tree.Group<Types>>{(child) => <Item item={child} />}</Tree.Group>
         </Tree.Item>
@@ -60,4 +61,11 @@ export function FixtureTree(props: RootProps<Types>) {
             <Tree.LiveRegion />
         </Tree.Root>
     );
+}
+
+function RenameField({ item }: { item: ItemOf<Types> }) {
+    const { state, props } = useTreeItemRename(item);
+    return state.renaming ? (
+        <input {...props} aria-label={`Rename ${item.label}`} />
+    ) : null;
 }

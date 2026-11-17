@@ -16,16 +16,31 @@ import * as styles from "./styles";
         <div [class]="styles.frame">
             <div [treeRoot]="model" checkboxes aria-label="Permissions" [class]="styles.root">
                 <ng-template [treeItems]="model" let-item>
-                    <div [treeItem]="item" [class]="styles.item">
+                    <div [treeItem]="item" #node="treeItem" [class]="styles.item">
                         <div treeItemContent [class]="styles.row">
                             <span treeToggle [class]="styles.toggle">
                                 <svg lucideChevronRight aria-hidden="true"></svg>
                             </span>
-                            <!-- a press toggles the check; it shows a check mark, or a dash when mixed -->
-                            <span treeCheckbox [class]="styles.checkbox">
+                            <!-- the app's own check control: a press toggles the item's check
+                                 (item.toggle-check, with the cascade); it shows a check mark, or a
+                                 dash when mixed. The item already carries aria-checked and Space
+                                 toggles it, so the button stays out of the tab order and hidden from
+                                 assistive technology; a native button never starts a drag or a
+                                 selection -->
+                            <button
+                                type="button"
+                                tabindex="-1"
+                                aria-hidden="true"
+                                data-testid="check"
+                                [attr.data-checked]="node.state().checked ? '' : null"
+                                [attr.data-indeterminate]="node.state().indeterminate ? '' : null"
+                                [attr.data-disabled]="node.state().disabled ? '' : null"
+                                [class]="styles.checkbox"
+                                (click)="model.run('item.toggle-check', { itemId: item.id })"
+                            >
                                 <svg lucideCheck aria-hidden="true" [class]="styles.checkIcon"></svg>
                                 <svg lucideMinus aria-hidden="true" [class]="styles.mixedIcon"></svg>
-                            </span>
+                            </button>
                             <span [class]="styles.label">{{ item.label }}</span>
                         </div>
                         <div treeGroup></div>

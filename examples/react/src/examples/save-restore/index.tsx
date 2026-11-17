@@ -5,6 +5,7 @@ import {
     type ItemOf,
     Tree,
     type TreeModel,
+    useTreeItemRename,
     useTreeState,
     validateTree,
 } from "@fragiola/tree-react";
@@ -111,14 +112,24 @@ function FileItem({ item }: { item: ItemOf<FileTypes> }) {
                     <File aria-hidden className={styles.fileIcon} />
                 )}
                 <span className={styles.label}>{item.label}</span>
-                <Tree.RenameInput
-                    aria-label={`Rename ${item.label}`}
-                    className={styles.input}
-                />
+                <RenameField item={item} />
             </Tree.ItemContent>
             <Tree.Group<FileTypes>>
                 {(child) => <FileItem item={child} />}
             </Tree.Group>
         </Tree.Item>
+    );
+}
+
+/** The app's own input, wired by `useTreeItemRename` while the item is renaming (F2). */
+function RenameField({ item }: { item: ItemOf<FileTypes> }) {
+    const { state, props } = useTreeItemRename(item);
+    if (!state.renaming) return null;
+    return (
+        <input
+            {...props}
+            aria-label={`Rename ${item.label}`}
+            className={styles.input}
+        />
     );
 }

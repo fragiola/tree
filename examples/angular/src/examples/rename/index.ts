@@ -31,7 +31,7 @@ let nextId = 0;
             </p>
             <div [treeRoot]="model" aria-label="Project files" [class]="styles.root">
                 <ng-template [treeItems]="model" let-item>
-                    <div [treeItem]="item" [class]="styles.item">
+                    <div [treeItem]="item" #node="treeItem" [class]="styles.item">
                         <!-- F2 is the tree's key; a double click is the app's, through the same command -->
                         <div
                             treeItemContent
@@ -48,15 +48,20 @@ let nextId = 0;
                                 <svg lucideFile aria-hidden="true" [class]="styles.fileIcon"></svg>
                             }
                             <span [class]="styles.label">{{ item.label }}</span>
-                            <!-- shown only while this item is renaming; a refused label keeps it open -->
-                            <input
-                                treeRenameInput
-                                [attr.aria-label]="'Rename ' + item.label"
-                                [attr.aria-describedby]="errorId"
-                                [class]="styles.input"
-                                (renameError)="error.set($event.message)"
-                                (input)="error.set(undefined)"
-                            />
+                            <!-- rendered only while this item is renaming; treeItemRename wires the
+                                 app's own input: it starts with the label, focused and selected;
+                                 Enter commits, Escape cancels, and a refused label keeps it open
+                                 (aria-invalid) -->
+                            @if (node.state().renaming) {
+                                <input
+                                    treeItemRename
+                                    [attr.aria-label]="'Rename ' + item.label"
+                                    [attr.aria-describedby]="errorId"
+                                    [class]="styles.input"
+                                    (renameError)="error.set($event.message)"
+                                    (input)="error.set(undefined)"
+                                />
+                            }
                         </div>
                         <div treeGroup></div>
                     </div>
