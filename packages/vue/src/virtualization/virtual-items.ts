@@ -1,12 +1,13 @@
-import type { AnyTypes, ItemOf, TreeTypes, VirtualRow } from "@fragiola/tree";
+import type { AnyTypes, ItemOf, TreeTypes } from "@fragiola/tree";
+import type { VirtualRow } from "@fragiola/tree/virtualization";
 import { Fragment, h, type VNode } from "vue";
-import { useTreeVirtualWindow } from "../composables/use-tree-virtual-window";
 import { useTreeContext } from "../context";
 import {
     definePrimitive,
     type SlotFunction,
     type TreeComponent,
 } from "../utils/primitive";
+import { useTreeVirtualWindow } from "./use-tree-virtual-window";
 
 // biome-ignore lint/complexity/noBannedTypes: Tree.VirtualItems takes no prop
 export type VirtualItemsProps = {};
@@ -31,13 +32,14 @@ function spacer(key: string, size: number): VNode {
 }
 
 /**
- * The rows of a virtualized tree (`Tree.Root` with `virtual`): only the visible items in view plus
- * the overscan, flat (each item carries its `aria-level`, `aria-posinset` and `aria-setsize`),
- * between spacers that take the place of the others. It renders no element of its own.
+ * The rows of a virtualized tree (a `Tree.Root` whose model has `virtualization()`): only the
+ * visible items in view plus the overscan, flat (each item carries its `aria-level`,
+ * `aria-posinset` and `aria-setsize`), between spacers that take the place of the others. It
+ * renders no element of its own. `typedVirtualItems<Types>()` is the same component, typed.
  *
  * ```vue
- * <Tree.Root :model="model" :virtual="virtual" style="height: 400px; overflow: auto">
- *     <Tree.VirtualItems v-slot="{ item }"><FileRow :item="item" /></Tree.VirtualItems>
+ * <Tree.Root :model="model" style="height: 400px; overflow: auto">
+ *     <VirtualItems v-slot="{ item }"><FileRow :item="item" /></VirtualItems>
  * </Tree.Root>
  * ```
  */
@@ -72,3 +74,17 @@ export const VirtualItems: TreeComponent<VirtualItemsProps, VirtualItemsSlots> =
             };
         },
     );
+
+/**
+ * `VirtualItems` typed by your registry (its slot's `item`), which a Vue template cannot pass:
+ * `const Rows = typedVirtualItems<Types>()`.
+ */
+export function typedVirtualItems<T extends TreeTypes>(): TreeComponent<
+    VirtualItemsProps,
+    VirtualItemsSlots<T>
+> {
+    return VirtualItems as unknown as TreeComponent<
+        VirtualItemsProps,
+        VirtualItemsSlots<T>
+    >;
+}

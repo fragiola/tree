@@ -86,7 +86,8 @@ export type {
     EngineIsMap,
     EngineIsPayload,
 } from "./engine/verbs";
-export type { FeatureName } from "./features/keys";
+export { FEATURE_ROOT_PROPS, type FeatureName } from "./features/keys";
+export { TREE_ROOT_PROPS } from "./features/root-props";
 export type {
     AnyFeatures,
     AnyTreeFeature,
@@ -100,6 +101,7 @@ export type {
     FeatureEngineHost,
     FeatureKeyContext,
     FeatureModel,
+    FeatureRootPropsOf,
     FeatureState,
     FeatureStateOf,
     FeatureViewport,

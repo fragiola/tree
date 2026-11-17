@@ -20,6 +20,7 @@ export const FEATURE_KEYS = Object.freeze({
         engineIs: [],
         fields: ["selectedItemIds", "selectionAnchorItemId"],
         settings: ["selectionMode"],
+        rootProps: ["selectedItemIds", "onSelectedItemIdsChange"],
     },
     virtualization: {
         commands: [],
@@ -30,6 +31,7 @@ export const FEATURE_KEYS = Object.freeze({
         engineIs: [],
         fields: [],
         settings: [],
+        rootProps: [],
     },
 } as const);
 
@@ -55,6 +57,24 @@ for (const [name, keys] of Object.entries(FEATURE_KEYS) as [
             owners.set(`${kind}:${key}`, name);
     }
 }
+
+/**
+ * Every root prop a feature ships (`selectedItemIds`, `onSelectedItemIdsChange`), with its feature:
+ * an adapter keeps them off the root's element, and warns when one is given without its feature.
+ */
+export const FEATURE_ROOT_PROPS: Readonly<Record<string, FeatureName>> =
+    Object.freeze(
+        Object.fromEntries(
+            (
+                Object.entries(FEATURE_KEYS) as [
+                    FeatureName,
+                    (typeof FEATURE_KEYS)[FeatureName],
+                ][]
+            ).flatMap(([name, keys]) =>
+                keys.rootProps.map((prop) => [prop, name] as const),
+            ),
+        ),
+    );
 
 /** The feature that owns `key` of kind `kind`, if one does. */
 export function ownerOf(

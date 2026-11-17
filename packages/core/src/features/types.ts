@@ -159,11 +159,13 @@ export interface FeatureEngine {
 
 /**
  * An opt-in feature: its state slice, commands, keys and engine behaviour. `S` types its state
- * slice on `model.state` (types only: a feature has no `~state` value).
+ * slice on `model.state`, and `P` the root props it ships (types only: a feature has no `~state`
+ * or `~props` value).
  */
 export interface TreeFeature<
     N extends FeatureName = FeatureName,
     S extends object = object,
+    P extends object = object,
 > {
     readonly name: N;
     /** features it needs installed too; a missing one fails `createTreeModel` */
@@ -213,10 +215,12 @@ export interface TreeFeature<
     readonly rootProps?: readonly TreeRootProp[];
     /** the state slice's type, for `model.state` (never set) */
     readonly "~state"?: S;
+    /** the root props' types, for the adapters' roots (never set) */
+    readonly "~props"?: P;
 }
 
 /** Any feature. */
-export type AnyTreeFeature = TreeFeature<FeatureName, object>;
+export type AnyTreeFeature = TreeFeature<FeatureName, object, object>;
 
 /** A list of features, as `createTreeModel` takes it. */
 export type TreeFeatures = readonly AnyTreeFeature[];
@@ -231,9 +235,20 @@ export type FeatureNamesOf<F extends TreeFeatures> = F[number]["name"];
 export type FeatureStateOf<F extends TreeFeatures> = UnionToIntersection<
     F[number] extends infer X
         ? X extends TreeFeature<FeatureName, infer S>
-            ? object extends S
+            ? keyof S extends never
                 ? Record<never, never>
                 : S
+            : never
+        : never
+>;
+
+/** The root props of a list of features, merged (`selectedItemIds` with `selection()`). */
+export type FeatureRootPropsOf<F extends TreeFeatures> = UnionToIntersection<
+    F[number] extends infer X
+        ? X extends TreeFeature<FeatureName, object, infer P>
+            ? keyof P extends never
+                ? Record<never, never>
+                : P
             : never
         : never
 >;

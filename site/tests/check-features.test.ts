@@ -52,6 +52,34 @@ describe("the features' bundle guard", () => {
         ]);
     });
 
+    it("fails an adapter's main entry built from its feature folder, tsdown's or ng-packagr's", () => {
+        const { read, readMap } = built(
+            {
+                "index.js": "export const a = 1;",
+                "fesm2022/fragiola-tree-angular.mjs": "export const b = 1;",
+            },
+            {
+                "index.js": ["../src/virtualization/virtual-items.tsx"],
+                "fesm2022/fragiola-tree-angular.mjs": [
+                    "../../virtualization/virtual-items.directive.ts",
+                ],
+            },
+        );
+        expect(featureLeaks("index.js", read, readMap, FEATURES)).toEqual([
+            "index.js: virtualization's ../src/virtualization/virtual-items.tsx",
+        ]);
+        expect(
+            featureLeaks(
+                "fesm2022/fragiola-tree-angular.mjs",
+                read,
+                readMap,
+                FEATURES,
+            ),
+        ).toEqual([
+            "fesm2022/fragiola-tree-angular.mjs: virtualization's ../../virtualization/virtual-items.directive.ts",
+        ]);
+    });
+
     it("fails a main entry that imports a feature's entry point", () => {
         const { read, readMap } = built({
             "index.js":

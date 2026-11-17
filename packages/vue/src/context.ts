@@ -2,6 +2,7 @@ import type {
     AnyTypes,
     ItemOf,
     TreeEngine,
+    TreeFeatures,
     TreeModel,
     TreeState,
     TreeTypes,
@@ -71,22 +72,24 @@ export function useItemContext(part: string): ComputedRef<ItemContextValue> {
  * A model of any registry, seen as `TreeModel<AnyTypes>`. `TreeModel<T>` takes `T` in its
  * commands' payloads, so it is not assignable to the erased type; the adapter only passes it on.
  */
-export function eraseModel<T extends TreeTypes>(
-    model: TreeModel<T>,
+export function eraseModel<T extends TreeTypes, F extends TreeFeatures>(
+    model: TreeModel<T, F>,
 ): TreeModel {
     return model as unknown as TreeModel;
 }
 
 /** The erased model seen with the registry `T` the caller declares. */
-export function typedModel<T extends TreeTypes>(
-    model: TreeModel,
-): TreeModel<T> {
-    return model as unknown as TreeModel<T>;
+export function typedModel<
+    T extends TreeTypes,
+    F extends TreeFeatures = readonly [],
+>(model: TreeModel): TreeModel<T, F> {
+    return model as unknown as TreeModel<T, F>;
 }
 
 /** The erased engine seen with the registry `T` the caller declares. */
-export function typedEngine<T extends TreeTypes>(
-    engine: TreeEngine,
-): TreeEngine<T> {
-    return engine as unknown as TreeEngine<T>;
+export function typedEngine<
+    T extends TreeTypes,
+    F extends TreeFeatures = readonly [],
+>(engine: TreeEngine): TreeEngine<T, F> {
+    return engine as unknown as TreeEngine<T, F>;
 }

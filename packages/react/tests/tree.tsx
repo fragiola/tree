@@ -97,9 +97,13 @@ export function FileItem({ item }: { item: ItemOf<FileTypes> }) {
     );
 }
 
-export function FileTree(props: RootProps<FileTypes>) {
+export function FileTree(props: RootProps<FileTypes, typeof FEATURES>) {
     return (
-        <Tree.Root<FileTypes> aria-label="Files" features={FEATURES} {...props}>
+        <Tree.Root<FileTypes, typeof FEATURES>
+            aria-label="Files"
+            features={FEATURES}
+            {...props}
+        >
             <Tree.Items<FileTypes>>
                 {(item) => <FileItem item={item} />}
             </Tree.Items>

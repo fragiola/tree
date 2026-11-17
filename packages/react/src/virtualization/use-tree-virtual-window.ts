@@ -1,4 +1,4 @@
-import type { VirtualWindow } from "@fragiola/tree";
+import type { VirtualWindow } from "@fragiola/tree/virtualization";
 import { useTreeContext } from "../context";
 
 /**

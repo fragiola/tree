@@ -18,7 +18,6 @@ const OWN = [
     "useTreeItemRename",
     "useTreeRef",
     "useTreeState",
-    "useTreeVirtualWindow",
 ];
 /** The same primitives as @fragiola/tree-react's, in files of the same names. */
 const PRIMITIVES = [
@@ -30,7 +29,6 @@ const PRIMITIVES = [
     "LiveRegion",
     "Root",
     "Toggle",
-    "VirtualItems",
 ];
 const FILES = [
     "drop-indicator",
@@ -113,6 +111,9 @@ describe("@fragiola/tree-vue", () => {
             "src/utils/primitive.ts",
             "src/utils/registration.ts",
             "src/utils/engine-facade.ts",
+            "src/virtualization/index.ts",
+            "src/virtualization/virtual-items.ts",
+            "src/virtualization/use-tree-virtual-window.ts",
         ];
         for (const file of files) {
             expect(read(file), file).not.toMatch(/:\s*any\b|<any>|as any\b/);

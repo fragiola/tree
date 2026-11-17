@@ -4,6 +4,8 @@ import * as core from "@fragiola/tree";
 import { describe, expect, it } from "vitest";
 import { exportedNames } from "../../../scripts/exported-names.ts";
 import * as react from "../src/index";
+import * as selectionEntry from "../src/selection";
+import * as virtualizationEntry from "../src/virtualization";
 
 const read = (path: string) =>
     readFileSync(join(import.meta.dirname, "..", path), "utf-8");
@@ -17,7 +19,6 @@ const OWN = [
     "useTreeItemRename",
     "useTreeRef",
     "useTreeState",
-    "useTreeVirtualWindow",
 ];
 const PRIMITIVES = [
     "DropIndicator",
@@ -28,7 +29,6 @@ const PRIMITIVES = [
     "LiveRegion",
     "Root",
     "Toggle",
-    "VirtualItems",
 ];
 
 describe("@fragiola/tree-react", () => {
@@ -109,5 +109,16 @@ describe("@fragiola/tree-react", () => {
             "CHANGELOG.md",
             "LICENSE",
         ]);
+    });
+
+    it("ships each feature from its own entry: the core's, and what renders it", () => {
+        expect(Object.keys(selectionEntry).sort()).toEqual(["selection"]);
+        expect(Object.keys(virtualizationEntry).sort()).toEqual([
+            "VirtualItems",
+            "useTreeVirtualWindow",
+            "virtualization",
+        ]);
+        for (const name of ["VirtualItems", "useTreeVirtualWindow"])
+            expect(name in react).toBe(false);
     });
 });

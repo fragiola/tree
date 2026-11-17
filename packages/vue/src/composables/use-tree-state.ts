@@ -1,6 +1,12 @@
 // From Dockable (fragiola/dockable, packages/vue/src/composables/use-model-state.ts), same author
 // and licence.
-import type { AnyTypes, TreeModel, TreeState, TreeTypes } from "@fragiola/tree";
+import type {
+    AnyTypes,
+    TreeFeatures,
+    TreeModel,
+    TreeStateOf,
+    TreeTypes,
+} from "@fragiola/tree";
 import {
     computed,
     inject,
@@ -16,9 +22,10 @@ import { onClient } from "../utils/render";
 export interface UseTreeStateOptions<
     T extends TreeTypes = AnyTypes,
     S = unknown,
+    F extends TreeFeatures = readonly [],
 > {
     /** the model to read (a value, a ref or a getter); default: the enclosing `Tree.Root`'s */
-    model?: MaybeRefOrGetter<TreeModel<T> | undefined>;
+    model?: MaybeRefOrGetter<TreeModel<T, F> | undefined>;
     /** whether two selections are the same, so readers are not triggered (`Object.is`) */
     isEqual?: ((a: S, b: S) => boolean) | undefined;
 }
@@ -29,20 +36,24 @@ export interface UseTreeStateOptions<
  * pure. Inside a `Tree.Root` it reads the root's model; pass `model` to read one anywhere.
  *
  * ```ts
- * const count = useTreeState<Types, number>((state) => state.selectedItemIds.length);
+ * const count = useTreeState((state) => state.selectedItemIds.length, { model });
  * const visible = useTreeState((_state, model) => model.get("visible-items").length, { model });
  * ```
  */
-export function useTreeState<T extends TreeTypes = AnyTypes, S = unknown>(
-    selector: (state: TreeState<T>, model: TreeModel<T>) => S,
-    options: UseTreeStateOptions<T, S> = {},
+export function useTreeState<
+    T extends TreeTypes = AnyTypes,
+    S = unknown,
+    F extends TreeFeatures = readonly [],
+>(
+    selector: (state: TreeStateOf<T, F>, model: TreeModel<T, F>) => S,
+    options: UseTreeStateOptions<T, S, F> = {},
 ): Readonly<Ref<S>> {
     const isEqual = options.isEqual ?? Object.is;
     const injected = inject(ModelKey, null);
-    const resolve = (): TreeModel<T> => {
+    const resolve = (): TreeModel<T, F> => {
         const model =
             toValue(options.model) ??
-            (injected ? typedModel<T>(injected) : undefined);
+            (injected ? typedModel<T, F>(injected) : undefined);
         if (!model) {
             throw new Error(
                 "useTreeState must be used inside Tree.Root, or be given a model",
@@ -67,7 +78,7 @@ export function useTreeState<T extends TreeTypes = AnyTypes, S = unknown>(
         );
     });
     // selected again on a commit, another model, or a reactive value the selector reads (a prop)
-    let last: { model: TreeModel<T>; value: S } | undefined;
+    let last: { model: TreeModel<T, F>; value: S } | undefined;
     return computed(() => {
         tick.value;
         const model = resolve();

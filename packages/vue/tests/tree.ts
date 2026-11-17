@@ -24,7 +24,7 @@ export type FileTypes = {
     items: { folder: undefined; file: { size: number } };
 };
 
-export const Tree = typedTree<FileTypes>();
+export const Tree = typedTree<FileTypes, typeof FEATURES>();
 
 //   src/            folder, expanded
 //     app.ts
@@ -145,7 +145,7 @@ export const FileItem = defineComponent({
 
 /** `Tree.Root` with the file items, a drop indicator and a live region. */
 export function fileTree(
-    props: RootProps<FileTypes> & Record<string, unknown>,
+    props: RootProps<FileTypes, typeof FEATURES> & Record<string, unknown>,
 ): VNodeChild {
     return h(
         Tree.Root,

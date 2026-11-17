@@ -12,6 +12,7 @@ import {
     useTreeItem,
     useTreeItemRename,
 } from "@fragiola/tree-react";
+import { VirtualItems as ReactVirtualItems } from "@fragiola/tree-react/virtualization";
 import * as React from "react";
 import { act } from "react";
 import { createRoot } from "react-dom/client";
@@ -231,7 +232,7 @@ describe("parity with @fragiola/tree-react in a virtualized tree", () => {
                         model: virtualModel() as never,
                         "aria-label": "Files",
                     },
-                    r(ReactTree.VirtualItems, {
+                    r(ReactVirtualItems, {
                         children: (item: Item) =>
                             r(
                                 ReactTree.Item,

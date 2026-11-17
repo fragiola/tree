@@ -1,6 +1,7 @@
 import { Component } from "@angular/core";
 import { describe, expect, it } from "vitest";
-import { injectTreeVirtualWindow, TREE } from "../src/public-api";
+import { TREE } from "../src/public-api";
+import { injectTreeVirtualWindow } from "../virtualization/public-api";
 import { BigTree, virtualModel } from "./big-tree";
 import { render, settle } from "./tree";
 

@@ -42,8 +42,20 @@ export interface SelectionOptions {
     mode?: SelectionMode | undefined;
 }
 
+/** The root props the selection feature ships: the controlled selection. */
+export interface SelectionRootProps {
+    /** controlled selection: the selected items (with `onSelectedItemIdsChange`) */
+    selectedItemIds?: readonly string[] | undefined;
+    /** called with the selection after every command that changes it */
+    onSelectedItemIdsChange?: ((itemIds: string[]) => void) | undefined;
+}
+
 /** The selection feature, as `features` holds it. */
-export type SelectionFeature = TreeFeature<"selection", SelectionState>;
+export type SelectionFeature = TreeFeature<
+    "selection",
+    SelectionState,
+    SelectionRootProps
+>;
 
 const COMMANDS: readonly CommandDefinition[] = [
     itemSelect,

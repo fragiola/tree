@@ -1,13 +1,11 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
+import { createTreeModel, type ItemOf, Tree, type TreeJson } from "../src";
 import {
-    createTreeModel,
-    type ItemOf,
-    Tree,
-    type TreeJson,
     useTreeVirtualWindow,
-} from "../src";
-import { virtualization } from "../src/virtualization";
+    VirtualItems,
+    virtualization,
+} from "../src/virtualization";
 import type { FileTypes } from "./tree";
 
 // 50 folders of 20 files, all expanded: 1050 visible items
@@ -61,14 +59,14 @@ function BigTree({ withVirtual = true }: { withVirtual?: boolean }) {
             }
             style={{ height: 100, overflow: "auto" }}
         >
-            <Tree.VirtualItems<FileTypes>>
+            <VirtualItems<FileTypes>>
                 {(item) => <Row item={item} />}
-            </Tree.VirtualItems>
+            </VirtualItems>
         </Tree.Root>
     );
 }
 
-describe("Tree.VirtualItems", () => {
+describe("VirtualItems", () => {
     it("renders only the rows in view plus the overscan, flat, between spacers", () => {
         render(<BigTree />);
         const items = screen.getAllByRole("treeitem");

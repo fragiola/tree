@@ -12,9 +12,9 @@ import {
     type TreeContext,
     type TreeItemContext,
 } from "../context";
-import { selectionModeOf } from "../utils/feature-state";
 import {
     beforeInputs,
+    bindFeatureAttributes,
     bindStructuralStyle,
     injectHost,
 } from "../utils/helpers";
@@ -30,8 +30,8 @@ import { bindRegistration } from "../utils/signals";
 
 /**
  * An item (`role="treeitem"`, the WAI-ARIA APG Tree View): `<div [treeItem]="item">`, with
- * `aria-level`, `aria-posinset`, `aria-setsize`, `aria-expanded` (a parent), `aria-selected` (a
- * tree that selects), `aria-checked` (`checkboxes`), `aria-disabled`, `aria-busy` (loading) and the
+ * `aria-level`, `aria-posinset`, `aria-setsize`, `aria-expanded` (a parent), the features' ARIA
+ * (`aria-selected` with `selection()`), `aria-checked` (`checkboxes`), `aria-disabled`, `aria-busy` (loading) and the
  * roving `tabindex`. It is the element DOM focus goes to; its state is in `data-*` (and
  * `#node="treeItem"`, `node.state()`), its depth in `--tree-depth`. The parts inside it
  * (`treeItemContent`, `treeToggle`, `treeGroup`, …) are this item's.
@@ -51,7 +51,6 @@ import { bindRegistration } from "../utils/signals";
         "[attr.aria-posinset]": "state().posinset",
         "[attr.aria-setsize]": "state().setsize",
         "[attr.aria-expanded]": "aria().expanded",
-        "[attr.aria-selected]": "aria().selected",
         "[attr.aria-checked]": "aria().checked",
         "[attr.aria-disabled]": "aria().disabled",
         "[attr.aria-busy]": "aria().busy",
@@ -87,12 +86,8 @@ export class TreeItemDirective<T extends TreeTypes = AnyTypes>
 
     protected readonly aria = computed(() => {
         const state = this.state();
-        // a tree that selects: the selection feature, in a mode other than none
-        const mode = selectionModeOf(this.context.state());
-        const selectable = mode !== undefined && mode !== "none";
         return {
             expanded: state.leaf ? null : String(state.expanded),
-            selected: selectable ? String(state.selected) : null,
             checked: this.context.checkboxes()
                 ? state.indeterminate
                     ? "mixed"
@@ -106,6 +101,7 @@ export class TreeItemDirective<T extends TreeTypes = AnyTypes>
 
     constructor() {
         bindStructuralStyle(this.host, () => depthStyle(this.state()));
+        bindFeatureAttributes(this.host, () => this.state().attributes);
         bindRegistration(
             this.context.engine,
             () => beforeInputs(undefined, () => this.item().id),

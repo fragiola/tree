@@ -42,7 +42,6 @@ const OWN = [
     "injectTree",
     "injectTreeItem",
     "injectTreeState",
-    "injectTreeVirtualWindow",
 ];
 
 /** Every file of the package's sources. */
@@ -76,13 +75,16 @@ describe("@fragiola/tree-angular", () => {
     });
 
     it("exports exactly the documented runtime API besides the core", () => {
-        expect(REACT_FILES).toHaveLength(9);
+        expect(REACT_FILES).toHaveLength(8);
         for (const hook of REACT_PART_HOOKS) {
             expect(
                 readdirSync(join(import.meta.dirname, "../../react/src/hooks")),
             ).toContain(`${hook}.ts`);
         }
-        const own = Object.keys(angular).filter((name) => !(name in core));
+        // `ɵ` names are what the feature entries build on, not an app's API
+        const own = Object.keys(angular).filter(
+            (name) => !(name in core) && !name.startsWith("ɵ"),
+        );
         expect(own.sort()).toEqual([...OWN].sort());
     });
 
@@ -152,5 +154,20 @@ describe("@fragiola/tree-angular", () => {
                 );
             }
         }
+    });
+
+    it("ships the virtualization from its own entry, out of TREE and the main entry", async () => {
+        const entry = await import("../virtualization/public-api");
+        expect(Object.keys(entry).sort()).toEqual([
+            "TreeVirtualItemsDirective",
+            "injectTreeVirtualWindow",
+            "virtualization",
+        ]);
+        expect(
+            new Set<unknown>(angular.TREE).has(entry.TreeVirtualItemsDirective),
+        ).toBe(false);
+        expect("injectTreeVirtualWindow" in angular).toBe(false);
+        const selection = await import("../selection/public-api");
+        expect(Object.keys(selection)).toEqual(["selection"]);
     });
 });

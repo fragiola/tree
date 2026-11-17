@@ -15,6 +15,7 @@ import {
     type AnyTypes,
     createTreeEngine,
     createTreeModel,
+    FEATURE_ROOT_PROPS,
     type KeyMap,
     type LoadChildren,
     type TransferHandler,
@@ -35,8 +36,8 @@ import {
 } from "../context";
 import { bindControlledState } from "../utils/controlled";
 import { createEngineFacade } from "../utils/engine-facade";
-import { selectionModeOf } from "../utils/feature-state";
 import {
+    bindFeatureAttributes,
     bindStructuralStyle,
     dataAttr,
     fromStore,
@@ -46,7 +47,7 @@ import {
 } from "../utils/helpers";
 
 export interface RootState {
-    /** the selection mode is `multiple` (`aria-multiselectable`) */
+    /** the selection mode is `multiple` (`aria-multiselectable`, with `selection()`) */
     multiselectable: boolean;
     /** a drag is under way (pointer or keyboard) */
     dragging: boolean;
@@ -78,7 +79,6 @@ export interface RootState {
     ],
     host: {
         role: "tree",
-        "[attr.aria-multiselectable]": "data().multiselectable",
         "data-tree-part": "root",
         "[attr.data-dragging]": "data().dragging",
         "[attr.data-keyboard-dragging]": "data().keyboardDragging",
@@ -107,7 +107,10 @@ export class TreeRootDirective<T extends TreeTypes = AnyTypes> {
     readonly features = input<TreeFeatures | undefined>(undefined);
     /** controlled expansion: the expanded items (`[(expandedItemIds)]`) */
     readonly expandedItemIds = input<readonly string[] | undefined>(undefined);
-    /** controlled selection: the selected items (`[(selectedItemIds)]`) */
+    /**
+     * controlled selection: the selected items (`[(selectedItemIds)]`), with `selection()` in the
+     * model's features (without it, ignored with a warning)
+     */
     readonly selectedItemIds = input<readonly string[] | undefined>(undefined);
     /** controlled checkboxes: the checked items (`[(checkedItemIds)]`) */
     readonly checkedItemIds = input<readonly string[] | undefined>(undefined);
@@ -226,7 +229,9 @@ export class TreeRootDirective<T extends TreeTypes = AnyTypes> {
         this.tick();
         const live = this.current();
         return {
-            multiselectable: selectionModeOf(tree) === "multiple",
+            multiselectable:
+                live?.adapter.rootAttributes()["aria-multiselectable"] ===
+                "true",
             dragging: live?.is("dragging") ?? false,
             keyboardDragging: live?.is("keyboard-dragging") ?? false,
             draggingFromOtherTree:
@@ -238,7 +243,6 @@ export class TreeRootDirective<T extends TreeTypes = AnyTypes> {
     protected readonly data = computed(() => {
         const state = this.state();
         return {
-            multiselectable: state.multiselectable ? "true" : null,
             dragging: dataAttr(state.dragging),
             keyboardDragging: dataAttr(state.keyboardDragging),
             draggingFromOtherTree: dataAttr(state.draggingFromOtherTree),
@@ -303,6 +307,13 @@ export class TreeRootDirective<T extends TreeTypes = AnyTypes> {
             );
         });
 
+        // the controlled lists: the core's and the features' (an Angular input is declared on
+        // the class, so a feature's list is an input of every root, used with its feature)
+        const outputs: Record<string, { emit(itemIds: string[]): void }> = {
+            expandedItemIds: this.expandedItemIdsChange,
+            selectedItemIds: this.selectedItemIdsChange,
+            checkedItemIds: this.checkedItemIdsChange,
+        };
         bindControlledState(
             this.erased,
             () => ({
@@ -310,16 +321,47 @@ export class TreeRootDirective<T extends TreeTypes = AnyTypes> {
                 selectedItemIds: this.selectedItemIds(),
                 checkedItemIds: this.checkedItemIds(),
             }),
-            (list, itemIds) => {
-                if (list === "expandedItemIds") {
-                    this.expandedItemIdsChange.emit(itemIds);
-                } else if (list === "selectedItemIds") {
-                    this.selectedItemIdsChange.emit(itemIds);
-                } else {
-                    this.checkedItemIdsChange.emit(itemIds);
-                }
-            },
+            (list, itemIds) => outputs[list]?.emit(itemIds),
         );
+        // the installed features' ARIA and data-* (`aria-multiselectable` with `selection()`)
+        bindFeatureAttributes(this.host, () => {
+            this.treeState();
+            this.tick();
+            return this.current()?.adapter.rootAttributes() ?? {};
+        });
+        // misuse the root ignores, once each: a feature's input without its feature, a later
+        // change of the features
+        const warned = new Set<string>();
+        const warn = (message: string) => {
+            if (warned.has(message)) return;
+            warned.add(message);
+            console.warn(`[@fragiola/tree-angular] ${message}`);
+        };
+        const firstFeatures = untracked(this.features);
+        effect(() => {
+            const features = this.features();
+            if (!this.treeRoot() && features !== firstFeatures) {
+                warn(
+                    "the features input changed after the root created its model: the change is ignored (the features are fixed when the model is created)",
+                );
+            }
+            const installed = new Set(
+                this.erased()
+                    .get("features")
+                    .map(({ name }) => name),
+            );
+            const lists: Record<string, unknown> = {
+                selectedItemIds: this.selectedItemIds(),
+            };
+            for (const [name, value] of Object.entries(lists)) {
+                const feature = FEATURE_ROOT_PROPS[name];
+                if (value !== undefined && feature && !installed.has(feature)) {
+                    warn(
+                        `${name} needs the ${feature} feature (\`${feature}()\` in the model's features): it is ignored`,
+                    );
+                }
+            }
+        });
 
         onDestroy(() => this.facade.set(null));
     }

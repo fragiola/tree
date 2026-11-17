@@ -7,4 +7,3 @@ export { Items } from "./components/items";
 export { LiveRegion } from "./components/live-region";
 export { Root } from "./components/root";
 export { Toggle } from "./components/toggle";
-export { VirtualItems } from "./components/virtual-items";

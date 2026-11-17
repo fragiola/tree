@@ -15,7 +15,6 @@ export type {
 } from "./components/live-region";
 export type { RootProps, RootState } from "./components/root";
 export type { ToggleProps } from "./components/toggle";
-export type { VirtualItemsProps } from "./components/virtual-items";
 export {
     createTreeRef,
     type TreeHandle,
@@ -39,7 +38,6 @@ export {
     type UseTreeStateOptions,
     useTreeState,
 } from "./hooks/use-tree-state";
-export { useTreeVirtualWindow } from "./hooks/use-tree-virtual-window";
 export * as Tree from "./parts";
 export type {
     DivPrimitiveProps,

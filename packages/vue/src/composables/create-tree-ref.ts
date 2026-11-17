@@ -1,15 +1,19 @@
 import type {
     AnyTypes,
     TreeEngine,
+    TreeFeatures,
     TreeModel,
     TreeTypes,
 } from "@fragiola/tree";
 import { markRaw, type ShallowRef, shallowRef, toRaw } from "vue";
 
 /** What a tree ref gives once its `Tree.Root` is mounted: the root's model and engine. */
-export interface TreeHandle<T extends TreeTypes = AnyTypes> {
-    model: TreeModel<T>;
-    engine: TreeEngine<T>;
+export interface TreeHandle<
+    T extends TreeTypes = AnyTypes,
+    F extends TreeFeatures = readonly [],
+> {
+    model: TreeModel<T, F>;
+    engine: TreeEngine<T, F>;
 }
 
 declare const treeRefBrand: unique symbol;
@@ -22,9 +26,12 @@ declare const treeRefBrand: unique symbol;
  * It is not a Vue ref: a template does not unwrap it, so `:tree-ref="tree"` passes the tree ref
  * itself, and the template reads `tree.value`, as a script does.
  */
-export interface TreeRef<T extends TreeTypes = AnyTypes> {
+export interface TreeRef<
+    T extends TreeTypes = AnyTypes,
+    F extends TreeFeatures = readonly [],
+> {
     /** the root's model and engine while it is mounted, `null` otherwise */
-    readonly value: TreeHandle<T> | null;
+    readonly value: TreeHandle<T, F> | null;
     /** only `createTreeRef` and `useTreeRef` make a tree ref */
     readonly [treeRefBrand]: true;
 }
@@ -41,7 +48,10 @@ const handles = new WeakMap<object, ShallowRef<TreeHandle | null>>();
  * tree.value?.model.run("tree.expand-all", {});
  * ```
  */
-export function createTreeRef<T extends TreeTypes = AnyTypes>(): TreeRef<T> {
+export function createTreeRef<
+    T extends TreeTypes = AnyTypes,
+    F extends TreeFeatures = readonly [],
+>(): TreeRef<T, F> {
     const handle = shallowRef<TreeHandle | null>(null);
     // a plain object, never made reactive: a template neither unwraps it nor wraps it in a proxy
     const tree = markRaw({
@@ -50,13 +60,13 @@ export function createTreeRef<T extends TreeTypes = AnyTypes>(): TreeRef<T> {
         },
     });
     handles.set(tree, handle);
-    return tree as unknown as TreeRef<T>;
+    return tree as unknown as TreeRef<T, F>;
 }
 
 /** @internal what `Tree.Root` calls: attaches (or, with `null`, detaches) its handle */
-export function setTreeRef<T extends TreeTypes>(
-    tree: TreeRef<T>,
-    handle: TreeHandle<T> | null,
+export function setTreeRef<T extends TreeTypes, F extends TreeFeatures>(
+    tree: TreeRef<T, F>,
+    handle: TreeHandle<T, F> | null,
 ): void {
     const current = handles.get(toRaw(tree));
     if (!current) {

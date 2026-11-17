@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { defineComponent, h } from "vue";
-import { useTreeVirtualWindow } from "../src";
+import { useTreeVirtualWindow } from "../src/virtualization";
 import { bigFileTree, virtualModel } from "./big-tree";
 import { render, settle, Tree } from "./tree";
 
@@ -8,7 +8,7 @@ const treeItems = () => [
     ...document.querySelectorAll<HTMLElement>('[role="treeitem"]'),
 ];
 
-describe("Tree.VirtualItems", () => {
+describe("VirtualItems", () => {
     it("renders only the rows in view plus the overscan, flat, between spacers", async () => {
         await render(() => bigFileTree());
         const items = treeItems();

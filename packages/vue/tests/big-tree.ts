@@ -1,8 +1,11 @@
 // A virtualized tree for the tests: 50 folders of 20 files, all expanded (1050 visible items),
-// rendered flat by `Tree.VirtualItems` (the same tree as packages/react's virtual tests).
+// rendered flat by `VirtualItems` (the same tree as packages/react's virtual tests).
 import { h, type VNodeChild } from "vue";
 import { createTreeModel, type ItemOf, type TreeJson } from "../src";
-import { virtualization } from "../src/virtualization";
+import { typedVirtualItems, virtualization } from "../src/virtualization";
+
+const VirtualItems = typedVirtualItems<FileTypes>();
+
 import { type FileTypes, Tree } from "./tree";
 
 export function bigTree(): TreeJson<FileTypes> {
@@ -49,7 +52,7 @@ export function bigFileTree(withVirtual = true): VNodeChild {
         },
         {
             default: () => [
-                h(Tree.VirtualItems, null, {
+                h(VirtualItems, null, {
                     default: ({ item }: { item: ItemOf<FileTypes> }) => [
                         h(
                             Tree.Item,

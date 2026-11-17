@@ -9,6 +9,7 @@ import {
     type TreeModel,
 } from "../src/public-api";
 import {
+    TreeVirtualItemsDirective,
     type VirtualizationFeature,
     virtualization,
 } from "../virtualization/public-api";
@@ -48,7 +49,7 @@ export const virtualModel = () =>
 /** `[treeRoot]` with a model of the `virtual` feature (none: not virtualized) and its rows: an item, its row, its toggle and its label. */
 @Component({
     selector: "test-big-tree",
-    imports: [TREE],
+    imports: [TREE, TreeVirtualItemsDirective],
     template: `
         <div
             [treeRoot]="model()"

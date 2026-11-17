@@ -1,6 +1,9 @@
 // The whole core, so that an Angular app installs and imports one package. A local export would
 // silently shadow a core name of the same spelling: tests/index.test.ts fails on one.
 export * from "@fragiola/tree";
+// What the adapter's own feature entries (`@fragiola/tree-angular/virtualization`) build on: an
+// entry imports another only through its public API. Not an app's API: the `ɵ` says so.
+export { injectTreeContext as ɵinjectTreeContext } from "./lib/context";
 export {
     type DropIndicatorState,
     TreeDropIndicatorDirective,
@@ -23,11 +26,9 @@ export {
 } from "./lib/directives/root.directive";
 export type {
     TreeItemsContext,
-    TreeVirtualItemsContext,
     TypedBy,
 } from "./lib/directives/templates.directive";
 export { TreeToggleDirective } from "./lib/directives/toggle.directive";
-export { TreeVirtualItemsDirective } from "./lib/directives/virtual-items.directive";
 export {
     type InjectTreeResult,
     injectTree,
@@ -40,6 +41,11 @@ export {
     type InjectTreeStateOptions,
     injectTreeState,
 } from "./lib/inject/inject-tree-state";
-export { injectTreeVirtualWindow } from "./lib/inject/inject-tree-virtual-window";
 export { TREE } from "./lib/tree";
+export { onDestroy as ɵonDestroy } from "./lib/utils/helpers";
 export type { TreeItemState } from "./lib/utils/item-state";
+export {
+    KeyedViews as ɵKeyedViews,
+    type SignalContext as ɵSignalContext,
+    signalContext as ɵsignalContext,
+} from "./lib/utils/views";

@@ -1,6 +1,6 @@
 import { computed, type Signal } from "@angular/core";
-import type { VirtualWindow } from "@fragiola/tree";
-import { injectTreeContext } from "../context";
+import type { VirtualWindow } from "@fragiola/tree/virtualization";
+import { ɵinjectTreeContext as injectTreeContext } from "@fragiola/tree-angular";
 
 /**
  * The rows the enclosing `[treeRoot]` renders when its model has the virtualization feature

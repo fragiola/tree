@@ -3,6 +3,8 @@ import {
     type AnyTypes,
     createTreeEngine,
     createTreeModel,
+    FEATURE_ROOT_PROPS,
+    type FeatureRootPropsOf,
     type KeyMap,
     type LoadChildren,
     type TransferHandler,
@@ -37,7 +39,6 @@ import {
     TreeKey,
 } from "../context";
 import { createEngineFacade } from "../utils/engine-facade";
-import { selectionModeOf } from "../utils/feature-state";
 import {
     definePrimitive,
     type PrimitiveProps,
@@ -53,7 +54,7 @@ import {
 } from "../utils/render";
 
 export interface RootState {
-    /** the selection mode is `multiple` (`aria-multiselectable`) */
+    /** the selection mode is `multiple` (`aria-multiselectable`, with `selection()`) */
     multiselectable: boolean;
     /** a drag is under way (pointer or keyboard) */
     dragging: boolean;
@@ -65,25 +66,29 @@ export interface RootState {
     empty: boolean;
 }
 
-export interface RootProps<T extends TreeTypes = AnyTypes>
-    extends PrimitiveProps {
+/**
+ * The props of `Tree.Root` every tree has. `RootProps<T, F>` adds the controlled lists the features
+ * `F` ship (`selectedItemIds` with `selection()`).
+ */
+export interface RootBaseProps<
+    T extends TreeTypes = AnyTypes,
+    F extends TreeFeatures = readonly [],
+> extends PrimitiveProps {
     /**
      * the tree model. Its middleware (`model.use`) sees every command the tree runs, and its
      * listeners (`model.subscribe`) every change. Another model remounts the tree (a new engine).
      * Give either `model` or `defaultTree`
      */
-    model?: TreeModel<T> | undefined;
+    model?: TreeModel<T, F> | undefined;
     /** the document of a model the root creates and keeps (read once, at mount) */
     defaultTree?: TreeJson<T> | undefined;
     /**
      * the opt-in features of the model the root creates from `defaultTree` (read once, at mount):
      * `[selection(), virtualization({ rowSize: 28 })]`. A `model` has its own
      */
-    features?: TreeFeatures | undefined;
+    features?: F | undefined;
     /** controlled expansion: the expanded items (`v-model:expanded-item-ids`) */
     expandedItemIds?: readonly string[] | undefined;
-    /** controlled selection: the selected items (`v-model:selected-item-ids`) */
-    selectedItemIds?: readonly string[] | undefined;
     /** controlled checkboxes: the checked items (`v-model:checked-item-ids`) */
     checkedItemIds?: readonly string[] | undefined;
     /** the app's loader of the children of an item with a `childrenStatus` */
@@ -131,30 +136,56 @@ export interface RootProps<T extends TreeTypes = AnyTypes>
      */
     dropOutside?: TreeDropOutside<T> | undefined;
     /** access to the model and the engine from outside the root (`useTreeRef`, `createTreeRef`) */
-    treeRef?: TreeRef<T> | undefined;
+    treeRef?: TreeRef<T, F> | undefined;
 }
+
+/** The controlled lists of the features `F`: their props without the `on…Change` callbacks. */
+type FeatureListProps<F extends TreeFeatures> = {
+    [K in keyof FeatureRootPropsOf<F> as K extends `on${string}`
+        ? never
+        : K]: FeatureRootPropsOf<F>[K];
+};
+
+/**
+ * The props of `Tree.Root`: every tree's, and the controlled lists the features `F` ship
+ * (`v-model:selected-item-ids` with `selection()`). A feature's prop is typed only when it is
+ * installed: `typedTree<Types, typeof features>()`.
+ */
+export type RootProps<
+    T extends TreeTypes = AnyTypes,
+    F extends TreeFeatures = readonly [],
+> = RootBaseProps<T, F> & FeatureListProps<F>;
 
 export interface RootSlots extends RenderSlot<RootState> {
     /** the tree: `Tree.Items`, `Tree.DropIndicator`, `Tree.LiveRegion`, … */
     default?: SlotFunction<Record<never, never>>;
 }
 
-/** The events of `Tree.Root`: a change of a list, for `v-model` (or `@update:…-item-ids`). */
-export type RootEmits = {
+/**
+ * The events of `Tree.Root`: a change of a list, for `v-model` (or `@update:…-item-ids`): the
+ * core's, and the features' (`update:selectedItemIds` with `selection()`).
+ */
+export type RootEmits<F extends TreeFeatures = readonly []> = {
     /** the expanded items, after every command that changes them */
     "update:expandedItemIds": (itemIds: string[]) => void;
-    /** the selection, after every command that changes it */
-    "update:selectedItemIds": (itemIds: string[]) => void;
     /** the checked items, after every command that changes them */
     "update:checkedItemIds": (itemIds: string[]) => void;
+} & {
+    [K in keyof FeatureListProps<F> as `update:${K & string}`]: (
+        itemIds: string[],
+    ) => void;
 };
+
+/** The controlled lists a feature ships, by name (`selectedItemIds`): props of every root. */
+const FEATURE_LISTS = Object.keys(FEATURE_ROOT_PROPS).filter(
+    (name) => !/^on[A-Z]/.test(name),
+);
 
 const ROOT_PROPS = [
     "model",
     "defaultTree",
     "features",
     "expandedItemIds",
-    "selectedItemIds",
     "checkedItemIds",
     "loadChildren",
     "announce",
@@ -172,7 +203,7 @@ const ROOT_PROPS = [
     "dropOutside",
     "treeRef",
     "as",
-] as const satisfies readonly (keyof RootProps)[];
+] as const satisfies readonly (keyof RootBaseProps)[];
 
 /** the props a bare attribute turns on (`<Tree.Root checkboxes>`) */
 const ROOT_BOOLEANS = [
@@ -180,11 +211,34 @@ const ROOT_BOOLEANS = [
     "checkboxes",
 ] as const satisfies readonly (keyof RootProps)[];
 
-const ROOT_EMITS = [
+const ROOT_EMITS: readonly string[] = [
     "update:expandedItemIds",
-    "update:selectedItemIds",
     "update:checkedItemIds",
-] as const satisfies readonly (keyof RootEmits)[];
+    ...FEATURE_LISTS.map((name) => `update:${name}`),
+];
+
+/** Every prop of the root: its own, and the features' lists. */
+const ALL_ROOT_PROPS = [...ROOT_PROPS, ...FEATURE_LISTS] as readonly (
+    | (typeof ROOT_PROPS)[number]
+    | string
+)[];
+
+/** The root's props as its implementation reads them: every model, every feature's list. */
+type RootTreeProps = RootBaseProps<AnyTypes, TreeFeatures> &
+    Record<string, unknown>;
+
+/** Its events: every controlled list's `update:<prop>`. */
+type RootTreeEmits = Record<string, (itemIds: string[]) => void>;
+
+/** Warns once per message: misuse that the root ignores. */
+function warnOnce(): (message: string) => void {
+    const warned = new Set<string>();
+    return (message) => {
+        if (warned.has(message)) return;
+        warned.add(message);
+        console.warn(`[@fragiola/tree-vue] ${message}`);
+    };
+}
 
 /** a key per object: another model remounts the tree (`-1` for none) */
 const modelKeys = new WeakMap<object, number>();
@@ -200,9 +254,9 @@ function keyOfModel(model: object | undefined): number {
 }
 
 /** The tree of one model: it owns the engine, so it lives as long as the model does. */
-const RootTree = definePrimitive<RootProps, RootSlots, RootEmits>(
+const RootTree = definePrimitive<RootTreeProps, RootSlots, RootTreeEmits>(
     "RootTree",
-    ROOT_PROPS,
+    ALL_ROOT_PROPS,
     (props, { attrs, slots, emit }) => {
         const model = eraseModel(
             props.model ??
@@ -328,6 +382,41 @@ const RootTree = definePrimitive<RootProps, RootSlots, RootEmits>(
             emit(event, itemIds),
         );
 
+        // the features are the model's, fixed when it is created: a later change is ignored
+        const warn = warnOnce();
+        const features = props.features;
+        watch(
+            () => props.features,
+            (next) => {
+                if (!props.model && next !== features) {
+                    warn(
+                        "the features prop changed after the root created its model: the change is ignored (the features are fixed when the model is created)",
+                    );
+                }
+            },
+        );
+        const installed = new Set(
+            model.get("features").map(({ name }) => name),
+        );
+        watch(
+            () => FEATURE_LISTS.map((name) => props[name] !== undefined),
+            () => {
+                for (const name of FEATURE_LISTS) {
+                    const feature = FEATURE_ROOT_PROPS[name];
+                    if (
+                        props[name] !== undefined &&
+                        feature &&
+                        !installed.has(feature)
+                    ) {
+                        warn(
+                            `${name} needs the ${feature} feature (\`${feature}()\` in the model's features): it is ignored`,
+                        );
+                    }
+                }
+            },
+            { immediate: true },
+        );
+
         const context: TreeContextValue = {
             model,
             engine,
@@ -364,8 +453,12 @@ const RootTree = definePrimitive<RootProps, RootSlots, RootEmits>(
             const tree = state.value;
             revision.value;
             const live = engine.value;
+            // the installed features' ARIA and data-* (`aria-multiselectable` with `selection()`)
+            const rootAttributes =
+                live?.adapter.rootAttributes() ?? NO_ATTRIBUTES;
             const rootState: RootState = {
-                multiselectable: selectionModeOf(tree) === "multiple",
+                multiselectable:
+                    rootAttributes["aria-multiselectable"] === "true",
                 dragging: live?.is("dragging") ?? false,
                 keyboardDragging: live?.is("keyboard-dragging") ?? false,
                 draggingFromOtherTree:
@@ -381,8 +474,7 @@ const RootTree = definePrimitive<RootProps, RootSlots, RootEmits>(
                 ref: rootRef,
                 props: {
                     role: "tree",
-                    "aria-multiselectable":
-                        rootState.multiselectable || undefined,
+                    ...rootAttributes,
                     "data-tree-part": "root",
                     ...dataAttributes({
                         dragging: rootState.dragging,
@@ -406,6 +498,9 @@ const RootTree = definePrimitive<RootProps, RootSlots, RootEmits>(
     { booleans: ROOT_BOOLEANS, emits: ROOT_EMITS },
 );
 
+const NO_ATTRIBUTES: Readonly<Record<string, string | undefined>> =
+    Object.freeze({});
+
 /**
  * The tree (`role="tree"`): owns the engine of its model, attaches it to the rendered element,
  * forwards the keys to it and re-renders when the tree changes. It renders only its default slot;
@@ -416,7 +511,7 @@ export const Root: TreeComponent<RootProps, RootSlots, RootEmits> =
         name: "TreeRoot",
         inheritAttrs: false,
         // a bare boolean attribute reaches RootTree as it came, which casts it
-        props: [...ROOT_PROPS],
+        props: [...ALL_ROOT_PROPS],
         emits: [...ROOT_EMITS],
         setup(props, { attrs, slots, emit }) {
             const forward = Object.fromEntries(
@@ -432,7 +527,7 @@ export const Root: TreeComponent<RootProps, RootSlots, RootEmits> =
                         ...attrs,
                         ...props,
                         ...forward,
-                        key: keyOfModel(props.model as object | undefined),
+                        key: keyOfModel((props as { model?: object }).model),
                     },
                     slots,
                 );

@@ -1,4 +1,4 @@
-import type { VirtualWindow } from "@fragiola/tree";
+import type { VirtualWindow } from "@fragiola/tree/virtualization";
 import { type ComputedRef, computed } from "vue";
 import { useTreeContext } from "../context";
 

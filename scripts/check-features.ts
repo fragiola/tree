@@ -14,11 +14,20 @@ const root = join(import.meta.dirname, "..");
 
 /**
  * The features: each one's entry point (its subpath, in every package that has it) and the
- * folders of its code, relative to a package (`src/selection/`).
+ * folders of its code, as a package's source maps name them (`src/selection/`).
  */
 export const FEATURES: readonly FeatureSources[] = [
-    { subpath: "selection", folders: ["src/selection/"] },
-    { subpath: "virtualization", folders: ["src/virtual/"] },
+    // the core's folder, each adapter's (`src/selection/`), and an Angular secondary entry's
+    // (`packages/angular/selection/`, `../../selection/` from its fesm bundles)
+    { subpath: "selection", folders: ["src/selection/", "../../selection/"] },
+    {
+        subpath: "virtualization",
+        folders: [
+            "src/virtual/",
+            "src/virtualization/",
+            "../../virtualization/",
+        ],
+    },
 ];
 
 /** A feature as the guard reads it: its subpath and the source folders of its code. */

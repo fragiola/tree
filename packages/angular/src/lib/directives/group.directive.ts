@@ -21,6 +21,7 @@ import {
     type TreeGroupContext,
 } from "../context";
 import {
+    bindFeatureAttributes,
     bindStructuralStyle,
     booleanInput,
     injectHost,
@@ -100,6 +101,12 @@ export class TreeGroupDirective implements TreeGroupContext, DoCheck {
     protected readonly itemData = computed(() => itemData(this.state()));
 
     constructor() {
+        // the installed features' data-* (`data-selected` with `selection()`)
+        bindFeatureAttributes(
+            this.host,
+            () => this.state().attributes,
+            "data-",
+        );
         bindStructuralStyle(this.host, () => ({
             ...depthStyle(this.state()),
             ...(this.state().expanded ? {} : { display: "none" }),
