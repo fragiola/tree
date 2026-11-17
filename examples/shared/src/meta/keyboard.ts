@@ -10,6 +10,7 @@ export default {
         "selection()",
         "keyMap",
         "typeAhead()",
+        "dragAndDrop()",
         "start-keyboard-drag",
         "announce",
         "LiveRegion",

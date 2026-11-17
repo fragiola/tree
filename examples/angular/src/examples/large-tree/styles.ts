@@ -52,7 +52,7 @@ export const fileIcon = "size-4 shrink-0 text-palette-accent/85";
 
 export const label = "min-w-0 flex-1 truncate";
 
-/** Where a drop line starts past its level (px), the root's `indicatorInset`: past the root's and
+/** Where a drop line starts past its level (px), drag and drop's `indicatorInset`: past the root's and
  * the row's padding (4px each), the toggle (16px) and the gap (6px), at the icon. */
 export const indicatorInset = 30;
 

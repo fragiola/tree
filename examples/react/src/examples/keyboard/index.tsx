@@ -8,6 +8,7 @@ import {
     Tree,
     type TreeModel,
 } from "@fragiola/tree-react";
+import { DropIndicator, dragAndDrop } from "@fragiola/tree-react/drag-and-drop";
 import { rename, useTreeItemRename } from "@fragiola/tree-react/rename";
 import { selection } from "@fragiola/tree-react/selection";
 import { typeAhead } from "@fragiola/tree-react/type-ahead";
@@ -16,8 +17,13 @@ import { Fragment, useId, useState } from "react";
 import { type FileTypes, fileSystem } from "../_kit/data";
 import * as styles from "./styles";
 
-/** The opt-in features of the model: the selection, the rename (F2) and the type-ahead. */
-const features = [selection(), rename(), typeAhead()] as const;
+/** The opt-in features of the model: the selection, the rename (F2), the type-ahead and the drags. */
+const features = [
+    selection(),
+    rename(),
+    typeAhead(),
+    dragAndDrop({ indicatorInset: styles.indicatorInset }),
+] as const;
 
 // Every key is the engine's (the WAI-ARIA APG tree view, `DEFAULT_KEY_MAP`): the example only
 // lists them. `keyMap` on the root would change any of them.
@@ -92,7 +98,6 @@ export default function Keyboard() {
         <div className={styles.frame}>
             <div className={styles.treeColumn}>
                 <Tree.Root<FileTypes, typeof features>
-                    indicatorInset={styles.indicatorInset}
                     model={model}
                     announce={announce}
                     aria-label="Project files"
@@ -101,7 +106,7 @@ export default function Keyboard() {
                     <Tree.Items<FileTypes>>
                         {(item) => <FileItem item={item} />}
                     </Tree.Items>
-                    <Tree.DropIndicator className={styles.dropIndicator} />
+                    <DropIndicator className={styles.dropIndicator} />
                     {/* visible here, to show what a screen reader hears during a drag */}
                     <Tree.LiveRegion className={styles.liveRegion} />
                 </Tree.Root>

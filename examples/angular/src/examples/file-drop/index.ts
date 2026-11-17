@@ -1,14 +1,18 @@
 import { Component, effect, signal, viewChild } from "@angular/core";
 import {
     type AnnounceEvent,
-    createTreeDropOutside,
-    createTreeForeignDrop,
     createTreeModel,
     type DropTarget,
     TREE,
     type TreeModel,
     TreeRootDirective,
 } from "@fragiola/tree-angular";
+import {
+    dragAndDrop,
+    TreeDropIndicatorDirective,
+} from "@fragiola/tree-angular/drag-and-drop";
+import { dropOutside } from "@fragiola/tree-angular/drop-outside";
+import { foreignDrop } from "@fragiola/tree-angular/foreign-drop";
 import {
     LucideChevronRight,
     LucideFile,
@@ -23,7 +27,7 @@ import * as styles from "./styles";
 // tree drag, and `onDrop` adds one item per file, from its name and size. The package reads no
 // file and uploads nothing: what a drop does is the app's commands. Only the types are known
 // before the drop, so `accept` takes a drag that carries files.
-const foreignDrop = createTreeForeignDrop<FileTypes>({
+const files = foreignDrop<FileTypes>({
     accept: ({ types }) => types.includes("Files"),
     onDrop: ({ dataTransfer, to: { parentItemId, index }, model }) => {
         [...dataTransfer.files].forEach((file, i) => {
@@ -42,11 +46,18 @@ const foreignDrop = createTreeForeignDrop<FileTypes>({
 // Rows dragged out of the tree: a release outside it goes to `onDrop`, with the element under the
 // pointer. Over the trash it deletes them (`item.remove`); anywhere else it refuses, and the
 // drag is cancelled.
-const dropOutside = createTreeDropOutside<FileTypes>({
+const trash = dropOutside<FileTypes>({
     onDrop: ({ itemIds, element, model }) =>
         element?.closest("[data-trash]") != null &&
         model.run("item.remove", { itemIds: [...itemIds] }).ok,
 });
+
+/** The opt-in features of the model: the drags, the files dropped on it, the rows dropped outside. */
+const features = [
+    dragAndDrop({ indicatorInset: styles.indicatorInset }),
+    files,
+    trash,
+] as const;
 
 /** The live region's text for each step: the package writes none. */
 function announcer(model: TreeModel<FileTypes>) {
@@ -84,6 +95,7 @@ function announcer(model: TreeModel<FileTypes>) {
     selector: "example-file-drop",
     imports: [
         TREE,
+        TreeDropIndicatorDirective,
         LucideChevronRight,
         LucideFile,
         LucideFolder,
@@ -96,10 +108,7 @@ function announcer(model: TreeModel<FileTypes>) {
             <div
                 [treeRoot]="model"
                 #tree="treeRoot"
-                [foreignDrop]="foreignDrop"
-                [dropOutside]="dropOutside"
                 [announce]="announce"
-                [indicatorInset]="styles.indicatorInset"
                 aria-label="Project files"
                 [class]="styles.root"
             >
@@ -148,15 +157,19 @@ function announcer(model: TreeModel<FileTypes>) {
 })
 export default class FileDrop {
     protected readonly styles = styles;
-    protected readonly foreignDrop = foreignDrop;
-    protected readonly dropOutside = dropOutside;
     protected readonly formatSize = formatSize;
     // The model is the source of truth: create it once.
-    protected readonly model = createTreeModel<FileTypes>(fileSystem());
+    protected readonly model = createTreeModel<FileTypes, typeof features>(
+        fileSystem(),
+        { features },
+    );
     protected readonly announce = announcer(this.model);
     /** whether the tree's drag is over the trash */
     protected readonly overTrash = signal(false);
-    private readonly root = viewChild.required(TreeRootDirective);
+    private readonly root =
+        viewChild.required<TreeRootDirective<FileTypes, typeof features>>(
+            TreeRootDirective,
+        );
 
     constructor() {
         // `drop-outside-element` is the element under the pointer while a drag is outside the

@@ -5,6 +5,7 @@ import {
     type DropTarget,
     type TreeModel,
 } from "@fragiola/tree-vue";
+import { DropIndicator } from "@fragiola/tree-vue/drag-and-drop";
 import { useId } from "vue";
 import { type FileTypes, fileSystem } from "../_kit/data";
 import FileItem from "./file-item.vue";
@@ -84,7 +85,6 @@ const legendId = useId();
     <div :class="styles.frame">
         <div :class="styles.treeColumn">
             <Tree.Root
-                :indicator-inset="styles.indicatorInset"
                 :model="model"
                 :announce="announce"
                 aria-label="Project files"
@@ -93,7 +93,7 @@ const legendId = useId();
                 <Tree.Items v-slot="{ item }">
                     <FileItem :item="item" />
                 </Tree.Items>
-                <Tree.DropIndicator :class="styles.dropIndicator" />
+                <DropIndicator :class="styles.dropIndicator" />
                 <!-- visible here, to show what a screen reader hears during a drag -->
                 <Tree.LiveRegion :class="styles.liveRegion" />
             </Tree.Root>

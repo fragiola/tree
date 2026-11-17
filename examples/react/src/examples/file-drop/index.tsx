@@ -2,8 +2,6 @@
 
 import {
     type AnnounceEvent,
-    createTreeDropOutside,
-    createTreeForeignDrop,
     createTreeModel,
     type DropTarget,
     type ItemOf,
@@ -12,6 +10,9 @@ import {
     type TreeRef,
     useTreeRef,
 } from "@fragiola/tree-react";
+import { DropIndicator, dragAndDrop } from "@fragiola/tree-react/drag-and-drop";
+import { dropOutside } from "@fragiola/tree-react/drop-outside";
+import { foreignDrop } from "@fragiola/tree-react/foreign-drop";
 import { ChevronRight, File, Folder, Trash2, Upload } from "lucide-react";
 import { useCallback, useState, useSyncExternalStore } from "react";
 import { type FileTypes, fileSystem, formatSize } from "../_kit/data";
@@ -21,7 +22,7 @@ import * as styles from "./styles";
 // tree drag, and `onDrop` adds one item per file, from its name and size. The package reads no
 // file and uploads nothing: what a drop does is the app's commands. Only the types are known
 // before the drop, so `accept` takes a drag that carries files.
-const foreignDrop = createTreeForeignDrop<FileTypes>({
+const files = foreignDrop<FileTypes>({
     accept: ({ types }) => types.includes("Files"),
     onDrop: ({ dataTransfer, to: { parentItemId, index }, model }) => {
         [...dataTransfer.files].forEach((file, i) => {
@@ -40,11 +41,18 @@ const foreignDrop = createTreeForeignDrop<FileTypes>({
 // Rows dragged out of the tree: a release outside it goes to `onDrop`, with the element under the
 // pointer. Over the trash it deletes them (`item.remove`); anywhere else it refuses, and the
 // drag is cancelled.
-const dropOutside = createTreeDropOutside<FileTypes>({
+const trash = dropOutside<FileTypes>({
     onDrop: ({ itemIds, element, model }) =>
         element?.closest("[data-trash]") != null &&
         model.run("item.remove", { itemIds: [...itemIds] }).ok,
 });
+
+/** The opt-in features of the model: the drags, the files dropped on it, the rows dropped outside. */
+const features = [
+    dragAndDrop({ indicatorInset: styles.indicatorInset }),
+    files,
+    trash,
+] as const;
 
 /** The live region's text for each step: the package writes none. */
 function announcer(model: TreeModel<FileTypes>) {
@@ -79,26 +87,25 @@ function announcer(model: TreeModel<FileTypes>) {
 }
 
 export default function FileDrop() {
-    const [model] = useState(() => createTreeModel<FileTypes>(fileSystem()));
+    const [model] = useState(() =>
+        createTreeModel<FileTypes, typeof features>(fileSystem(), { features }),
+    );
     const [announce] = useState(() => announcer(model));
-    const tree = useTreeRef<FileTypes>();
+    const tree = useTreeRef<FileTypes, typeof features>();
     const overTrash = useDragOver(tree);
     return (
         <div className={styles.frame}>
-            <Tree.Root<FileTypes>
+            <Tree.Root<FileTypes, typeof features>
                 model={model}
                 treeRef={tree}
-                foreignDrop={foreignDrop}
-                dropOutside={dropOutside}
                 announce={announce}
-                indicatorInset={styles.indicatorInset}
                 aria-label="Project files"
                 className={styles.root}
             >
                 <Tree.Items<FileTypes>>
                     {(item) => <FileItem item={item} />}
                 </Tree.Items>
-                <Tree.DropIndicator className={styles.dropIndicator} />
+                <DropIndicator className={styles.dropIndicator} />
                 <Tree.LiveRegion className={styles.liveRegion} />
             </Tree.Root>
             {/* the app's own target: data-trash is what onDrop looks for */}
@@ -124,7 +131,7 @@ export default function FileDrop() {
  * pointer while a drag is outside the tree (the pointer stays captured by the row, so the trash
  * gets no pointer events of its own).
  */
-function useDragOver(tree: TreeRef<FileTypes>): boolean {
+function useDragOver(tree: TreeRef<FileTypes, typeof features>): boolean {
     const engine = tree.current?.engine;
     const subscribe = useCallback(
         (onChange: () => void) => engine?.subscribe(onChange) ?? (() => {}),

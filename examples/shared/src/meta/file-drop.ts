@@ -7,8 +7,9 @@ export default {
     category: "editing",
     order: 4,
     features: [
-        "createTreeForeignDrop",
-        "createTreeDropOutside",
+        "dragAndDrop()",
+        "foreignDrop()",
+        "dropOutside()",
         "drop-outside-element",
         "item.add",
         "item.remove",

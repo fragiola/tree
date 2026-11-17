@@ -8,8 +8,8 @@ export default {
     order: 3,
     features: [
         "selection()",
-        "dragGroup",
-        "transfer",
+        "dragAndDrop()",
+        "dragGroup()",
         "item.add",
         "item.remove",
         "item.move",

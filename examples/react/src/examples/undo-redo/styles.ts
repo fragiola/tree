@@ -47,7 +47,7 @@ export const label = "min-w-0 truncate [[data-renaming]>&]:hidden";
 export const input =
     "h-[calc(var(--tr-row-height)-6px)] min-w-0 flex-1 rounded-[4px] border border-palette-line bg-palette-base px-1.5 text-palette-contrast outline-none focus:border-palette-ring";
 
-/** Where a drop line starts past its level (px), the root's `indicatorInset`: past the root's and
+/** Where a drop line starts past its level (px), drag and drop's `indicatorInset`: past the root's and
  * the row's padding (4px each), the toggle (16px) and the gap (6px), at the icon. */
 export const indicatorInset = 30;
 

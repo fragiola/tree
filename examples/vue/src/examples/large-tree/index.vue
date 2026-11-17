@@ -8,6 +8,7 @@ import {
     useTreeRef,
     useTreeState,
 } from "@fragiola/tree-vue";
+import { DropIndicator } from "@fragiola/tree-vue/drag-and-drop";
 import { typedVirtualItems } from "@fragiola/tree-vue/virtualization";
 import { ChevronRight, File, Folder } from "@lucide/vue";
 import { ref, watchEffect } from "vue";
@@ -126,7 +127,6 @@ watchEffect((onCleanup) => {
         <Tree.Root
             :model="model"
             :tree-ref="tree"
-            :indicator-inset="styles.indicatorInset"
             :announce="announce"
             aria-label="Large project"
             :class="styles.root"
@@ -148,7 +148,7 @@ watchEffect((onCleanup) => {
                     </Tree.ItemContent>
                 </Tree.Item>
             </VirtualItems>
-            <Tree.DropIndicator :class="styles.dropIndicator" />
+            <DropIndicator :class="styles.dropIndicator" />
             <Tree.LiveRegion :class="styles.liveRegion" />
         </Tree.Root>
         <p :class="styles.hint">

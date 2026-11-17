@@ -1,48 +1,18 @@
 <script setup lang="ts">
 import {
     type AnnounceEvent,
-    createTreeDropOutside,
-    createTreeForeignDrop,
     createTreeModel,
     type DropTarget,
     type TreeModel,
     useTreeRef,
 } from "@fragiola/tree-vue";
+import { DropIndicator } from "@fragiola/tree-vue/drag-and-drop";
 import { Trash2, Upload } from "@lucide/vue";
 import { ref, watchEffect } from "vue";
 import { type FileTypes, fileSystem } from "../_kit/data";
 import FileItem from "./file-item.vue";
 import * as styles from "./styles";
-import { Tree } from "./tree";
-
-// Files from the desktop (or another window) dropped on the tree: the target shows as for a
-// tree drag, and `onDrop` adds one item per file, from its name and size. The package reads no
-// file and uploads nothing: what a drop does is the app's commands. Only the types are known
-// before the drop, so `accept` takes a drag that carries files.
-const foreignDrop = createTreeForeignDrop<FileTypes>({
-    accept: ({ types }) => types.includes("Files"),
-    onDrop: ({ dataTransfer, to: { parentItemId, index }, model }) => {
-        [...dataTransfer.files].forEach((file, i) => {
-            model.run("item.add", {
-                item: {
-                    kind: "file",
-                    label: file.name,
-                    data: { size: file.size },
-                },
-                to: { parentItemId, index: index + i },
-            });
-        });
-    },
-});
-
-// Rows dragged out of the tree: a release outside it goes to `onDrop`, with the element under the
-// pointer. Over the trash it deletes them (`item.remove`); anywhere else it refuses, and the
-// drag is cancelled.
-const dropOutside = createTreeDropOutside<FileTypes>({
-    onDrop: ({ itemIds, element, model }) =>
-        element?.closest("[data-trash]") != null &&
-        model.run("item.remove", { itemIds: [...itemIds] }).ok,
-});
+import { features, Tree } from "./tree";
 
 /** The live region's text for each step: the package writes none. */
 function announcer(model: TreeModel<FileTypes>) {
@@ -77,9 +47,11 @@ function announcer(model: TreeModel<FileTypes>) {
 }
 
 // The model is the source of truth: create it once (never in a ref).
-const model = createTreeModel<FileTypes>(fileSystem());
+const model = createTreeModel<FileTypes, typeof features>(fileSystem(), {
+    features,
+});
 const announce = announcer(model);
-const tree = useTreeRef<FileTypes>();
+const tree = useTreeRef<FileTypes, typeof features>();
 
 // Whether the tree's drag is over the trash: `drop-outside-element` is the element under the
 // pointer while a drag is outside the tree (the pointer stays captured by the row, so the trash
@@ -103,17 +75,14 @@ watchEffect((onCleanup) => {
         <Tree.Root
             :model="model"
             :tree-ref="tree"
-            :foreign-drop="foreignDrop"
-            :drop-outside="dropOutside"
             :announce="announce"
-            :indicator-inset="styles.indicatorInset"
             aria-label="Project files"
             :class="styles.root"
         >
             <Tree.Items v-slot="{ item }">
                 <FileItem :item="item" />
             </Tree.Items>
-            <Tree.DropIndicator :class="styles.dropIndicator" />
+            <DropIndicator :class="styles.dropIndicator" />
             <Tree.LiveRegion :class="styles.liveRegion" />
         </Tree.Root>
         <!-- the app's own target: data-trash is what onDrop looks for -->

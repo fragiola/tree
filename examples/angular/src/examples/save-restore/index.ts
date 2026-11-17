@@ -6,6 +6,10 @@ import {
     type TreeModel,
     validateTree,
 } from "@fragiola/tree-angular";
+import {
+    dragAndDrop,
+    TreeDropIndicatorDirective,
+} from "@fragiola/tree-angular/drag-and-drop";
 import { rename, TreeItemRenameDirective } from "@fragiola/tree-angular/rename";
 import { selection } from "@fragiola/tree-angular/selection";
 
@@ -21,8 +25,12 @@ import { type FileTypes, fileSystem } from "../_kit/data";
 import { persistTree, restoreTree } from "../_kit/persist";
 import * as styles from "./styles";
 
-/** The opt-in features of the model: the selection and the rename (F2). */
-const features = [selection(), rename()] as const;
+/** The opt-in features of the model: the selection, the rename (F2) and the drags. */
+const features = [
+    selection(),
+    rename(),
+    dragAndDrop({ indicatorInset: styles.indicatorInset }),
+] as const;
 
 /** Where the document is saved: one key per tree. */
 const STORAGE_KEY = "fragiola-tree:examples:save-restore";
@@ -47,6 +55,7 @@ function restore(): {
     selector: "example-save-restore",
     imports: [
         TREE,
+        TreeDropIndicatorDirective,
         TreeItemRenameDirective,
         ClickableButton,
         LucideChevronRight,
@@ -77,7 +86,6 @@ function restore(): {
             </div>
             <div
                 [treeRoot]="model"
-                [indicatorInset]="styles.indicatorInset"
                 aria-label="Project files"
                 [class]="styles.root"
             >

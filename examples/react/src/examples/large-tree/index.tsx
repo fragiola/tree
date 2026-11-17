@@ -11,6 +11,7 @@ import {
     useTreeRef,
     useTreeState,
 } from "@fragiola/tree-react";
+import { DropIndicator, dragAndDrop } from "@fragiola/tree-react/drag-and-drop";
 import { typeAhead } from "@fragiola/tree-react/type-ahead";
 import {
     VirtualItems,
@@ -54,6 +55,7 @@ function largeTree(): TreeJson<Types> {
 const features = [
     virtualization({ estimateRowSize: 28, overscan: 10 }),
     typeAhead(),
+    dragAndDrop({ indicatorInset: styles.indicatorInset }),
 ] as const;
 
 /** The live region's text for each step of a drag (pointer or keyboard): the package writes none. */
@@ -137,7 +139,6 @@ export default function LargeTree() {
             <Tree.Root<Types, typeof features>
                 model={model}
                 treeRef={tree}
-                indicatorInset={styles.indicatorInset}
                 announce={announce}
                 aria-label="Large project"
                 className={styles.root}
@@ -146,7 +147,7 @@ export default function LargeTree() {
                 <VirtualItems<Types>>
                     {(item) => <Row item={item} />}
                 </VirtualItems>
-                <Tree.DropIndicator className={styles.dropIndicator} />
+                <DropIndicator className={styles.dropIndicator} />
                 <Tree.LiveRegion className={styles.liveRegion} />
             </Tree.Root>
             <p className={styles.hint}>
