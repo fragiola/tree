@@ -1,0 +1,138 @@
+/* Theme "ide" — A dense code-editor explorer: hairline guides, a line on the selected row.
+
+   One file per theme, selected by data-example-theme="ide" on any element (the embed puts it
+   on <body>, as an app would). A theme only sets values; it styles no markup. It declares:
+     1. shape tokens (--tr-*) that the examples' class names read: the font and its size
+        (--tr-font, --tr-size), the radius of a row and of a frame (--tr-radius), a row's height
+        and one level's indentation (--tr-row-height, --tr-indent), the gap between parts
+        (--tr-gap), the frame's shadow (--tr-shadow), motion (--tr-motion), the indentation
+        guides' width (--tr-guide-width), the selected row's marker at the inline start
+        (--tr-marker, a width: 0px for none), the toggle's look (--tr-toggle-icon, the chevron's
+        display; --tr-toggle-closed and --tr-toggle-open, a text drawn instead; --tr-toggle-turn,
+        the chevron's turn when expanded), the drop indicator's line (--tr-indicator-width,
+        --tr-indicator-style) and the focus ring's width (--tr-focus-width);
+     2. the Fragiola palettes the examples use, each with all SIX roles (base, soft, line,
+        contrast, accent, ring). A palette that omitted one would inherit it from the page and
+        leak across the theme boundary;
+     3. on every palette, the row colours and images that depend on it: a selected row
+        (--tr-selected-bg, --tr-selected-fg) and its marker (--tr-marker-color), a hovered one
+        (--tr-hover-bg), the drop indicator's line (--tr-indicator) and the indentation guides
+        (--tr-guide-color, and --tr-guide: the image a row draws in its indentation, one line
+        per level, or none). They are declared per palette so that var(--palette-…) resolves
+        against the palette the element sits in.
+
+   Dense rows with no radius and no motion, a hairline guide per level, the selected row filled
+   and marked by a line at its inline start, a 1px focus ring and a 1px drop line.
+
+   Specificity: the palette rules are ":root [data-example-theme="ide"] .palette-x", which ties
+   with Fragiola's own ":root[data-theme] .palette-x" and wins by coming later in the cascade, so
+   a theme overrides the page's light/dark. */
+
+[data-example-theme="ide"] {
+    color-scheme: dark;
+    --palette-state-shift: 0.1;
+    --tr-font: system-ui, -apple-system, "Segoe UI", sans-serif;
+    --tr-size: 0.8125rem;
+    --tr-radius: 0px;
+    --tr-row-height: 1.375rem;
+    --tr-indent: 0.75rem;
+    --tr-gap: 0.25rem;
+    --tr-shadow: none;
+    --tr-motion: 0ms;
+    --tr-guide-width: 1px;
+    --tr-marker: 2px;
+    --tr-toggle-icon: block;
+    --tr-toggle-closed: none;
+    --tr-toggle-open: none;
+    --tr-toggle-turn: 90deg;
+    --tr-indicator-width: 1px;
+    --tr-indicator-style: solid;
+    --tr-focus-width: 1px;
+}
+
+:root [data-example-theme="ide"] .palette-surface,
+:root [data-example-theme="ide"].palette-surface {
+    --palette-base: oklch(0.2 0.006 260);
+    --palette-soft: oklch(0.26 0.008 260);
+    --palette-line: oklch(0.32 0.008 260);
+    --palette-contrast: oklch(0.9 0.005 260);
+    --palette-accent: oklch(0.82 0.006 260);
+    --palette-ring: var(--palette-accent);
+}
+
+:root [data-example-theme="ide"] .palette-raised,
+:root [data-example-theme="ide"].palette-raised {
+    --palette-base: oklch(0.235 0.006 260);
+    --palette-soft: oklch(0.19 0.006 260);
+    --palette-line: oklch(0.32 0.008 260);
+    --palette-contrast: oklch(0.92 0.005 260);
+    --palette-accent: oklch(0.8 0.006 260);
+    --palette-ring: var(--palette-accent);
+}
+
+:root [data-example-theme="ide"] .palette-blue,
+:root [data-example-theme="ide"].palette-blue {
+    --palette-base: oklch(0.55 0.16 245);
+    --palette-soft: oklch(0.3 0.08 245);
+    --palette-line: oklch(0.42 0.1 245);
+    --palette-contrast: oklch(0.99 0 0);
+    --palette-accent: oklch(0.75 0.13 245);
+    --palette-ring: var(--palette-accent);
+}
+
+:root [data-example-theme="ide"] .palette-orange,
+:root [data-example-theme="ide"].palette-orange {
+    --palette-base: oklch(0.72 0.15 60);
+    --palette-soft: oklch(0.3 0.07 60);
+    --palette-line: oklch(0.42 0.09 60);
+    --palette-contrast: oklch(0.18 0.03 60);
+    --palette-accent: oklch(0.8 0.13 60);
+    --palette-ring: var(--palette-accent);
+}
+
+:root [data-example-theme="ide"] .palette-green,
+:root [data-example-theme="ide"].palette-green {
+    --palette-base: oklch(0.68 0.15 150);
+    --palette-soft: oklch(0.3 0.07 150);
+    --palette-line: oklch(0.42 0.09 150);
+    --palette-contrast: oklch(0.15 0.03 150);
+    --palette-accent: oklch(0.76 0.13 150);
+    --palette-ring: var(--palette-accent);
+}
+
+:root [data-example-theme="ide"] .palette-danger,
+:root [data-example-theme="ide"].palette-danger {
+    --palette-base: oklch(0.66 0.18 25);
+    --palette-soft: oklch(0.3 0.08 25);
+    --palette-line: oklch(0.42 0.1 25);
+    --palette-contrast: oklch(0.14 0.03 25);
+    --palette-accent: oklch(0.76 0.15 25);
+    --palette-ring: var(--palette-accent);
+}
+
+:root [data-example-theme="ide"] .palette-purple,
+:root [data-example-theme="ide"].palette-purple {
+    --palette-base: oklch(0.68 0.16 300);
+    --palette-soft: oklch(0.3 0.08 300);
+    --palette-line: oklch(0.42 0.1 300);
+    --palette-contrast: oklch(0.14 0.03 300);
+    --palette-accent: oklch(0.78 0.14 300);
+    --palette-ring: var(--palette-accent);
+}
+
+:root [data-example-theme="ide"] [class*="palette-"],
+:root [data-example-theme="ide"][class*="palette-"] {
+    --tr-selected-bg: oklch(from var(--palette-line) l c h / 0.6);
+    --tr-selected-fg: var(--palette-contrast);
+    --tr-marker-color: oklch(0.75 0.13 245);
+    --tr-hover-bg: oklch(from var(--palette-line) l c h / 0.3);
+    --tr-indicator: oklch(0.75 0.13 245);
+    --tr-guide-color: oklch(from var(--palette-line) l c h / 0.9);
+    --tr-guide: repeating-linear-gradient(
+        to right,
+        transparent 0 calc(var(--tr-indent) / 2 - var(--tr-guide-width) / 2),
+        var(--tr-guide-color) 0
+            calc(var(--tr-indent) / 2 + var(--tr-guide-width) / 2),
+        transparent 0 var(--tr-indent)
+    );
+}

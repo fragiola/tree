@@ -3,3 +3,6 @@
 
 @import "./light.css";
 @import "./dark.css";
+@import "./ide.css";
+@import "./paper.css";
+@import "./terminal.css";

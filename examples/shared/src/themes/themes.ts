@@ -26,6 +26,45 @@ export const THEMES = [
             "oklch(0.75 0.16 55)",
         ],
     },
+    {
+        name: "ide",
+        title: "IDE",
+        description:
+            "A dense code-editor explorer: hairline guides, a line on the selected row.",
+        scheme: "dark",
+        swatch: [
+            "oklch(0.2 0.006 260)",
+            "oklch(0.235 0.006 260)",
+            "oklch(0.55 0.16 245)",
+            "oklch(0.72 0.15 60)",
+        ],
+    },
+    {
+        name: "paper",
+        title: "Paper",
+        description:
+            "Warm and spacious: tall rounded rows, a deep indent, a marked selection.",
+        scheme: "light",
+        swatch: [
+            "oklch(0.955 0.014 85)",
+            "oklch(0.99 0.006 85)",
+            "oklch(0.46 0.09 220)",
+            "oklch(0.62 0.14 45)",
+        ],
+    },
+    {
+        name: "terminal",
+        title: "Terminal",
+        description:
+            "Phosphor green on black: monospace, inverted rows, [+] and [-] toggles.",
+        scheme: "dark",
+        swatch: [
+            "oklch(0.13 0.012 150)",
+            "oklch(0.16 0.016 150)",
+            "oklch(0.85 0.2 145)",
+            "oklch(0.8 0.16 75)",
+        ],
+    },
 ] as const;
 
 export type ThemeName = (typeof THEMES)[number]["name"];
