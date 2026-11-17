@@ -31,20 +31,39 @@ describe("the selection feature", () => {
             filesModel({}, { features: [selection({ mode: "multiple" })] }),
         );
         mounted = m;
-        expect(m.engine.adapter.itemAttributes("app")).toEqual({
+        expect(m.model.get("item-attributes-by", { itemId: "app" })).toEqual({
             "aria-selected": "false",
         });
         m.model.run("item.select", { itemId: "app" });
-        expect(m.engine.adapter.itemAttributes("app")).toEqual({
+        expect(m.model.get("item-attributes-by", { itemId: "app" })).toEqual({
             "aria-selected": "true",
             "data-selected": "",
         });
-        expect(m.engine.adapter.rootAttributes()).toEqual({
+        expect(m.model.get("root-attributes")).toEqual({
             "aria-multiselectable": "true",
         });
         m.model.run("tree.configure", { settings: { selectionMode: "none" } });
-        expect(m.engine.adapter.itemAttributes("app")).toEqual({});
-        expect(m.engine.adapter.rootAttributes()).toEqual({});
+        expect(m.model.get("item-attributes-by", { itemId: "app" })).toEqual(
+            {},
+        );
+        expect(m.model.get("root-attributes")).toEqual({});
+    });
+
+    it("gives the attributes from the model's state alone: no engine, no screen", () => {
+        const model = filesModel(
+            {
+                settings: { selectionMode: "multiple" },
+                selectedItemIds: ["app"],
+            },
+            { features: [selection()] },
+        );
+        expect(model.get("item-attributes-by", { itemId: "app" })).toEqual({
+            "aria-selected": "true",
+            "data-selected": "",
+        });
+        expect(model.get("root-attributes")).toEqual({
+            "aria-multiselectable": "true",
+        });
     });
 
     it("selects on a click: Shift extends, Ctrl toggles", () => {

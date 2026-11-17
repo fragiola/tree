@@ -146,12 +146,6 @@ export interface FeatureEngine {
     readonly get?: { readonly [key: string]: (payload: unknown) => unknown };
     /** engine questions (`engine.is`) */
     readonly is?: { readonly [key: string]: (payload: unknown) => boolean };
-    /** the ARIA and `data-*` an item gets (`undefined`: absent) */
-    itemAttributes?(
-        itemId: string,
-    ): Readonly<Record<string, string | undefined>>;
-    /** the ARIA and `data-*` the root gets (`undefined`: absent) */
-    rootAttributes?(): Readonly<Record<string, string | undefined>>;
     /** renders only some rows: the engine scrolls through it */
     readonly viewport?: FeatureViewport;
     destroy?(): void;
@@ -209,6 +203,18 @@ export interface TreeFeature<
     configured?(draft: Draft, before: FeatureState["settings"]): void;
     /** the items that take the roving tab stop before the first visible item */
     tabStop?(state: FeatureState): readonly string[];
+    /**
+     * the ARIA and `data-*` an item gets, from the state alone (no screen: a server render has
+     * them); `undefined` for an absent attribute
+     */
+    itemAttributes?(
+        state: FeatureState,
+        itemId: string,
+    ): Readonly<Record<string, string | undefined>>;
+    /** the ARIA and `data-*` the root gets, from the state alone */
+    rootAttributes?(
+        state: FeatureState,
+    ): Readonly<Record<string, string | undefined>>;
     /** its part of each engine */
     engine?(host: FeatureEngineHost): FeatureEngine;
     /** its controlled root props */

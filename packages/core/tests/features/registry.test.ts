@@ -164,11 +164,16 @@ describe("a bare tree (no feature)", () => {
         expect("selectedItemIds" in m.model.state).toBe(false);
     });
 
-    it("gives the items and the root no feature attribute", () => {
+    it("gives the items and the root no feature attribute, with no engine either", () => {
+        const model = bare();
+        expect(model.get("item-attributes-by", { itemId: "app" })).toEqual({});
+        expect(model.get("root-attributes")).toEqual({});
         const m = mount(bare());
         mounted = m;
-        expect(m.engine.adapter.itemAttributes("app")).toEqual({});
-        expect(m.engine.adapter.rootAttributes()).toEqual({});
+        expect(m.model.get("item-attributes-by", { itemId: "app" })).toEqual(
+            {},
+        );
+        expect(m.model.get("root-attributes")).toEqual({});
     });
 
     it("drags the pressed item alone", () => {

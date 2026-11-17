@@ -189,14 +189,6 @@ function selectionEngine(host: FeatureEngineHost): FeatureEngine {
                   : "replace";
             model.run("item.select", { itemId, mode: how });
         },
-        itemAttributes(itemId: string) {
-            const state = slice(model.state);
-            if (modeOf(state) === "none") return NO_ATTRIBUTES;
-            return selectedOf(state).includes(itemId) ? SELECTED : UNSELECTED;
-        },
-        rootAttributes() {
-            return mode() === "multiple" ? MULTISELECTABLE : NO_ATTRIBUTES;
-        },
     };
 }
 
@@ -267,6 +259,15 @@ export function selection(options: SelectionOptions = {}): SelectionFeature {
             }
         },
         tabStop: (state) => selectedOf(slice(state)),
+        itemAttributes: (state, itemId) => {
+            const current = slice(state);
+            if (modeOf(current) === "none") return NO_ATTRIBUTES;
+            return selectedOf(current).includes(itemId) ? SELECTED : UNSELECTED;
+        },
+        rootAttributes: (state) =>
+            modeOf(slice(state)) === "multiple"
+                ? MULTISELECTABLE
+                : NO_ATTRIBUTES,
         engine: selectionEngine,
         rootProps,
     } satisfies SelectionFeature);

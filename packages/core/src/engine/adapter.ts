@@ -52,16 +52,6 @@ export interface TreeEngineAdapter<T extends TreeTypes = AnyTypes> {
      */
     handleDragEvent(event: DragEvent): void;
 
-    /**
-     * the ARIA and `data-*` the installed features give an item (`aria-selected`, …): each value a
-     * string, `undefined` for an absent attribute. Adapters spread it on `Tree.Item`
-     */
-    itemAttributes(
-        itemId: string,
-    ): Readonly<Record<string, string | undefined>>;
-    /** the ARIA and `data-*` the installed features give the root (`aria-multiselectable`, …) */
-    rootAttributes(): Readonly<Record<string, string | undefined>>;
-
     /** calls `listener` when adapters should re-render (a commit, a drag step, an announcement); returns its remover */
     subscribe(listener: () => void): () => void;
     /** the render revision: a number that changes whenever adapters should re-render */

@@ -51,6 +51,19 @@ export interface ModelGetMap<T extends TreeTypes = AnyTypes> {
     commands: { payload: NoPayload; result: readonly CommandInfo[] };
     /** the installed features, each with its controlled root props (for the adapters) */
     features: { payload: NoPayload; result: readonly TreeFeatureInfo[] };
+    /**
+     * the ARIA and `data-*` the installed features give an item (`selection()`: `aria-selected`,
+     * `data-selected`), from the state alone: each a string, `undefined` when absent
+     */
+    "item-attributes-by": {
+        payload: { itemId: string };
+        result: Readonly<Record<string, string | undefined>>;
+    };
+    /** the ARIA and `data-*` the installed features give the root (`aria-multiselectable`) */
+    "root-attributes": {
+        payload: NoPayload;
+        result: Readonly<Record<string, string | undefined>>;
+    };
     /** the tree's settings: its modes and the item flags' defaults */
     settings: { payload: NoPayload; result: TreeSettings };
     /** an item by its id */
@@ -225,6 +238,10 @@ const GETTERS: Getters = {
     // computed once per model, in `createQueries`
     commands: () => [],
     features: (_state, _payload, features) => features.info,
+    "item-attributes-by": (state, { itemId }, features) =>
+        features.itemAttributes(state as FeatureState, itemId),
+    "root-attributes": (state, _payload, features) =>
+        features.rootAttributes(state as FeatureState),
     settings: (state) => state.settings,
     "item-by": (state, { id }) => itemOf(state, id),
     "item-parent-by": (state, { itemId }) => {

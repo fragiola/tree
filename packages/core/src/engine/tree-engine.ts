@@ -855,8 +855,6 @@ class Engine<T extends TreeTypes, F extends TreeFeatures>
             handleDragEvent: (event) => {
                 if (!this.destroyed) this.foreign?.handle(event);
             },
-            itemAttributes: (itemId) => this.attributes("item", itemId),
-            rootAttributes: () => this.attributes("root"),
             subscribe: (listener) => {
                 const wrapper = () => listener();
                 this.adapterListeners.add(wrapper);
@@ -866,25 +864,6 @@ class Engine<T extends TreeTypes, F extends TreeFeatures>
             },
             getSnapshot: () => this.revision,
         };
-    }
-
-    /** The features' attributes of an item or the root, merged (none: one shared empty object). */
-    private attributes(
-        part: "item" | "root",
-        itemId = "",
-    ): Readonly<Record<string, string | undefined>> {
-        let merged: Record<string, string | undefined> | undefined;
-        let only: Readonly<Record<string, string | undefined>> | undefined;
-        for (const contribution of this.contributions) {
-            const attributes =
-                part === "item"
-                    ? contribution.itemAttributes?.(itemId)
-                    : contribution.rootAttributes?.();
-            if (!attributes) continue;
-            if (only === undefined) only = attributes;
-            else merged = { ...(merged ?? only), ...attributes };
-        }
-        return merged ?? only ?? NO_ATTRIBUTES;
     }
 
     // ---------------------------------------------------------------------------------------------
@@ -1059,9 +1038,6 @@ class Engine<T extends TreeTypes, F extends TreeFeatures>
         return itemId !== undefined && this.focus({ itemId }, false).ok;
     }
 }
-
-const NO_ATTRIBUTES: Readonly<Record<string, string | undefined>> =
-    Object.freeze({});
 
 /** The nearest scroll container of the root (the root itself when it scrolls). */
 function scrollParent(root: HTMLElement): HTMLElement | undefined {

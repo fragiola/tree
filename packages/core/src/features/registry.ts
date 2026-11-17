@@ -53,6 +53,32 @@ export interface ComposedFeatures {
     disabled(draft: Draft, itemId: string): void;
     configured(draft: Draft, before: FeatureState["settings"]): void;
     tabStop(state: FeatureState): readonly string[];
+    /** the installed features' attributes of an item, merged (none: one shared empty object) */
+    itemAttributes(
+        state: FeatureState,
+        itemId: string,
+    ): Readonly<Record<string, string | undefined>>;
+    /** the installed features' attributes of the root, merged */
+    rootAttributes(
+        state: FeatureState,
+    ): Readonly<Record<string, string | undefined>>;
+}
+
+const NO_ATTRIBUTES: Readonly<Record<string, string | undefined>> =
+    Object.freeze({});
+
+/** Merges the attributes of each contribution (one alone is returned as it is). */
+function mergeAttributes(
+    all: readonly (Readonly<Record<string, string | undefined>> | undefined)[],
+): Readonly<Record<string, string | undefined>> {
+    let only: Readonly<Record<string, string | undefined>> | undefined;
+    let merged: Record<string, string | undefined> | undefined;
+    for (const attributes of all) {
+        if (!attributes) continue;
+        if (only === undefined) only = attributes;
+        else merged = { ...(merged ?? only), ...attributes };
+    }
+    return merged ?? only ?? NO_ATTRIBUTES;
 }
 
 /** The message of a key or field whose feature is not installed. */
@@ -123,6 +149,8 @@ export function composeFeatures(
     const disablers = each("disabled");
     const configurers = each("configured");
     const tabStops = each("tabStop");
+    const itemAttributers = each("itemAttributes");
+    const rootAttributers = each("rootAttributes");
 
     const composed: ComposedFeatures = {
         list,
@@ -171,6 +199,22 @@ export function composeFeatures(
         },
         tabStop: (state) =>
             tabStops.flatMap((feature) => feature.tabStop?.(state) ?? []),
+        itemAttributes: (state, itemId) =>
+            itemAttributers.length === 0
+                ? NO_ATTRIBUTES
+                : mergeAttributes(
+                      itemAttributers.map((feature) =>
+                          feature.itemAttributes?.(state, itemId),
+                      ),
+                  ),
+        rootAttributes: (state) =>
+            rootAttributers.length === 0
+                ? NO_ATTRIBUTES
+                : mergeAttributes(
+                      rootAttributers.map((feature) =>
+                          feature.rootAttributes?.(state),
+                      ),
+                  ),
     };
     return Object.freeze(composed);
 }
