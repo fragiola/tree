@@ -42,7 +42,8 @@ export function treeItemState(
           : "unchecked";
     const status = item.childrenStatus;
     const dropTarget = engine?.is("item-drop-target", { itemId }) ?? false;
-    const attributes = engine?.adapter.itemAttributes(itemId) ?? NO_ATTRIBUTES;
+    // the features' ARIA and data-*: model state, so a server render has them
+    const attributes = model.get("item-attributes-by", { itemId });
     return {
         itemId,
         path,
@@ -69,9 +70,6 @@ export function treeItemState(
         attributes,
     };
 }
-
-const NO_ATTRIBUTES: Readonly<Record<string, string | undefined>> =
-    Object.freeze({});
 
 /** @internal the installed features' attributes whose names start with `prefix` (`data-`, `aria-`) */
 export function featureAttributes(

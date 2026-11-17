@@ -2,6 +2,7 @@ import { Component, input } from "@angular/core";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { selection } from "../selection/public-api";
 import { createTreeModel, TREE, type TreeModel } from "../src/public-api";
+import { virtualization } from "../virtualization/public-api";
 import { FileTree, type FileTypes, files, itemElement, render } from "./tree";
 
 afterEach(() => {
@@ -31,6 +32,33 @@ describe("features on the root", () => {
             "aria-multiselectable",
         );
         expect(document.querySelector("[aria-selected]")).toBeNull();
+    });
+
+    it("has the features' attributes before the root creates its engine (its first render)", async () => {
+        const { TestBed } = await import("@angular/core/testing");
+        const fixture = TestBed.createComponent(FileTree);
+        fixture.componentRef.setInput(
+            "defaultTree",
+            files({
+                settings: { selectionMode: "multiple" },
+                selectedItemIds: ["app"],
+            }),
+        );
+        // one synchronous render: the engine is created after it (afterNextRender)
+        fixture.detectChanges();
+        const element = fixture.nativeElement as HTMLElement;
+        expect(element.querySelector('[role="tree"]')).toHaveAttribute(
+            "aria-multiselectable",
+            "true",
+        );
+        expect(element.querySelector('[aria-selected="true"]')).not.toBeNull();
+        fixture.destroy();
+    });
+
+    it("warns nothing at mount for a root with defaultTree and features", async () => {
+        const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+        await render(FileTree, { defaultTree: files() });
+        expect(warn.mock.calls).toEqual([]);
     });
 
     it("an item gets its features' ARIA, and every part of it their data-*", async () => {
@@ -76,7 +104,11 @@ describe("features on the root", () => {
             readonly features = input([selection()]);
         }
         const rendered = await render(Host);
+        // nothing at mount, nor for an equal new list
+        expect(warn).not.toHaveBeenCalled();
         await rendered.set("features", [selection({ mode: "multiple" })]);
+        expect(warn).not.toHaveBeenCalled();
+        await rendered.set("features", [selection(), virtualization()]);
         await rendered.set("features", [selection()]);
         expect(warn).toHaveBeenCalledTimes(1);
         expect(warn.mock.calls[0]?.[0]).toContain(

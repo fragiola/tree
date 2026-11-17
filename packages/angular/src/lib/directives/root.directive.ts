@@ -66,6 +66,11 @@ export interface RootState {
  * the tree to the parts inside. Another model, or another engine option, makes another engine.
  * `#tree="treeRoot"` gives its `model()` and its `engine` to the rest of the template.
  */
+/** A list of features by their names, in order: an equal new list (`features={[selection()]}`) is the same. */
+function featureNames(features: TreeFeatures | undefined): string {
+    return (features ?? []).map((feature) => feature.name).join(",");
+}
+
 @Directive({
     selector: "[treeRoot]",
     exportAs: "treeRoot",
@@ -171,6 +176,8 @@ export class TreeRootDirective<
     readonly checkedItemIdsChange = output<string[]>();
 
     private readonly host = injectHost();
+    /** the names of the features the root's own model was created with */
+    private createdWith: string | undefined;
     /** the model made from `defaultTree`, once it is set */
     private own: TreeModel | undefined;
     /** the model shown while there is neither a model nor a `defaultTree`: no item */
@@ -186,9 +193,11 @@ export class TreeRootDirective<
                 this.empty ??= createTreeModel();
                 return this.empty as unknown as TreeModel<T, F>;
             }
+            const features = untracked(this.features);
+            this.createdWith = featureNames(features);
             this.own = eraseModel(
                 createTreeModel<T, TreeFeatures>(json, {
-                    features: untracked(this.features),
+                    features,
                 }) as unknown as TreeModel<T, F>,
             );
         }
@@ -233,7 +242,7 @@ export class TreeRootDirective<
         const live = this.current();
         return {
             multiselectable:
-                live?.adapter.rootAttributes()["aria-multiselectable"] ===
+                this.erased().get("root-attributes")["aria-multiselectable"] ===
                 "true",
             dragging: live?.is("dragging") ?? false,
             keyboardDragging: live?.is("keyboard-dragging") ?? false,
@@ -330,7 +339,7 @@ export class TreeRootDirective<
         bindFeatureAttributes(this.host, () => {
             this.treeState();
             this.tick();
-            return this.current()?.adapter.rootAttributes() ?? {};
+            return this.erased().get("root-attributes");
         });
         // misuse the root ignores, once each: a feature's input without its feature, a later
         // change of the features
@@ -340,10 +349,15 @@ export class TreeRootDirective<
             warned.add(message);
             console.warn(`[@fragiola/tree-angular] ${message}`);
         };
-        const firstFeatures = untracked(this.features);
         effect(() => {
-            const features = this.features();
-            if (!this.treeRoot() && features !== firstFeatures) {
+            // the names the root's own model was created with: a list equal by names is the same
+            const features = featureNames(this.features());
+            this.erased();
+            if (
+                !this.treeRoot() &&
+                this.createdWith !== undefined &&
+                features !== this.createdWith
+            ) {
                 warn(
                     "the features input changed after the root created its model: the change is ignored (the features are fixed when the model is created)",
                 );

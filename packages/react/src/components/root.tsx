@@ -132,9 +132,6 @@ export type RootProps<
     F extends TreeFeatures = readonly [],
 > = RootBaseProps<T, F> & FeatureRootPropsOf<F>;
 
-const NO_ATTRIBUTES: Readonly<Record<string, string | undefined>> =
-    Object.freeze({});
-
 /** Splits the features' root props (by name: `FEATURE_ROOT_PROPS`) from the element's props. */
 function splitFeatureProps(props: Record<string, unknown>) {
     const featureProps: Record<string, unknown> = {};
@@ -144,6 +141,11 @@ function splitFeatureProps(props: Record<string, unknown>) {
         else rest[name] = value;
     }
     return { featureProps, rest };
+}
+
+/** A list of features by their names, in order: an equal new list (`features={[selection()]}`) is the same. */
+function featureNames(features: TreeFeatures | undefined): string {
+    return (features ?? []).map((feature) => feature.name).join(",");
 }
 
 /** Warns once per message and root: misuse that the root ignores. */
@@ -204,8 +206,8 @@ export function Root<
 
     // the features are the model's, fixed when it is created: a later change is ignored
     const warn = useWarnOnce();
-    const [firstFeatures] = React.useState(features);
-    if (!modelProp && features !== firstFeatures) {
+    const [firstFeatures] = React.useState(() => featureNames(features));
+    if (!modelProp && featureNames(features) !== firstFeatures) {
         warn(
             "the features prop changed after the root created its model: the change is ignored (the features are fixed when the model is created)",
         );
@@ -357,7 +359,7 @@ export function Root<
     );
 
     // the installed features' ARIA and data-* (`aria-multiselectable` with `selection()`)
-    const rootAttributes = live?.adapter.rootAttributes() ?? NO_ATTRIBUTES;
+    const rootAttributes = model.get("root-attributes");
     const rootState: RootState = {
         multiselectable: rootAttributes["aria-multiselectable"] === "true",
         dragging: live?.is("dragging") ?? false,

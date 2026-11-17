@@ -37,4 +37,17 @@ describe("a server render", () => {
         expect(subscribe).not.toHaveBeenCalled();
         expect(run).not.toHaveBeenCalled();
     });
+
+    it("renders the features' ARIA and data-*: they are model state, no engine needed", async () => {
+        const model = filesModel({
+            settings: { selectionMode: "multiple" },
+            selectedItemIds: ["app"],
+        });
+        const html = await renderToString(
+            createSSRApp({ render: () => [fileTree({ model })] }),
+        );
+        expect(html).toContain('aria-multiselectable="true"');
+        expect(html).toMatch(/aria-selected="true"[^>]*data-selected/);
+        expect(html).toContain('aria-selected="false"');
+    });
 });

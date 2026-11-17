@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { h, nextTick, ref } from "vue";
 import { createTreeModel, Tree } from "../src";
 import { selection } from "../src/selection";
+import { virtualization } from "../src/virtualization";
 import { files, fileTree, itemElement, render, settle } from "./tree";
 
 afterEach(() => {
@@ -68,10 +69,12 @@ describe("features on the root", () => {
                 features: features.value as never,
             }),
         );
+        // an equal new list (inline `:features="[selection()]"`) is the same: no warning
         features.value = [selection({ mode: "multiple" })];
         await nextTick();
         await settle();
-        features.value = [selection()];
+        expect(warn).not.toHaveBeenCalled();
+        features.value = [selection(), virtualization()] as never;
         await settle();
         expect(warn).toHaveBeenCalledTimes(1);
         expect(warn.mock.calls[0]?.[0]).toContain(

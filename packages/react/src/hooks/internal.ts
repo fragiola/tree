@@ -41,7 +41,8 @@ export function useTreeItemState<T extends TreeTypes = AnyTypes>(
           : "unchecked";
     const status = item.childrenStatus;
     const dropTarget = engine?.is("item-drop-target", { itemId }) ?? false;
-    const attributes = engine?.adapter.itemAttributes(itemId) ?? NO_ATTRIBUTES;
+    // the features' ARIA and data-*: model state, so the first render (and a server's) has them
+    const attributes = model.get("item-attributes-by", { itemId });
     return {
         itemId,
         path,
@@ -68,9 +69,6 @@ export function useTreeItemState<T extends TreeTypes = AnyTypes>(
         attributes,
     };
 }
-
-const NO_ATTRIBUTES: Readonly<Record<string, string | undefined>> =
-    Object.freeze({});
 
 /** @internal the installed features' `data-*` of an item: every part of it carries them */
 export function featureDataAttributes(

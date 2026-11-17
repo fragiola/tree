@@ -230,6 +230,11 @@ type RootTreeProps = RootBaseProps<AnyTypes, TreeFeatures> &
 /** Its events: every controlled list's `update:<prop>`. */
 type RootTreeEmits = Record<string, (itemIds: string[]) => void>;
 
+/** A list of features by their names, in order: an equal new list (`features={[selection()]}`) is the same. */
+function featureNames(features: TreeFeatures | undefined): string {
+    return (features ?? []).map((feature) => feature.name).join(",");
+}
+
 /** Warns once per message: misuse that the root ignores. */
 function warnOnce(): (message: string) => void {
     const warned = new Set<string>();
@@ -384,9 +389,9 @@ const RootTree = definePrimitive<RootTreeProps, RootSlots, RootTreeEmits>(
 
         // the features are the model's, fixed when it is created: a later change is ignored
         const warn = warnOnce();
-        const features = props.features;
+        const features = featureNames(props.features);
         watch(
-            () => props.features,
+            () => featureNames(props.features),
             (next) => {
                 if (!props.model && next !== features) {
                     warn(
@@ -454,8 +459,7 @@ const RootTree = definePrimitive<RootTreeProps, RootSlots, RootTreeEmits>(
             revision.value;
             const live = engine.value;
             // the installed features' ARIA and data-* (`aria-multiselectable` with `selection()`)
-            const rootAttributes =
-                live?.adapter.rootAttributes() ?? NO_ATTRIBUTES;
+            const rootAttributes = model.get("root-attributes");
             const rootState: RootState = {
                 multiselectable:
                     rootAttributes["aria-multiselectable"] === "true",
@@ -497,9 +501,6 @@ const RootTree = definePrimitive<RootTreeProps, RootSlots, RootTreeEmits>(
     },
     { booleans: ROOT_BOOLEANS, emits: ROOT_EMITS },
 );
-
-const NO_ATTRIBUTES: Readonly<Record<string, string | undefined>> =
-    Object.freeze({});
 
 /**
  * The tree (`role="tree"`): owns the engine of its model, attaches it to the rendered element,

@@ -115,7 +115,8 @@ export function treeItemState(
           : "unchecked";
     const status = item.childrenStatus;
     const dropTarget = engine?.is("item-drop-target", { itemId }) ?? false;
-    const attributes = engine?.adapter.itemAttributes(itemId) ?? NO_ATTRIBUTES;
+    // the features' ARIA and data-*: model state, so the first render (and a server's) has them
+    const attributes = model.get("item-attributes-by", { itemId });
     return {
         itemId,
         path,

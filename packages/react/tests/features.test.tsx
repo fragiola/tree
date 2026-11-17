@@ -2,6 +2,7 @@ import { render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createTreeModel, Tree } from "../src";
 import { selection } from "../src/selection";
+import { virtualization } from "../src/virtualization";
 import { FileTree, files, itemElement } from "./tree";
 
 afterEach(() => {
@@ -80,7 +81,10 @@ describe("features on the root", () => {
     it("warns once when the features prop changes after the root created its model", () => {
         const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
         const { rerender } = render(<FileTree defaultTree={files()} />);
-        const other = [selection({ mode: "multiple" })] as const;
+        // an equal new list (inline `features={[selection()]}`) is the same: no warning
+        rerender(<FileTree defaultTree={files()} features={[selection()]} />);
+        expect(warn).not.toHaveBeenCalled();
+        const other = [selection(), virtualization()] as const;
         rerender(<FileTree defaultTree={files()} features={other as never} />);
         rerender(<FileTree defaultTree={files()} features={other as never} />);
         expect(warn).toHaveBeenCalledTimes(1);
