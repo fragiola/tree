@@ -3,7 +3,14 @@ import { h, nextTick, ref } from "vue";
 import { createTreeModel, Tree } from "../src";
 import { selection } from "../src/selection";
 import { virtualization } from "../src/virtualization";
-import { files, fileTree, itemElement, render, settle } from "./tree";
+import {
+    bareFiles,
+    files,
+    fileTree,
+    itemElement,
+    render,
+    settle,
+} from "./tree";
 
 afterEach(() => {
     vi.restoreAllMocks();
@@ -13,7 +20,7 @@ describe("features on the root", () => {
     it("a bare tree says nothing about a selection", async () => {
         await render(() =>
             h(Tree.Root, {
-                model: createTreeModel(files()) as never,
+                model: createTreeModel(bareFiles()) as never,
                 "aria-label": "Bare",
             }),
         );
@@ -45,7 +52,7 @@ describe("features on the root", () => {
 
     it("warns once, and ignores it, when a feature's list has no feature", async () => {
         const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-        const model = createTreeModel(files());
+        const model = createTreeModel(bareFiles());
         await render(() =>
             h(Tree.Root, {
                 model,
@@ -65,7 +72,7 @@ describe("features on the root", () => {
         const features = ref([selection()]);
         await render(() =>
             fileTree({
-                defaultTree: files(),
+                defaultTree: bareFiles(),
                 features: features.value as never,
             }),
         );

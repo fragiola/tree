@@ -9,9 +9,9 @@ import {
     type Tree as Untyped,
     useTree,
     useTreeItem,
-    useTreeItemRename,
     useTreeState,
 } from "../../src";
+import { useTreeItemRename } from "../../src/rename";
 
 type Types = {
     items: { folder: undefined; file: { size: number } };

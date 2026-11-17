@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { h } from "vue";
 import type { ItemOf } from "../src";
+import { selection } from "../src/selection";
 import {
     byPath,
     type FileTypes,
     filesModel,
+    filesModelWith,
     fileTree,
     itemElement,
     render,
@@ -77,7 +79,7 @@ describe("the WAI-ARIA Tree View roles and states", () => {
             expandedItemIds: ["src", "utils"],
             checkedItemIds: ["a"],
         });
-        await render(() => fileTree({ model, checkboxes: true }));
+        await render(() => fileTree({ model }));
         expect(itemElement("a.ts")).toHaveAttribute("aria-checked", "true");
         expect(itemElement("b.ts")).toHaveAttribute("aria-checked", "false");
         expect(itemElement("utils")).toHaveAttribute("aria-checked", "mixed");
@@ -85,9 +87,7 @@ describe("the WAI-ARIA Tree View roles and states", () => {
     });
 
     it("sets no aria-checked without checkboxes", async () => {
-        await render(() =>
-            fileTree({ model: filesModel({ checkedItemIds: ["app"] }) }),
-        );
+        await render(() => fileTree({ model: filesModelWith([selection()]) }));
         expect(itemElement("app.ts")).not.toHaveAttribute("aria-checked");
     });
 

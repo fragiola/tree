@@ -1,4 +1,13 @@
-import type { AnyTypes, CommandError, ItemOf, TreeTypes } from "@fragiola/tree";
+// The rename's part composable (`@fragiola/tree-vue/rename`): it wires the app's own editor onto an
+// item's rename (`rename()`). A tree that never imports it does not ship it.
+import type {
+    AnyFeatures,
+    AnyTypes,
+    CommandError,
+    ItemOf,
+    TreeEngine,
+    TreeTypes,
+} from "@fragiola/tree";
 import {
     type ComputedRef,
     computed,
@@ -94,7 +103,10 @@ export function useTreeItemRename<T extends TreeTypes = AnyTypes>(
 
     // `focus: false` on a blur: focus went elsewhere, and stays there
     const commit = (focus: boolean): boolean => {
-        const engine = context.engine.value;
+        const engine = context.engine.value as TreeEngine<
+            AnyTypes,
+            AnyFeatures
+        > | null;
         if (done || !engine) return true;
         done = true;
         const result = engine.run("commit-rename", {
@@ -109,7 +121,10 @@ export function useTreeItemRename<T extends TreeTypes = AnyTypes>(
         return false;
     };
     const cancel = (focus: boolean) => {
-        const engine = context.engine.value;
+        const engine = context.engine.value as TreeEngine<
+            AnyTypes,
+            AnyFeatures
+        > | null;
         if (done || !engine) return;
         done = true;
         engine.run("cancel-rename", { itemId: current().id, focus });
@@ -134,7 +149,10 @@ export function useTreeItemRename<T extends TreeTypes = AnyTypes>(
     };
 
     const state = computed<TreeItemRenameState>(() => ({
-        renaming: context.state.value.renamingItemId === current().id,
+        // the rename's state (`rename()`): a model without it never renames
+        renaming:
+            (context.state.value as { readonly renamingItemId?: string | null })
+                .renamingItemId === current().id,
         invalid: error.value !== undefined,
         error: error.value,
     }));

@@ -1,8 +1,10 @@
 import { type CommandError, veto } from "@fragiola/tree";
 import { describe, expect, it, vi } from "vitest";
 import { defineComponent, h, type PropType, type VNodeChild } from "vue";
-import { type ItemOf, useTree, useTreeItem, useTreeItemRename } from "../src";
+import { type ItemOf, useTree, useTreeItem } from "../src";
+import { useTreeItemRename } from "../src/rename";
 import {
+    type FEATURES,
     type FileTypes,
     filesModel,
     fileTree,
@@ -60,7 +62,7 @@ const ManualEditor = defineComponent({
         item: { type: Object as PropType<ItemOf<FileTypes>>, required: true },
     },
     setup(props) {
-        const { engine } = useTree<FileTypes>();
+        const { engine } = useTree<FileTypes, typeof FEATURES>();
         const { state } = useTreeItem(() => props.item);
         return (): VNodeChild =>
             state.value.renaming

@@ -4,19 +4,27 @@ import {
     Tree as ReactTree,
     useTree as useReactTree,
     useTreeItem as useReactTreeItem,
-    useTreeItemRename as useReactTreeItemRename,
 } from "@fragiola/tree-react";
+import { useTreeItemRename as useReactTreeItemRename } from "@fragiola/tree-react/rename";
 import { VirtualItems as ReactVirtualItems } from "@fragiola/tree-react/virtualization";
 import * as React from "react";
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { describe, expect, it } from "vitest";
-import { createTreeForeignDrop, createTreeModel, type TreeJson } from "../src";
+import {
+    createTreeForeignDrop,
+    createTreeModel,
+    type TreeFeatures,
+    type TreeJson,
+} from "../src";
+import { selection } from "../src/selection";
 import { bigFileTree, virtualModel } from "./big-tree";
 import {
+    FEATURES,
     type FileTypes,
     files,
     filesModel,
+    filesModelWith,
     fileTree,
     fire,
     itemElement,
@@ -29,7 +37,7 @@ const r = React.createElement;
 
 /** The app's own check control, as `tests/tree.ts`'s `Check` (and packages/react's). */
 function ReactCheck({ item }: { item: Item }) {
-    const { model } = useReactTree();
+    const { model } = useReactTree<FileTypes, typeof FEATURES>();
     const { state } = useReactTreeItem(item as never);
     return r("button", {
         type: "button",
@@ -98,8 +106,11 @@ function snapshot(root: Element) {
 async function both(
     json: TreeJson<FileTypes>,
     props: Record<string, unknown> = {},
+    features: TreeFeatures = FEATURES,
 ) {
-    await render(() => fileTree({ model: filesModel(json), ...props }));
+    await render(() =>
+        fileTree({ model: filesModelWith(features, json), ...props }),
+    );
     const vue = snapshot(document.querySelector('[role="tree"]') as Element);
     document.body.innerHTML = "";
     const host = document.createElement("div");
@@ -108,7 +119,7 @@ async function both(
     (
         globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
     ).IS_REACT_ACT_ENVIRONMENT = true;
-    const model = filesModel(json);
+    const model = filesModelWith(features, json);
     await act(async () => {
         root.render(
             r(
@@ -138,7 +149,7 @@ describe("parity with @fragiola/tree-react", () => {
         });
         const app = json.items.app;
         if (app) json.items.app = { ...app, disabled: true };
-        const { vue, react } = await both(json, { checkboxes: true });
+        const { vue, react } = await both(json);
         expect(vue.length).toBeGreaterThan(20);
         expect(vue).toEqual(react);
     });
@@ -146,6 +157,8 @@ describe("parity with @fragiola/tree-react", () => {
     it("renders the same without checkboxes and with no selection", async () => {
         const { vue, react } = await both(
             files({ settings: { selectionMode: "none" } }),
+            {},
+            [selection()],
         );
         expect(vue).toEqual(react);
     });

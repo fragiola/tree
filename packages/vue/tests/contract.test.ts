@@ -2,8 +2,8 @@ import { describe, expect, it, vi } from "vitest";
 import { defineComponent, h, ref, type VNode } from "vue";
 import type { ItemOf, RenderSlotProps, TreeItemState } from "../src";
 import {
+    bareFiles,
     type FileTypes,
-    files,
     filesModel,
     fire,
     itemElement,
@@ -209,7 +209,9 @@ describe("the primitive contract", () => {
         ).rejects.toThrow("Tree.Item must be rendered inside Tree.Root");
         await expect(
             render(() =>
-                h(Tree.Root, { defaultTree: files() }, () => h(Tree.Toggle)),
+                h(Tree.Root, { defaultTree: bareFiles() }, () =>
+                    h(Tree.Toggle),
+                ),
             ),
         ).rejects.toThrow("Tree.Toggle must be rendered inside Tree.Item");
         warn.mockRestore();

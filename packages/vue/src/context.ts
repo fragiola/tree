@@ -34,8 +34,6 @@ export interface TreeContextValue {
     readonly revision: Readonly<Ref<number>>;
     /** the roving tab stop of this state (`tab-stop-item`), computed once per state */
     readonly tabStopItemId: ComputedRef<string | undefined>;
-    /** the items carry `aria-checked` and Space toggles the check (`checkboxes` on the root) */
-    readonly checkboxes: ComputedRef<boolean>;
 }
 
 export const TreeKey: InjectionKey<TreeContextValue> = Symbol("Tree");

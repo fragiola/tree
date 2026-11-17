@@ -15,7 +15,6 @@ const OWN = [
     "typedTree",
     "useTree",
     "useTreeItem",
-    "useTreeItemRename",
     "useTreeRef",
     "useTreeState",
 ];
@@ -103,7 +102,6 @@ describe("@fragiola/tree-vue", () => {
                 "internal",
                 "use-tree",
                 "use-tree-item",
-                "use-tree-item-rename",
                 "use-tree-ref",
                 "use-tree-state",
             ].map((name) => `src/composables/${name}.ts`),
@@ -111,6 +109,7 @@ describe("@fragiola/tree-vue", () => {
             "src/utils/primitive.ts",
             "src/utils/registration.ts",
             "src/utils/engine-facade.ts",
+            "src/rename/use-tree-item-rename.ts",
             "src/virtualization/index.ts",
             "src/virtualization/virtual-items.ts",
             "src/virtualization/use-tree-virtual-window.ts",
