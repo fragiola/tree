@@ -58,14 +58,18 @@ export function projectRules(model: ProjectModel) {
         }
         if (ctx.command === "item.move") {
             const { parentItemId } = ctx.payload.to;
+            // the labels arriving from other folders: taken there, or twice among the moved items
+            const arriving = new Set<string>();
             for (const itemId of ctx.payload.itemIds) {
                 const label = ctx.get("item-by", { id: itemId })?.label ?? "";
                 const from = ctx.get("item-parent-by", { itemId })?.id ?? null;
+                if (from === parentItemId) continue;
                 if (
-                    from !== parentItemId &&
-                    labelTaken(parentItemId, label, itemId)
+                    labelTaken(parentItemId, label, itemId) ||
+                    arriving.has(label.toLowerCase())
                 )
                     return veto(`“${label}” already exists there.`);
+                arriving.add(label.toLowerCase());
             }
         }
         if (
@@ -99,6 +103,7 @@ export function createEditors(model: ProjectModel) {
         for (const listener of listeners) listener();
     };
 
+    let lastSelected = model.state.selectedItemIds;
     const isFile = (itemId: string) =>
         model.get("item-by", { id: itemId })?.kind === "file";
 
@@ -108,10 +113,18 @@ export function createEditors(model: ProjectModel) {
         let { activeFileId } = editors;
         if (activeFileId !== null && !isFile(activeFileId))
             activeFileId = openFileIds.at(-1) ?? null;
-        // one file selected in the tree: it is the file shown
+        // a new selection of one file: it is the file shown (an unchanged selection opens
+        // nothing, so a closed tab stays closed)
         const selected = model.state.selectedItemIds;
+        const changed = selected !== lastSelected;
+        lastSelected = selected;
         const only = selected.length === 1 ? selected[0] : undefined;
-        if (only !== undefined && isFile(only) && only !== activeFileId) {
+        if (
+            changed &&
+            only !== undefined &&
+            isFile(only) &&
+            only !== activeFileId
+        ) {
             activeFileId = only;
             if (!openFileIds.includes(only)) openFileIds.push(only);
         }
@@ -148,13 +161,14 @@ export function createEditors(model: ProjectModel) {
                 (id) => id !== fileId,
             );
             const index = editors.openFileIds.indexOf(fileId);
-            const activeFileId =
-                editors.activeFileId === fileId
-                    ? (openFileIds[Math.min(index, openFileIds.length - 1)] ??
-                      null)
-                    : editors.activeFileId;
+            const wasShown = editors.activeFileId === fileId;
+            const activeFileId = wasShown
+                ? (openFileIds[Math.min(index, openFileIds.length - 1)] ?? null)
+                : editors.activeFileId;
             set({ openFileIds, activeFileId });
-            if (activeFileId !== null) reveal(model, activeFileId);
+            // closing the file shown shows the next one, selected in the tree; closing another
+            // leaves the tree as it is
+            if (wasShown && activeFileId !== null) reveal(model, activeFileId);
         },
     };
 }

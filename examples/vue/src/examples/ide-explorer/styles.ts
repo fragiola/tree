@@ -126,7 +126,7 @@ export const liveRegion = "sr-only";
 export const editor = "flex min-h-0 min-w-0 flex-1 flex-col bg-palette-base";
 
 export const tabList =
-    "palette-raised flex h-9 shrink-0 items-stretch overflow-x-auto border-palette-line border-b bg-palette-base";
+    "palette-raised m-0 flex h-9 shrink-0 list-none items-stretch overflow-x-auto p-0 border-palette-line border-b bg-palette-base";
 
 export const tab = cn(
     "group flex shrink-0 items-center gap-1.5 border-palette-line border-e ps-3 pe-1 text-palette-accent/85",

@@ -2,7 +2,8 @@ import { expect, type Page, test } from "@playwright/test";
 import { dragRow, item, openExample, row, tree } from "../helpers";
 
 // ide-explorer: a code editor's workbench. A file's accessible name is its label and its git
-// status its description; the open editors are tabs beside the tree.
+// status its description; the open editors are a list of buttons beside the tree, the file shown
+// the current one (`aria-current`).
 
 const open = async (page: Page) => {
     const stage = await openExample(page, "ide-explorer");
@@ -99,31 +100,38 @@ test("selecting a file opens its editor; a tab selects its file again", async ({
     page,
 }) => {
     const { stage, files } = await open(page);
-    const tabs = stage.getByRole("tablist", { name: "Open editors" });
-    await expect(tabs.getByRole("tab", { name: "app.tsx" })).toHaveAttribute(
-        "aria-selected",
-        "true",
-    );
+    const tabs = stage.getByRole("list", { name: "Open editors" });
+    const tab = (name: string) =>
+        tabs.getByRole("button", { name, exact: true });
+    await expect(tab("app.tsx")).toHaveAttribute("aria-current", "true");
     await row(item(files, "main.tsx")).click();
-    await expect(tabs.getByRole("tab", { name: "main.tsx" })).toHaveAttribute(
-        "aria-selected",
-        "true",
-    );
+    await expect(tab("main.tsx")).toHaveAttribute("aria-current", "true");
     await expect(stage.getByRole("navigation", { name: "Path" })).toHaveText(
         /^\s*src\s*main\.tsx\s*$/,
     );
     await expect(stage.getByTestId("code")).toContainText("createRoot");
-    await tabs.getByRole("tab", { name: "app.tsx" }).click();
+    await tab("app.tsx").click();
     await expect(item(files, "app.tsx")).toHaveAttribute(
         "aria-selected",
         "true",
     );
     await stage.getByRole("button", { name: "Close app.tsx" }).click();
-    await expect(tabs.getByRole("tab", { name: "app.tsx" })).toHaveCount(0);
-    await expect(tabs.getByRole("tab", { name: "main.tsx" })).toHaveAttribute(
-        "aria-selected",
-        "true",
-    );
+    await expect(tab("app.tsx")).toHaveCount(0);
+    await expect(tab("main.tsx")).toHaveAttribute("aria-current", "true");
+});
+
+test("a closed editor stays closed while the tree changes", async ({
+    page,
+}) => {
+    const { stage } = await open(page);
+    const tabs = stage.getByRole("list", { name: "Open editors" });
+    await stage.getByRole("button", { name: "Close app.tsx" }).click();
+    await expect(tabs.getByRole("button")).toHaveCount(0);
+    await stage.getByRole("button", { name: "Collapse folders" }).click();
+    await expect(tabs.getByRole("button")).toHaveCount(0);
+    await expect(
+        stage.getByText("Select a file in the explorer to open it."),
+    ).toBeVisible();
 });
 
 test("reveal active file opens its folders and focuses it", async ({

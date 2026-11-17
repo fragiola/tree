@@ -49,8 +49,9 @@ const lines = computed(() => (text.value ? text.value.split("\n") : [""]));
 
 <template>
     <section aria-label="Editor" :class="styles.editor">
-        <div role="tablist" aria-label="Open editors" :class="styles.tabList">
-            <div
+        <!-- the open editors: a button shows a file (the one shown is the current one), another closes it -->
+        <ul aria-label="Open editors" :class="styles.tabList">
+            <li
                 v-for="file in files"
                 :key="file.id"
                 :data-active="file.id === editors.activeFileId ? '' : undefined"
@@ -58,8 +59,7 @@ const lines = computed(() => (text.value ? text.value.split("\n") : [""]));
             >
                 <button
                     type="button"
-                    role="tab"
-                    :aria-selected="file.id === editors.activeFileId"
+                    :aria-current="file.id === editors.activeFileId ? 'true' : undefined"
                     :class="styles.tabButton"
                     @click="props.editors.activate(file.id)"
                 >
@@ -74,8 +74,8 @@ const lines = computed(() => (text.value ? text.value.split("\n") : [""]));
                 >
                     <X aria-hidden="true" />
                 </button>
-            </div>
-        </div>
+            </li>
+        </ul>
         <p v-if="text === undefined" :class="styles.empty">
             Select a file in the explorer to open it.
         </p>

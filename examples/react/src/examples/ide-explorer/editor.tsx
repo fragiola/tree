@@ -41,21 +41,20 @@ export function Editor({
         activeFileId === null ? undefined : (CONTENTS[activeFileId] ?? "");
     return (
         <section aria-label="Editor" className={styles.editor}>
-            <div
-                role="tablist"
-                aria-label="Open editors"
-                className={styles.tabList}
-            >
+            {/* the open editors: a button shows a file (the one shown is the current one), another
+                closes it */}
+            <ul aria-label="Open editors" className={styles.tabList}>
                 {files.map((file) => (
-                    <div
+                    <li
                         key={file.id}
                         data-active={file.id === activeFileId ? "" : undefined}
                         className={styles.tab}
                     >
                         <button
                             type="button"
-                            role="tab"
-                            aria-selected={file.id === activeFileId}
+                            aria-current={
+                                file.id === activeFileId ? "true" : undefined
+                            }
                             className={styles.tabButton}
                             onClick={() => editors.activate(file.id)}
                         >
@@ -70,9 +69,9 @@ export function Editor({
                         >
                             <X aria-hidden />
                         </button>
-                    </div>
+                    </li>
                 ))}
-            </div>
+            </ul>
             {text === undefined ? (
                 <p className={styles.empty}>
                     Select a file in the explorer to open it.

@@ -13,13 +13,13 @@ import type { Editors, EditorsStore, ProjectModel } from "./workspace";
     host: { class: "contents" },
     template: `
         <section aria-label="Editor" [class]="styles.editor">
-            <div role="tablist" aria-label="Open editors" [class]="styles.tabList">
+            <!-- the open editors: a button shows a file (the one shown is the current one), another closes it -->
+            <ul aria-label="Open editors" [class]="styles.tabList">
                 @for (file of files(); track file.id) {
-                    <div [attr.data-active]="file.id === editors().activeFileId ? '' : null" [class]="styles.tab">
+                    <li [attr.data-active]="file.id === editors().activeFileId ? '' : null" [class]="styles.tab">
                         <button
                             type="button"
-                            role="tab"
-                            [attr.aria-selected]="file.id === editors().activeFileId"
+                            [attr.aria-current]="file.id === editors().activeFileId ? 'true' : null"
                             [class]="styles.tabButton"
                             (click)="store().activate(file.id)"
                         >
@@ -34,9 +34,9 @@ import type { Editors, EditorsStore, ProjectModel } from "./workspace";
                         >
                             <svg lucideX aria-hidden="true"></svg>
                         </button>
-                    </div>
+                    </li>
                 }
-            </div>
+            </ul>
             @if (lines(); as lines) {
                 <nav aria-label="Path" [class]="styles.breadcrumb">
                     @for (crumb of path(); track crumb.id; let first = $first) {
