@@ -17,6 +17,7 @@ const OWN = [
     "useTreeItem",
     "useTreeRef",
     "useTreeState",
+    "useTreeVirtualWindow",
 ];
 /** The same primitives as @fragiola/tree-react's, in files of the same names. */
 const PRIMITIVES = [
@@ -30,6 +31,7 @@ const PRIMITIVES = [
     "RenameInput",
     "Root",
     "Toggle",
+    "VirtualItems",
 ];
 const FILES = [
     "checkbox",

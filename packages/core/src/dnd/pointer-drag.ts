@@ -5,7 +5,7 @@
 // transient `item.expand`); the nearest scroll container scrolls near its edges. Escape, a
 // cancelled pointer or a lost capture end it with nothing committed; a release over a target runs
 // one `item.move`.
-import { isDragExempt, windowOf } from "../dom/owner";
+import { isDragExempt } from "../dom/owner";
 import type { EngineHost } from "../engine/host";
 import { rectOf } from "../geometry/rect";
 import type { DropTarget } from "./drop-evaluation";
@@ -96,7 +96,13 @@ export class PointerDrag {
             }
         });
         listen(content, "lostpointercapture", () => {
-            if (this.session) this.cancel();
+            // a row a virtualized tree no longer renders loses the capture: the document's
+            // listeners still follow the pointer
+            if (
+                this.session &&
+                (content.isConnected || this.host.renderedRows() === undefined)
+            )
+                this.cancel();
         });
     }
 
@@ -220,9 +226,8 @@ export class PointerDrag {
     /** Scrolls the nearest scroll container while the pointer is near its top or bottom edge. */
     private updateScroll(): void {
         const session = this.session;
-        const root = this.host.root();
-        if (!session || !root) return;
-        const container = scrollParent(root);
+        if (!session || !this.host.root()) return;
+        const container = this.host.scrollContainer();
         if (!container) return;
         const rect = rectOf(container);
         const { threshold, speed } = this.host.options.autoScroll;
@@ -322,6 +327,11 @@ export class PointerDrag {
         return this.press !== undefined;
     }
 
+    /** The item a pointer pressed (its content holds the pointer capture), while it does. */
+    get pressedItemId(): string | undefined {
+        return this.press?.itemId;
+    }
+
     private end(): void {
         const session = this.session;
         const press = this.press;
@@ -342,15 +352,4 @@ export class PointerDrag {
         if (session && this.host.drag()?.mode === "pointer")
             this.host.setDrag(null);
     }
-}
-
-/** The nearest scroll container of the root (the root itself when it scrolls). */
-function scrollParent(root: HTMLElement): HTMLElement | undefined {
-    const view = windowOf(root);
-    if (!view) return undefined;
-    for (let node: HTMLElement | null = root; node; node = node.parentElement) {
-        const { overflowY } = view.getComputedStyle(node);
-        if (overflowY === "auto" || overflowY === "scroll") return node;
-    }
-    return undefined;
 }

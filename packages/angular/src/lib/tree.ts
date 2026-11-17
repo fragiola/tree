@@ -8,6 +8,7 @@ import { TreeLiveRegionDirective } from "./directives/live-region.directive";
 import { TreeRenameInputDirective } from "./directives/rename-input.directive";
 import { TreeRootDirective } from "./directives/root.directive";
 import { TreeToggleDirective } from "./directives/toggle.directive";
+import { TreeVirtualItemsDirective } from "./directives/virtual-items.directive";
 
 /**
  * Every Tree directive, for a standalone component's `imports`:
@@ -24,4 +25,5 @@ export const TREE = [
     TreeRenameInputDirective,
     TreeDropIndicatorDirective,
     TreeLiveRegionDirective,
+    TreeVirtualItemsDirective,
 ] as const;

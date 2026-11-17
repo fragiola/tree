@@ -12,19 +12,19 @@ framework has an adapter, so **every piece of logic that isn't rendering lives i
 
 | package | name | contains | depends on |
 |---|---|---|---|
-| `packages/core` | `@fragiola/tree` | the tree model (JSON document v1 and its JSON Schema, the command bus, commands with JSON Schemas, `get`/`is` queries, middleware, events), and the engine (DOM focus, the WAI-ARIA keyboard model with type-ahead, Pointer Events drag and drop with keyboard drag, the async children loader, announcements) | DOM only, zero runtime deps |
-| `packages/react` | `@fragiola/tree-react` | the `Tree.*` primitives (`Root`, `Items`, `Item`, `ItemContent`, `Group`, `Toggle`, `Checkbox`, `RenameInput`, `DropIndicator`, `LiveRegion`) and hooks (`useTree`, `useTreeItem`, `useTreeState`, `useTreeRef`, `createTreeRef`) over the core, and the core re-exported | the core (`workspace:*`, published as the exact version); peer `react`, `react-dom` (^19) |
-| `packages/vue` | `@fragiola/tree-vue` | the same `Tree.*` primitives as Vue 3.5 components (plain `.ts` render functions, `as` and a `render` scoped slot, default scoped slots for the recursion, `v-model:*-item-ids`), `typedTree<Types>()`, the composables (`useTree`, `useTreeItem`, `useTreeState`, `useTreeRef`, `createTreeRef`), and the core re-exported | the core (`workspace:*`, published as the exact version); peer `vue` (^3.5) |
-| `packages/angular` | `@fragiola/tree-angular` | the same primitives as Angular standalone attribute directives on the consumer's elements (`[treeRoot]`, `ng-template[treeItems]` for the recursion, `[treeItem]`, `[treeItemContent]`, `[treeGroup]`, `[treeToggle]`, `[treeCheckbox]`, `input[treeRenameInput]`, `[treeDropIndicator]`, `[treeLiveRegion]`, the `TREE` array; signals, `host` bindings, zoneless), the injection functions (`injectTree`, `injectTreeItem`, `injectTreeState`), and the core re-exported. Built by ng-packagr (Angular Package Format, partial compilation, ESM only) on TypeScript 6.0.3, pinned in this package (the Angular compiler supports `>=6.0 <6.1`); published from its `dist` (`publishConfig.directory`, its manifest written by `scripts/publish-manifest.ts`) | the core (`workspace:*`, published as the exact version); peer `@angular/core` (^22) |
+| `packages/core` | `@fragiola/tree` | the tree model (JSON document v1 and its JSON Schema, the command bus, commands with JSON Schemas, `get`/`is` queries, middleware, events), and the engine (DOM focus, the WAI-ARIA keyboard model with type-ahead, Pointer Events drag and drop with keyboard drag, the async children loader, announcements, the opt-in virtualizer `createTreeVirtualizer`) | DOM only, zero runtime deps |
+| `packages/react` | `@fragiola/tree-react` | the `Tree.*` primitives (`Root`, `Items`, `VirtualItems`, `Item`, `ItemContent`, `Group`, `Toggle`, `Checkbox`, `RenameInput`, `DropIndicator`, `LiveRegion`) and hooks (`useTree`, `useTreeItem`, `useTreeState`, `useTreeRef`, `createTreeRef`, `useTreeVirtualWindow`) over the core, and the core re-exported | the core (`workspace:*`, published as the exact version); peer `react`, `react-dom` (^19) |
+| `packages/vue` | `@fragiola/tree-vue` | the same `Tree.*` primitives as Vue 3.5 components (plain `.ts` render functions, `as` and a `render` scoped slot, default scoped slots for the recursion, `v-model:*-item-ids`), `typedTree<Types>()`, the composables (`useTree`, `useTreeItem`, `useTreeState`, `useTreeRef`, `createTreeRef`, `useTreeVirtualWindow`), and the core re-exported | the core (`workspace:*`, published as the exact version); peer `vue` (^3.5) |
+| `packages/angular` | `@fragiola/tree-angular` | the same primitives as Angular standalone attribute directives on the consumer's elements (`[treeRoot]`, `ng-template[treeItems]` for the recursion, `ng-template[treeVirtualItems]` for a virtualized tree's rows, `[treeItem]`, `[treeItemContent]`, `[treeGroup]`, `[treeToggle]`, `[treeCheckbox]`, `input[treeRenameInput]`, `[treeDropIndicator]`, `[treeLiveRegion]`, the `TREE` array; signals, `host` bindings, zoneless), the injection functions (`injectTree`, `injectTreeItem`, `injectTreeState`, `injectTreeVirtualWindow`), and the core re-exported. Built by ng-packagr (Angular Package Format, partial compilation, ESM only) on TypeScript 6.0.3, pinned in this package (the Angular compiler supports `>=6.0 <6.1`); published from its `dist` (`publishConfig.directory`, its manifest written by `scripts/publish-manifest.ts`) | the core (`workspace:*`, published as the exact version); peer `@angular/core` (^22) |
 | `examples/shared` | `examples-shared`, private | what every framework's examples share: the metadata (`src/meta/<id>.ts`), the five example themes (`light`, `dark`, `ide`, `paper`, `terminal`: Dockable's, each changing the tree's shape as well as its colours, read by every example of every framework through the `--tr-*` tokens), the embed protocol, the manifest builder and loader generator, every Playwright spec | no framework |
-| `examples/react` | `examples-react`, private | the 13 React examples (`src/examples/<id>/`), the vendored Fragiola UI (`src/components`, `scripts/vendor-fragiola.ts`), the embed app | `@fragiola/tree-react`, Fragiola UI's stack |
-| `examples/vue` | `examples-vue`, private | the 13 examples in Vue (`src/examples/<id>/index.vue`, `styles.ts` copied from React's), the Vue kit (Dockable's, over Reka UI, with the React kit's classes; `src/styles` and `src/lib/cn.ts` copied from examples/react, `tests/vendored.test.ts`), the embed app; single-file components checked by `vue-tsc` on TypeScript 6.0.3, pinned in this app only | `@fragiola/tree-vue`, Vue 3.5, Reka UI, `@lucide/vue` |
-| `examples/angular` | `examples-angular`, private | the 13 examples in Angular (`src/examples/<id>/index.ts`, a default-exported standalone component with an inline template, and `styles.ts` copied from Vue's), the Angular kit (Dockable's clickable and switch, with the React kit's classes; `src/styles` and `src/lib/cn.ts` copied from examples/react, `tests/vendored.test.ts`), the embed app (Vite + `@analogjs/vite-plugin-angular`, zoneless); typechecked by `ngc` (strict templates) on TypeScript 6.0.3, pinned in this app only | `@fragiola/tree-angular`, Angular 22, `@lucide/angular` |
+| `examples/react` | `examples-react`, private | the 14 React examples (`src/examples/<id>/`), the vendored Fragiola UI (`src/components`, `scripts/vendor-fragiola.ts`), the embed app | `@fragiola/tree-react`, Fragiola UI's stack |
+| `examples/vue` | `examples-vue`, private | the 14 examples in Vue (`src/examples/<id>/index.vue`, `styles.ts` copied from React's), the Vue kit (Dockable's, over Reka UI, with the React kit's classes; `src/styles` and `src/lib/cn.ts` copied from examples/react, `tests/vendored.test.ts`), the embed app; single-file components checked by `vue-tsc` on TypeScript 6.0.3, pinned in this app only | `@fragiola/tree-vue`, Vue 3.5, Reka UI, `@lucide/vue` |
+| `examples/angular` | `examples-angular`, private | the 14 examples in Angular (`src/examples/<id>/index.ts`, a default-exported standalone component with an inline template, and `styles.ts` copied from Vue's), the Angular kit (Dockable's clickable and switch, with the React kit's classes; `src/styles` and `src/lib/cn.ts` copied from examples/react, `tests/vendored.test.ts`), the embed app (Vite + `@analogjs/vite-plugin-angular`, zoneless); typechecked by `ngc` (strict templates) on TypeScript 6.0.3, pinned in this app only | `@fragiola/tree-angular`, Angular 22, `@lucide/angular` |
 | `apps/playground` | `playground`, private | every example live, dev-only scenarios (`src/scenarios/<area>/<id>.tsx`), unstyled fixtures for Playwright (`fixtures/<name>/`), the Inspector | `@fragiola/tree-react` |
 | `site` | `site`, private | the site export (`export.ts`, `contract.ts`, `dev.ts`, `dev-proxy.ts`, `sources.ts`), the pages fragiola.com/tree serves (`site/docs`), the repository's script tests | |
 
 Vue came with Epic #11 and Angular with Epic #14: each adapter has its package, its examples app
-(the 13 examples with the same ids, passing the shared specs unchanged), its CI e2e job (one per
+(the 14 examples with the same ids, passing the shared specs unchanged), its CI e2e job (one per
 `examples/*/playwright.config.ts`), its entry in `ADAPTERS` (`scripts/check-package.ts`), its
 framework in `site/project.json` and in `COMPLETE_FRAMEWORKS` (`examples/shared/e2e/available.ts`):
 React, Vue and Angular all ship every example.
@@ -96,7 +96,7 @@ Do not "fix" these. A change that breaks one is a decision for the maintainer.
    `ownerDocument` / `defaultView`; ids come from an injectable `createId`), and has no `any` in its
    exported declarations. The package makes no network call: the app's `loadChildren` does.
 7. **The primitive contract** is the ecosystem's (`../guidelines/components/primitives.md`, Dockable's
-   `AGENTS.md`). One namespace, `Tree`: `Tree.Root` (`role="tree"`), `Tree.Items`, `Tree.Item`
+   `AGENTS.md`). One namespace, `Tree`: `Tree.Root` (`role="tree"`), `Tree.Items`, `Tree.VirtualItems`, `Tree.Item`
    (`role="treeitem"` with `aria-level`, `aria-posinset`, `aria-setsize`, `aria-expanded`,
    `aria-selected`, `aria-checked`, `aria-disabled`, `aria-busy` and the roving `tabindex`),
    `Tree.ItemContent`, `Tree.Group` (`role="group"`), `Tree.Toggle`, `Tree.Checkbox`,
@@ -105,7 +105,8 @@ Do not "fix" these. A change that breaks one is a decision for the maintainer.
    the model's items); no text and no `aria-label` of their own.
 8. **Part and path attributes** (decided by the maintainer on 2026-11-16,
    `../guidelines/decisions.md`). Every element carries **`data-tree-part`** (`root`, `item`,
-   `content`, `group`, `toggle`, `checkbox`, `rename-input`, `drop-indicator`, `live-region`), and
+   `content`, `group`, `toggle`, `checkbox`, `rename-input`, `drop-indicator`, `live-region`, and
+   `spacer` for a virtualized tree's spacers), and
    every item **`data-tree-path`**, its position from the root (`/0/2`: the third child of the
    first root item, `model.get("item-path-by", { itemId })`). e2e selectors and tooling use them,
    never class names. State attributes: `data-expanded`, `data-selected`, `data-focused`,
@@ -119,14 +120,22 @@ Do not "fix" these. A change that breaks one is a decision for the maintainer.
 10. **App policy stays in the app.** No undo/redo, no persistence, no translations, no announcement
     text in the packages. Labels are raw model data no primitive reads or renders. The examples
     show those features as copyable code.
-11. **No virtualization in this release.** `model.get("visible-items")` is the flat render order a
-    virtualizer will consume later without an API break.
+11. **Virtualization is opt-in, in the core** (the maintainer's request of 2026-11-17, Epic #28).
+    `createTreeVirtualizer(options)` (`src/virtual/`) is the engine's `virtual` option and every
+    root's `virtual` prop/input: the engine windows `model.get("visible-items")` (the flat render
+    order) and `get("virtual-window")` is what `Tree.VirtualItems` /
+    `ng-template[treeVirtualItems]` render, flat (`aria-level`, `aria-posinset`, `aria-setsize`,
+    no `Tree.Group`) between `data-tree-part="spacer"` elements. No library (Data Grid's
+    precedent: its window math and scroll target are copied with their header), measured rows
+    through the root window's `ResizeObserver`. A tree without the option must behave and render
+    exactly as before, and a bundle that never imports `createTreeVirtualizer` must not carry it:
+    the engine reaches the virtualizer only through the option.
 
 ## The engine (`createTreeEngine(model, options)`)
 
-- **Verbs** (`src/engine/verbs.ts`): `run` `focus`, `scroll-to`, `load-children`,
-  `start-keyboard-drag`, `cancel-drag`; `get` `drop-target`, `dragging-item-ids`,
-  `drop-indicator`, `announcement`, `direction`; `is` `dragging`, `keyboard-dragging`,
+- **Verbs** (`src/engine/verbs.ts`): `run` `focus`, `scroll-to` (`{ itemId, align? }`),
+  `load-children`, `start-keyboard-drag`, `cancel-drag`; `get` `drop-target`, `dragging-item-ids`,
+  `drop-indicator`, `announcement`, `direction`, `virtual-window`; `is` `dragging`, `keyboard-dragging`,
   `item-dragging`, `item-drop-target`. The engine object is exactly the verbs plus `adapter`,
   `subscribe` and `destroy` (a guard test).
 - **`engine.adapter`** (`src/engine/adapter.ts`): the root and item element registration, the
@@ -150,6 +159,12 @@ Do not "fix" these. A change that breaks one is a decision for the maintainer.
   their keys: the engine neither selects nor drags from them, nor handles their keys.
 - **Announcements**: the app's `announce(event)` returns the live region's text; the engine keeps
   the latest one (`get("announcement")`). No text is built in.
+- **Virtualization** (`src/virtual/`, opt-in through the `virtual` option): the window of the
+  visible items in view plus `overscan`, sizes fixed, per row or measured (a Fenwick tree: O(log n)
+  offsets), the roving tab stop, the renamed item and the pressed item pinned in the DOM wherever
+  the scroll is. Focus, End, PageDown/PageUp (a virtualized tree only), type-ahead and `scroll-to`
+  scroll to rows outside the window; a pointer drag auto-scrolls the virtualizer's scroll element,
+  a keyboard drag scrolls its target into view.
 
 ## Glossary
 
@@ -215,6 +230,7 @@ packages/core/      @fragiola/tree      src/index.ts (the entry), and one folder
                     src/dnd/            the drag machine, drop evaluation, keyboard drag, auto-scroll
                     src/geometry/       rect math
                     src/dom/            owner document / window helpers
+                    src/virtual/        the opt-in virtualizer: row sizes, the window (from Data Grid), scroll targets
                     tests/              mirrors src/; tests/types/ (type fixtures); guard.test.ts
                     scripts/            generate-command-docs.ts
 packages/react/     @fragiola/tree-react  src/index.ts, parts.ts (the Tree namespace), context.ts, and
@@ -268,9 +284,9 @@ examples app per framework; the registration in `www` is fragiola/www#32.
 - The JSON model is documented in `site/docs/api/json-model.mdx`, the commands in the generated
   `site/docs/api/commands.mdx`. The examples' workarounds, when there are any, are listed in
   `docs/docs-examples-gaps.md`; what the packages leave out is on `site/docs/limitations.mdx`.
-- **The examples** (`examples/react/src/examples/README.md`): 13 ids, final, that Vue and
+- **The examples** (`examples/react/src/examples/README.md`): 14 ids, final, that Vue and
   Angular port in full: `hello-tree`, `file-explorer`, `multi-select`, `checkboxes`, `async-loading`,
-  `rename`, `drag-and-drop`, `keyboard`, `controlled`, `save-restore`, `undo-redo`,
+  `rename`, `drag-and-drop`, `keyboard`, `controlled`, `save-restore`, `large-tree`, `undo-redo`,
   `command-console`, `rtl`. The shared specs reach them only through `data-tree-part`,
   `data-tree-path`, roles, accessible names and test ids. Fragiola UI is vendored into the
   examples (committed copies), never a dependency of a package.
@@ -296,7 +312,8 @@ and the view are Fragiola's own.
   No code is ported from it; if some ever is, it keeps its Apache-2.0 header and the `NOTICE`
   requirements apply.
 - Code reused from another Fragiola project carries the lighter header
-  `// From Dockable (fragiola/dockable, <path>), same author and licence.` (or Grid Layout's).
+  `// From Dockable (fragiola/dockable, <path>), same author and licence.` (or Grid Layout's, or
+  Data Grid's: `src/virtual/window.ts` and `scroll-target.ts`).
 
 ## Conventions
 

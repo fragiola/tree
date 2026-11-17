@@ -12,6 +12,7 @@ import {
 } from "../geometry/rect";
 import { holdsChildren } from "../state/structure";
 import type { VisibleItem } from "../state/types";
+import { visibleIndex } from "../state/visible-items";
 import {
     type DropContext,
     type DropTarget,
@@ -59,7 +60,11 @@ export function rowAt(
     y: number,
 ): { index: number; fraction: number } | undefined {
     let last: { index: number; rect: Rect } | undefined;
-    for (const [index, entry] of visible.entries()) {
+    // a virtualized tree hit-tests the rows it renders around the view
+    const rows = host.renderedRows();
+    const end = Math.min(rows?.end ?? visible.length, visible.length);
+    for (let index = rows?.start ?? 0; index < end; index++) {
+        const entry = visible[index] as VisibleItem;
         const content = host.contentOf(entry.itemId);
         if (!content) continue;
         const rect = rectOf(content);
@@ -130,11 +135,9 @@ export function targetAt(
 }
 
 /** The last visible row of an item's subtree (itself when it shows no children). */
-function lastVisibleOf(
-    visible: readonly VisibleItem[],
-    itemId: string,
-): string {
-    const start = visible.findIndex((entry) => entry.itemId === itemId);
+export function lastVisibleOf(host: EngineHost, itemId: string): string {
+    const visible = host.model.get("visible-items");
+    const start = visibleIndex(host.model.state).get(itemId) ?? -1;
     const level = visible[start]?.level ?? 0;
     let last = itemId;
     for (let i = start + 1; i < visible.length; i++) {
@@ -168,18 +171,32 @@ export function indicatorOf(
     }
     const rowId =
         target.position === "after"
-            ? lastVisibleOf(host.model.get("visible-items"), target.itemId)
+            ? lastVisibleOf(host, target.itemId)
             : target.itemId;
     const content = host.contentOf(rowId);
-    if (!content) return null;
-    const rect = rectOf(content);
-    const top = rect.top - rootRect.top + root.scrollTop;
+    const box = content
+        ? boxOf(root, rootRect, rectOf(content))
+        : host.unrenderedRowBox(rowId);
+    if (!box) return null;
+    const { top, height } = box;
     return {
         position: target.position,
         itemId: target.itemId,
         level: target.level,
-        blockOffset: target.position === "after" ? top + rect.height : top,
-        blockSize: target.position === "inside" ? rect.height : 0,
+        blockOffset: target.position === "after" ? top + height : top,
+        blockSize: target.position === "inside" ? height : 0,
         inlineOffset: inline,
+    };
+}
+
+/** A rendered row's box, relative to the root (its scroll included). */
+function boxOf(
+    root: HTMLElement,
+    rootRect: Rect,
+    rect: Rect,
+): { top: number; height: number } {
+    return {
+        top: rect.top - rootRect.top + root.scrollTop,
+        height: rect.height,
     };
 }

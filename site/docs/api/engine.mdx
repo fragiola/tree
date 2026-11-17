@@ -58,6 +58,7 @@ in an iframe or a popup window.
 | `autoScroll` | `{ threshold?: number; speed?: number }` | engine defaults | how close (px) to a scroll container's edge a drag scrolls it, and how fast (px per frame) |
 | `typeAheadTimeout` | `number` | `500` | how long (ms) between two typed characters keeps one search |
 | `resetLoadsOnDestroy` | `boolean` | `false` | `destroy()` puts the items it was loading back to `unloaded`, so the next engine loads them again (adapters set it) |
+| `virtual` | `TreeVirtualizer` | none | renders only the visible items in view: `createTreeVirtualizer(options)` (below); without it every visible item is rendered |
 
 ## Members
 
@@ -80,7 +81,7 @@ An engine key never has a dot, so it never reads as a command (`EngineActionKey`
 | action | payload | does |
 | --- | --- | --- |
 | `"focus"` | `{ itemId }` | moves DOM focus to the item and makes it the focused item (`item.focus`) |
-| `"scroll-to"` | `{ itemId }` | scrolls the item into view (the nearest edge) |
+| `"scroll-to"` | `{ itemId, align? }` | scrolls the item into view: the nearest edge, or `align` (`ScrollAlign`: `"nearest"`, `"start"`, `"center"`, `"end"`); a virtualized tree scrolls to a visible item that is not rendered, which renders it |
 | `"load-children"` | `{ itemId }` | calls your `loadChildren` for an item with a `childrenStatus` (a retry, or a first load); refused while it loads |
 | `"start-keyboard-drag"` | `{ itemIds }` | starts a keyboard drag: the arrows move the drop target, Enter drops (`item.move`), Escape cancels |
 | `"cancel-drag"` | none | cancels the drag under way, pointer or keyboard: nothing is committed |
@@ -96,6 +97,7 @@ An engine key never has a dot, so it never reads as a command (`EngineActionKey`
 | `"drop-indicator"` | `DropIndicator \| null`: where the drop indicator goes |
 | `"announcement"` | `string`: the latest text your `announce` returned (`""` before any) |
 | `"direction"` | `"ltr" \| "rtl"`: the root's writing direction; Right and Left swap in `rtl` |
+| `"virtual-window"` | `VirtualWindow \| null`: the rows a virtualized tree renders; `null` without the `virtual` option |
 
 A `DropTarget` is the `item.move` a drop would run and how it reads on screen; a `DropIndicator`
 is where `Tree.DropIndicator` goes, relative to the root's border box, in pixels and logical
@@ -114,6 +116,56 @@ sides:
 
 `DropContext` and `HoverPosition` are the inputs of the drop evaluation (what it reads of the
 tree, and where the pointer is over a row), exported for an adapter's tests.
+
+## Virtualization
+
+`createTreeVirtualizer(options)` describes a virtualizer (a `TreeVirtualizer`) for the `virtual`
+option: the engine then renders only the visible items in view, plus `overscan` rows on each
+side, so a tree of hundreds of thousands of visible items scrolls, moves the focus and drags like
+a small one. It is opt-in and costs nothing without it: a bundle that never imports
+`createTreeVirtualizer` leaves it out. The guide is [Virtualization](/docs/guides/virtualization).
+
+```ts
+import { createTreeEngine, createTreeVirtualizer } from "@fragiola/tree";
+
+// one virtualizer serves every tree: create it once, not on every render
+const virtual = createTreeVirtualizer({ rowSize: 28 });
+const engine = createTreeEngine(model, { root, virtual });
+engine.get("virtual-window"); // the rows to render
+```
+
+`TreeVirtualizerOptions`:
+
+| option | type | default | description |
+| --- | --- | --- | --- |
+| `rowSize` | `RowSize` | none | every row's exact size (px), or a function of the `VisibleItem` for one per row; rows are never measured, and your CSS gives them these sizes |
+| `estimateRowSize` | `RowSize` | `32` | the size a row is given until it is measured (without `rowSize`): rendered rows are measured through the root window's `ResizeObserver` and keep their size while they stay visible |
+| `overscan` | `number` | `8` | how many rows are rendered past each edge of the view |
+| `scrollElement` | `() => HTMLElement \| null \| undefined` | the nearest scrolling ancestor of the root (the root included), else the document | the element that scrolls the rows |
+| `initialViewportSize` | `number` | `0` | the view's size (px) while the scroll element has none: a server render, a test without layout, a hidden tree |
+
+A `TreeVirtualizer` holds its frozen `options` and `connect(host)`, which only the engine calls.
+`engine.get("virtual-window")` returns a `VirtualWindow`, and each of its rows is a
+`VirtualRow`, a `VisibleItem` with where it goes:
+
+| field | of | description |
+| --- | --- | --- |
+| `rows` | `VirtualWindow` | the rows to render, in order: the ones in view plus the overscan, and the pinned ones (the roving tab stop, the item being renamed, the item a pointer pressed) wherever the scroll is |
+| `start`, `end` | `VirtualWindow` | the rows in view plus the overscan, as indexes of the visible items (`end` excluded) |
+| `totalSize` | `VirtualWindow` | the size (px) of every visible item together |
+| `spaceAfter` | `VirtualWindow` | the space (px) after the last rendered row: the last spacer |
+| `index` | `VirtualRow` | its index in `model.get("visible-items")` |
+| `offset` | `VirtualRow` | from the top of the rows to its top (px) |
+| `size` | `VirtualRow` | its size (px): given, measured or estimated |
+| `spaceBefore` | `VirtualRow` | the space (px) between the previous rendered row (or the top) and this one: the spacer before it |
+
+A virtualized tree is flat: render each row as an item with no group, between spacers of
+`spaceBefore` and, after the last one, `spaceAfter` (what `Tree.VirtualItems` does). The rows
+start at the top of the root's content box. With estimated sizes, the engine keeps the view in
+place when a row above it is measured, so it sets `overflow-anchor: none` on the scroll element
+while attached (the browser's own anchoring would move the view a second time). PageDown and
+PageUp move the focus by the rows in view (`"focus-page-down"`, `"focus-page-up"`); a tree that
+is not virtualized leaves those keys to the browser.
 
 ## Asking: `is`
 

@@ -1,6 +1,8 @@
 // Reads of the tree's structure: parents, ancestors, descendants, paths, visibility. Each takes a
 // state and caches what it computes on that state object (states are never mutated: a draft hands
-// out a new snapshot after every change).
+// out a new snapshot after every change). The reads of the structure alone are cached on the
+// frozen items and root items of a committed state instead, so a command that leaves the structure
+// alone (a focus, a selection) reuses them: a key on a tree of 100 000 items rebuilds nothing.
 import type { TreeItem, TreeState } from "./types";
 
 type AnyState = TreeState;
@@ -16,6 +18,71 @@ function cached<V>(
         cache.set(state, value);
     }
     return value;
+}
+
+/**
+ * What a read depends on, frozen: the same object for every state sharing those values, so a
+ * cache keyed on it is shared too. Undefined while one of them is not frozen (a draft's snapshot,
+ * whose items may still change, or a model created with `freeze: false`): the read is cached on
+ * the state then.
+ */
+const keys = new WeakMap<object, WeakMap<object, object>>();
+
+/**
+ * Objects known to be frozen: a frozen object stays frozen, and `Object.isFrozen` walks every
+ * property of a large map of items.
+ */
+const frozen = new WeakSet<object>();
+
+function isFrozen(value: object): boolean {
+    if (frozen.has(value)) return true;
+    if (!Object.isFrozen(value)) return false;
+    frozen.add(value);
+    return true;
+}
+
+function keyOf(first: object, second: object): object | undefined {
+    if (!isFrozen(first) || !isFrozen(second)) return undefined;
+    let inner = keys.get(first);
+    if (inner === undefined) {
+        inner = new WeakMap();
+        keys.set(first, inner);
+    }
+    let key = inner.get(second);
+    if (key === undefined) {
+        // frozen: a key is itself the first half of another key (the expanded items')
+        key = Object.freeze({});
+        inner.set(second, key);
+    }
+    return key;
+}
+
+/** The key of a state's structure: its items and root items, when both are frozen. */
+export function structureKey(state: AnyState): object | undefined {
+    return keyOf(state.items, state.rootItemIds);
+}
+
+/** A read cached on a key when there is one, else on the state. */
+export function cachedOn<V>(
+    shared: WeakMap<object, V>,
+    own: WeakMap<AnyState, V>,
+    key: object | undefined,
+    state: AnyState,
+    compute: () => V,
+): V {
+    if (key === undefined) return cached(own, state, compute);
+    let value = shared.get(key);
+    if (value === undefined) {
+        value = compute();
+        shared.set(key, value);
+    }
+    return value;
+}
+
+/** The key of a state's structure and its expanded items, when all are frozen. */
+export function expansionKey(state: AnyState): object | undefined {
+    const structure = structureKey(state);
+    return structure && keyOf(structure, state.expandedItemIds);
 }
 
 /** An item of a state, or undefined (own keys only: `toString` is not an item). */
@@ -46,24 +113,31 @@ export function childIdsOf(
 }
 
 const parentCache = new WeakMap<AnyState, ReadonlyMap<string, string | null>>();
+const sharedParents = new WeakMap<object, ReadonlyMap<string, string | null>>();
 
 /** Every attached item's parent (`null` for a root item). */
 export function parentIndex(
     state: AnyState,
 ): ReadonlyMap<string, string | null> {
-    return cached(parentCache, state, () => {
-        const parents = new Map<string, string | null>();
-        const visit = (ids: readonly string[], parent: string | null) => {
-            for (const id of ids) {
-                if (parents.has(id)) continue;
-                parents.set(id, parent);
-                const children = itemOf(state, id)?.childItemIds;
-                if (children) visit(children, id);
-            }
-        };
-        visit(state.rootItemIds, null);
-        return parents;
-    });
+    return cachedOn(
+        sharedParents,
+        parentCache,
+        structureKey(state),
+        state,
+        () => {
+            const parents = new Map<string, string | null>();
+            const visit = (ids: readonly string[], parent: string | null) => {
+                for (const id of ids) {
+                    if (parents.has(id)) continue;
+                    parents.set(id, parent);
+                    const children = itemOf(state, id)?.childItemIds;
+                    if (children) visit(children, id);
+                }
+            };
+            visit(state.rootItemIds, null);
+            return parents;
+        },
+    );
 }
 
 /** An item's parent: an id, `null` for a root item, undefined for an unknown item. */
@@ -111,10 +185,11 @@ export function isDescendantOf(
 }
 
 const orderCache = new WeakMap<AnyState, ReadonlyMap<string, number>>();
+const sharedOrder = new WeakMap<object, ReadonlyMap<string, number>>();
 
 /** Each attached item's index in document order (depth first, children after their parent). */
 export function documentOrder(state: AnyState): ReadonlyMap<string, number> {
-    return cached(orderCache, state, () => {
+    return cachedOn(sharedOrder, orderCache, structureKey(state), state, () => {
         const order = new Map<string, number>();
         const visit = (ids: readonly string[]) => {
             for (const id of ids) {
@@ -130,10 +205,21 @@ export function documentOrder(state: AnyState): ReadonlyMap<string, number> {
 }
 
 const expandedCache = new WeakMap<AnyState, ReadonlySet<string>>();
+const sharedExpanded = new WeakMap<readonly string[], ReadonlySet<string>>();
 
 /** The expanded items, as a set. */
 export function expandedSet(state: AnyState): ReadonlySet<string> {
-    return cached(expandedCache, state, () => new Set(state.expandedItemIds));
+    const expanded = state.expandedItemIds;
+    // the set depends on the list alone: cached on it once it is frozen
+    if (!isFrozen(expanded)) {
+        return cached(expandedCache, state, () => new Set(expanded));
+    }
+    let set = sharedExpanded.get(expanded);
+    if (set === undefined) {
+        set = new Set(expanded);
+        sharedExpanded.set(expanded, set);
+    }
+    return set;
 }
 
 /** Whether an item is attached and all its ancestors are expanded. */

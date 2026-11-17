@@ -38,7 +38,7 @@ The ids are final: Vue and Angular port every one, with the same id.
 | `getting-started` | `hello-tree` (the smallest tree), `file-explorer` |
 | `selection` | `multi-select`, `checkboxes` |
 | `editing` | `rename`, `drag-and-drop` |
-| `data` | `async-loading`, `controlled`, `save-restore` |
+| `data` | `async-loading`, `controlled`, `save-restore`, `large-tree` (virtualized) |
 | `model-api` | `undo-redo`, `command-console` |
 | `accessibility` | `keyboard`, `rtl` |
 

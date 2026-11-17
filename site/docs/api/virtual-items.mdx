@@ -1,0 +1,82 @@
+---
+title: Tree.VirtualItems
+description: The rows of a virtualized tree - only the visible items in view, flat, between spacers - for trees of hundreds of thousands of rows.
+---
+
+`Tree.VirtualItems` renders the rows of a virtualized tree: a `Tree.Root` with a `virtual` prop
+(`createTreeVirtualizer(options)`). It calls its children function with each visible item in view
+plus the overscan, in order, and puts a spacer where the other rows would be. It renders no
+element of its own and takes no common props. Without `virtual` on the root, it renders nothing.
+
+<Framework name="react">
+
+```tsx
+import { createTreeVirtualizer, Tree } from "@fragiola/tree-react";
+
+// one virtualizer serves every tree: create it once, not on every render
+const virtual = createTreeVirtualizer({ rowSize: 28 });
+
+<Tree.Root<Types> model={model} virtual={virtual} aria-label="Files" style={{ height: 400, overflow: "auto" }}>
+    <Tree.VirtualItems<Types>>{(item) => <FileRow item={item} />}</Tree.VirtualItems>
+</Tree.Root>
+```
+
+</Framework>
+
+<Framework name="vue">
+
+```vue
+<script setup lang="ts">
+import { createTreeVirtualizer } from "@fragiola/tree-vue";
+
+const virtual = createTreeVirtualizer({ rowSize: 28 });
+</script>
+
+<template>
+    <Tree.Root :model="model" :virtual="virtual" aria-label="Files" style="height: 400px; overflow: auto">
+        <Tree.VirtualItems v-slot="{ item }"><FileRow :item="item" /></Tree.VirtualItems>
+    </Tree.Root>
+</template>
+```
+
+</Framework>
+
+<Framework name="angular">
+
+```html
+<div [treeRoot]="model" [virtual]="virtual" aria-label="Files" style="height: 400px; overflow: auto">
+    <ng-template [treeVirtualItems]="model" let-item>
+        <div [treeItem]="item">
+            <div treeItemContent>{{ item.label }}</div>
+        </div>
+    </ng-template>
+</div>
+```
+
+In Angular, `<ng-template treeVirtualItems let-item let-row="row">` renders its template for each
+row, directly inside `[treeRoot]`, with the spacers around them; `[treeVirtualItems]="model"`
+types `item`.
+
+</Framework>
+
+A virtualized tree is **flat**: every rendered item is a sibling of the others in the root, and
+carries its `aria-level`, `aria-posinset` and `aria-setsize`, so assistive technology reads the
+whole structure. Render each row as a `Tree.Item` with its `Tree.ItemContent`, and **no
+`Tree.Group`**: the indentation comes from `--tree-depth` on the item. The rows start at the top
+of the root's content box, and the root (or the `scrollElement` you give the virtualizer) is the
+element that scrolls. The roving tab stop, the item being renamed and the item a pointer pressed
+stay rendered wherever the scroll is. The guide is [Virtualization](/docs/guides/virtualization).
+
+## Props
+
+`VirtualItemsProps<T>`:
+
+| prop | type | description |
+| --- | --- | --- |
+| `children` | `(item: ItemOf<T>, row: VirtualRow) => ReactNode` | renders a row: called with each rendered visible item, in order, and its `VirtualRow` (its level, index, offset and size) |
+
+## Attributes
+
+The rows are your items. Each spacer is a `div` with `data-tree-part="spacer"`, `aria-hidden`
+and its height (and `flex-shrink: 0`) as its only inline style; its size is the space of the rows
+it stands for (`spaceBefore` of the row after it, `spaceAfter` of the window for the last one).

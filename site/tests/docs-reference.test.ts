@@ -85,11 +85,13 @@ const MODULE_PAGES: Record<string, string> = {
     "./components/rename-input": "rename-input",
     "./components/drop-indicator": "drop-indicator",
     "./components/live-region": "live-region",
+    "./components/virtual-items": "virtual-items",
     "./hooks/use-tree": "hooks",
     "./hooks/use-tree-item": "hooks",
     "./hooks/use-tree-state": "hooks",
     "./hooks/use-tree-ref": "hooks",
     "./hooks/create-tree-ref": "hooks",
+    "./hooks/use-tree-virtual-window": "hooks",
     "./utils/use-render": "root",
 };
 
@@ -218,6 +220,7 @@ describe("the React reference", () => {
                 "RenameInput",
                 "Root",
                 "Toggle",
+                "VirtualItems",
             ].sort(),
         );
         for (const { name, module } of partExports) {
@@ -314,6 +317,7 @@ describe("the React reference", () => {
                 "useTreeItem",
                 "useTreeRef",
                 "useTreeState",
+                "useTreeVirtualWindow",
             ].sort(),
         );
         for (const { name } of hooks) {
@@ -425,7 +429,7 @@ describe("the Angular reference", () => {
     });
 
     it("lists every directive with its selector and exportAs, and TREE holds them all", () => {
-        expect(directives.length).toBe(10);
+        expect(directives.length).toBe(11);
         for (const { selector, exportAs, name } of directives) {
             expect(mdx, name).toMatch(
                 new RegExp(
@@ -470,7 +474,7 @@ describe("the concept pages", () => {
                 ),
             ),
         );
-        expect(names.size).toBe(9);
+        expect(names.size).toBe(10);
         const mdx = docsPage("concepts/parts-and-paths");
         for (const name of names) {
             expect(mdx, `part "${name}"`).toContain(`\`${name}\``);
@@ -508,7 +512,7 @@ describe("the concept pages", () => {
         const examples = readdirSync(
             join(ROOT, "examples/shared/src/meta"),
         ).map((file) => file.replace(/\.ts$/, ""));
-        expect(examples).toHaveLength(13);
+        expect(examples).toHaveLength(14);
         for (const id of examples) {
             expect(
                 pages.includes(`<Example id="${id}"`) ||

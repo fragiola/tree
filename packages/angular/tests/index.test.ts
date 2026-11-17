@@ -30,6 +30,7 @@ const OWN = [
     "injectTree",
     "injectTreeItem",
     "injectTreeState",
+    "injectTreeVirtualWindow",
 ];
 
 /** Every file of the package's sources. */
@@ -63,7 +64,7 @@ describe("@fragiola/tree-angular", () => {
     });
 
     it("exports exactly the documented runtime API besides the core", () => {
-        expect(REACT_FILES).toHaveLength(10);
+        expect(REACT_FILES).toHaveLength(11);
         const own = Object.keys(angular).filter((name) => !(name in core));
         expect(own.sort()).toEqual([...OWN].sort());
     });

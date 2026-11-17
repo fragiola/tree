@@ -9,6 +9,7 @@ import {
     type TreeJson,
     type TreeModel,
     type TreeTypes,
+    type TreeVirtualizer,
 } from "@fragiola/tree";
 import {
     computed,
@@ -94,6 +95,12 @@ export interface RootProps<T extends TreeTypes = AnyTypes>
     indicatorInset?: number | undefined;
     /** how long (ms) between two typed characters keeps one type-ahead search (default 500) */
     typeAheadTimeout?: number | undefined;
+    /**
+     * renders only the visible items in view (`createTreeVirtualizer(options)`, rendered by
+     * `Tree.VirtualItems`). Create it once (in `setup`, or at module level): another virtualizer
+     * creates another engine
+     */
+    virtual?: TreeVirtualizer | undefined;
     /** access to the model and the engine from outside the root (`useTreeRef`, `createTreeRef`) */
     treeRef?: TreeRef<T> | undefined;
 }
@@ -129,6 +136,7 @@ const ROOT_PROPS = [
     "indentation",
     "indicatorInset",
     "typeAheadTimeout",
+    "virtual",
     "treeRef",
     "as",
 ] as const satisfies readonly (keyof RootProps)[];
@@ -145,7 +153,10 @@ const ROOT_EMITS = [
     "update:checkedItemIds",
 ] as const satisfies readonly (keyof RootEmits)[];
 
-/** a key per model: another model remounts the tree, with a new engine */
+/**
+ * a key per object: another model remounts the tree, another virtualizer makes another engine
+ * (`-1` for none)
+ */
 const modelKeys = new WeakMap<object, number>();
 let nextModelKey = 0;
 function keyOfModel(model: object | undefined): number {
@@ -199,6 +210,8 @@ const RootTree = definePrimitive<RootProps, RootSlots, RootEmits>(
             indentation: props.indentation,
             indicatorInset: props.indicatorInset,
             typeAheadTimeout: props.typeAheadTimeout,
+            // a virtualizer by identity (it holds functions JSON leaves out)
+            virtual: keyOfModel(props.virtual),
         });
         const create = () => {
             const hasLoader = props.loadChildren !== undefined;
@@ -223,6 +236,7 @@ const RootTree = definePrimitive<RootProps, RootSlots, RootEmits>(
                 indentation: props.indentation,
                 indicatorInset: props.indicatorInset,
                 typeAheadTimeout: props.typeAheadTimeout,
+                virtual: props.virtual,
                 // a remount (a route change, a `v-if`) loads what this engine was loading
                 resetLoadsOnDestroy: true,
             });

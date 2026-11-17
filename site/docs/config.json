@@ -116,6 +116,10 @@
                     "path": "guides/ai-and-automation"
                 },
                 {
+                    "label": "Virtualization",
+                    "path": "guides/virtualization"
+                },
+                {
                     "label": "Right-to-left trees",
                     "path": "guides/rtl"
                 },
@@ -140,6 +144,10 @@
                 {
                     "label": "Tree.Items",
                     "path": "api/items"
+                },
+                {
+                    "label": "Tree.VirtualItems",
+                    "path": "api/virtual-items"
                 },
                 {
                     "label": "Tree.Item",
