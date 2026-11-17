@@ -21,13 +21,13 @@ const toggleCheck = () =>
             </Tree.Toggle>
             <!--
                 the app's own check control: a check mark, or a dash when mixed. The item carries
-                aria-checked and Space toggles it, so the button stays out of the tab order and
-                hidden from assistive technology; a native button never starts a drag or a selection
+                aria-checked and Space toggles it, so the box is a span hidden from assistive
+                technology that never takes focus (a press focuses the item, and the arrows keep
+                working); data-tree-no-drag keeps a press from dragging or selecting
             -->
-            <button
-                type="button"
-                tabindex="-1"
+            <span
                 aria-hidden="true"
+                data-tree-no-drag
                 data-testid="check"
                 :data-checked="state.checked ? '' : undefined"
                 :data-indeterminate="state.indeterminate ? '' : undefined"
@@ -37,7 +37,7 @@ const toggleCheck = () =>
             >
                 <Check aria-hidden="true" :class="styles.checkIcon" />
                 <Minus aria-hidden="true" :class="styles.mixedIcon" />
-            </button>
+            </span>
             <span :class="styles.label">{{ item.label }}</span>
         </Tree.ItemContent>
         <Tree.Group v-slot="{ item: child }">

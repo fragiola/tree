@@ -137,7 +137,10 @@ export class TreeItemRenameDirective {
     }
 
     protected onBlur(): void {
-        if (!this.done && !this.commit(false)) this.cancel(false);
+        if (this.done || this.commit(false)) return;
+        // leaving with a refused label cancels: the rename is over, and so is its error
+        this.cancel(false);
+        this.error.set(undefined);
     }
 
     protected onInput(): void {

@@ -93,20 +93,20 @@ focus, keys, drags, the async loader) is the root's.
 
 With `checkboxes` on the root, every item carries `aria-checked` (`mixed` included),
 `data-checked` / `data-indeterminate`, and Space toggles its check. The check control is yours:
-read the item's state and run the command. A press on a native `button` or `input` in the row is
-the control's; any other element needs `data-tree-no-drag`.
+read the item's state and run the command. Make it an element that never takes focus (a press then
+focuses the item, and the arrows keep working), hidden from assistive technology, with
+`data-tree-no-drag` so a press on it starts no drag and no selection.
 
 ```html
 <div [treeItem]="item" #node="treeItem">
     <div treeItemContent>
-        <button
-            type="button"
-            tabindex="-1"
+        <span
             aria-hidden="true"
+            data-tree-no-drag
             [attr.data-checked]="node.state().checked ? '' : null"
             [attr.data-indeterminate]="node.state().indeterminate ? '' : null"
             (click)="tree.model().run('item.toggle-check', { itemId: item.id })"
-        ></button>
+        ></span>
         {{ item.label }}
         @if (node.state().renaming) {
             <input treeItemRename #rename="treeItemRename" aria-label="Name" (renameError)="onError($event)" />

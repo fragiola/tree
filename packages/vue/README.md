@@ -111,12 +111,12 @@ control.
 - **Checks.** With `checkboxes` on the root, each item has `aria-checked` and `data-checked` /
   `data-indeterminate`, and Space toggles it. A visible control is yours: read
   `useTreeItem(item).state` (`checked`, `indeterminate`, `checkState`) and run
-  `model.run("item.toggle-check", { itemId })`. Keep it out of the tab order and hidden from
-  assistive technology (the item already says it), and make it a native `button` or `input`, or
-  give it `data-tree-no-drag`, so a press on it starts no drag and no selection.
+  `model.run("item.toggle-check", { itemId })`. Make it an element that never takes focus (a
+  press then focuses the item, and the arrows keep working), hidden from assistive technology (the
+  item already says it), with `data-tree-no-drag` so a press on it starts no drag and no selection.
 
   ```vue
-  <button type="button" tabindex="-1" aria-hidden="true"
+  <span aria-hidden="true" data-tree-no-drag
       :data-checked="state.checked ? '' : undefined"
       :data-indeterminate="state.indeterminate ? '' : undefined"
       @click="model.run('item.toggle-check', { itemId: item.id })" />

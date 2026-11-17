@@ -650,16 +650,17 @@ class Engine<T extends TreeTypes> implements TreeEngine<T>, EngineHost {
         // removal moved it): read before the adapters re-render and remove the old element
         const root = this.rootElement;
         const active = root?.ownerDocument.activeElement;
-        // the item renaming before this change (a commit or a cancel just ended it), or now
-        const renaming = this.renamingItemId ?? this.model.state.renamingItemId;
+        // the item whose rename this change ended (a commit, a cancel, another command): its editor
+        // goes away, so focus goes back to the item; while a rename goes on, focus stays in it
+        const previous = this.renamingItemId;
         this.renamingItemId = this.model.state.renamingItemId;
+        const ended = previous !== this.renamingItemId ? previous : null;
         const hadFocus =
             root !== undefined &&
             active !== null &&
             active !== undefined &&
             root.contains(active) &&
-            (this.isItemElement(active) ||
-                this.inRenamingItem(active, renaming));
+            (this.isItemElement(active) || this.inRenamingItem(active, ended));
         // an item moved to another parent is a new element: the adapter registers it after this
         // re-render, and it takes the focus the old one had (registerItem)
         this.refocus = hadFocus || (this.refocus && this.focusLost());
@@ -695,8 +696,8 @@ class Engine<T extends TreeTypes> implements TreeEngine<T>, EngineHost {
     }
 
     /**
-     * Whether an element is inside the renaming item's element: the app's label editor, whatever
-     * element it is. Focus elsewhere inside an item (the app's own buttons) is left where it is.
+     * Whether an element is inside the element of the item whose rename just ended: the app's label
+     * editor, whatever element it is. Focus elsewhere inside an item is left where it is.
      */
     private inRenamingItem(element: Element, itemId: string | null): boolean {
         if (itemId === null) return false;
@@ -854,8 +855,8 @@ class Engine<T extends TreeTypes> implements TreeEngine<T>, EngineHost {
 
     private keyDown(event: KeyEventInput): boolean {
         if (this.destroyed) return false;
-        // the rename input, and any control inside an item (a button, a link, an input: the
-        // DRAG_EXEMPT elements), handle their own keys
+        // any control inside an item (a button, a link, an input, the app's rename editor: the
+        // DRAG_EXEMPT elements) handles its own keys
         const target = asElement(event.target);
         const item = target?.closest(`[${PART_ATTRIBUTE}="item"]`);
         if (target && item && isDragExempt(target, item)) return false;

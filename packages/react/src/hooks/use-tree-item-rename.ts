@@ -62,11 +62,13 @@ export function useTreeItemRename<T extends TreeTypes = AnyTypes>(
     const latest = React.useRef(options.onRenameError);
     latest.current = options.onRenameError;
 
-    // each rename starts afresh
+    // each rename starts afresh: the editor (mounted with it) focused and its text selected, once
     useIsomorphicLayoutEffect(() => {
         if (!renaming) return;
         done.current = false;
         setError(undefined);
+        input.current?.focus({ preventScroll: true });
+        input.current?.select();
     }, [renaming]);
 
     // `focus: false` on a blur: focus went elsewhere, and stays there
@@ -89,12 +91,8 @@ export function useTreeItemRename<T extends TreeTypes = AnyTypes>(
         done.current = true;
         engine.run("cancel-rename", { itemId, focus });
     };
-    // a stable ref: it focuses and selects the editor once, when it mounts
     const ref = React.useCallback((element: HTMLInputElement | null) => {
         input.current = element;
-        if (!element) return;
-        element.focus({ preventScroll: true });
-        element.select();
     }, []);
 
     const invalid = error !== undefined;
@@ -113,7 +111,10 @@ export function useTreeItemRename<T extends TreeTypes = AnyTypes>(
             }
         },
         onBlur: () => {
-            if (!done.current && !commit(false)) cancel(false);
+            if (done.current || commit(false)) return;
+            // leaving with a refused label cancels: the rename is over, and so is its error
+            cancel(false);
+            setError(undefined);
         },
         onChange: () => {
             if (error) setError(undefined);

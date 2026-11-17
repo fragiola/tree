@@ -83,17 +83,17 @@ function PermissionItem({ item }: { item: ItemOf<PermissionTypes> }) {
 /**
  * The app's own check control: a press toggles the item's check (`item.toggle-check`, with the
  * cascade); it shows a check mark, or a dash when mixed. The item already carries `aria-checked`
- * and Space toggles it, so the button stays out of the tab order and hidden from assistive
- * technology; a native button never starts a drag or a selection.
+ * and Space toggles it, so the box is a span hidden from assistive technology that never takes
+ * focus (a press focuses the item, and the arrows keep working); `data-tree-no-drag` keeps a press
+ * from dragging or selecting.
  */
 function CheckControl({ item }: { item: ItemOf<PermissionTypes> }) {
     const { model } = useTree<PermissionTypes>();
     const { state } = useTreeItem(item);
     return (
-        <button
-            type="button"
-            tabIndex={-1}
+        <span
             aria-hidden
+            data-tree-no-drag=""
             data-testid="check"
             data-checked={state.checked ? "" : undefined}
             data-indeterminate={state.indeterminate ? "" : undefined}
@@ -103,6 +103,6 @@ function CheckControl({ item }: { item: ItemOf<PermissionTypes> }) {
         >
             <Check aria-hidden className={styles.checkIcon} />
             <Minus aria-hidden className={styles.mixedIcon} />
-        </button>
+        </span>
     );
 }

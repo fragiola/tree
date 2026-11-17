@@ -113,6 +113,17 @@ describe("inline rename", () => {
         expect(itemElement("app.ts")).toHaveFocus();
     });
 
+    it("keeps focus and the typed text in the editor through an unrelated change", () => {
+        const { model, input } = start();
+        fireEvent.change(input, { target: { value: "half" } });
+        act(() => {
+            model.run("item.toggle-check", { itemId: "readme" });
+        });
+        expect(input).toHaveFocus();
+        expect(input.value).toBe("half");
+        expect(model.state.renamingItemId).toBe("app");
+    });
+
     it("cancels on Escape", () => {
         const { model, input } = start();
         fireEvent.change(input, { target: { value: "x" } });

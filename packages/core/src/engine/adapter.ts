@@ -17,7 +17,7 @@ export interface PressInput {
 
 /**
  * What only an adapter (React, Vue, Angular) calls on an engine: the root and item elements, the
- * events it forwards, the rename input, and the revision it re-renders on. An app never needs it:
+ * events it forwards, and the revision it re-renders on. An app never needs it:
  * it uses `run`, `can`, `check`, `get` and `is`. The adapter forwards events; the core decides.
  */
 export interface TreeEngineAdapter<T extends TreeTypes = AnyTypes> {

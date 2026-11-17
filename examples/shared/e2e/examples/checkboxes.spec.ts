@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import { item, openExample, row, tree } from "../helpers";
 
 // checkboxes: an item's accessible name is its label; its check is its aria-checked. The check
-// control is the app's own (a button hidden from assistive technology), reached by its test id.
+// control is the app's own (a span hidden from assistive technology), reached by its test id.
 
 test("a group is mixed, and checking its last permission checks it", async ({
     page,
@@ -24,6 +24,8 @@ test("a group is mixed, and checking its last permission checks it", async ({
         "aria-checked",
         "true",
     );
+    // the box never takes focus: the press focuses the item, and the arrows keep working
+    await expect(item(perms, "Publish pages")).toBeFocused();
     await expect(content).toHaveAttribute("aria-checked", "true");
     await expect(scopes).toContainText("content:publish");
 });

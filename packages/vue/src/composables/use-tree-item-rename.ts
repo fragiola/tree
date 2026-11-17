@@ -124,7 +124,10 @@ export function useTreeItemRename<T extends TreeTypes = AnyTypes>(
         }
     };
     const onBlur = () => {
-        if (!done && !commit(false)) cancel(false);
+        if (done || commit(false)) return;
+        // leaving with a refused label cancels: the rename is over, and so is its error
+        cancel(false);
+        error.value = undefined;
     };
     const onInput = () => {
         if (error.value) error.value = undefined;

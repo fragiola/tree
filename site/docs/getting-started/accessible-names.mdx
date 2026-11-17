@@ -115,8 +115,8 @@ examples do.
 
 `Tree.Toggle` is hidden from assistive technology (`aria-hidden`): the item already says
 `aria-expanded`, and the keyboard acts on the item. It needs no name. The same goes for your own
-check control: the item says `aria-checked` and Space toggles it, so give the control
-`aria-hidden` and `tabindex="-1"`, not a name.
+check control: the item says `aria-checked` and Space toggles it, so make the control an element
+that never takes focus, with `aria-hidden` and no name ([checkboxes](/docs/guides/checkboxes)).
 
 ## The rename input
 

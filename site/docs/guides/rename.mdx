@@ -103,7 +103,9 @@ focus where it went. The hook adds no part attribute: the element and its look a
 ## By hand
 
 The hook is a convenience over two engine actions. Wire your own editor with them when you need
-another element (a `contenteditable`, a combobox):
+another element (a `contenteditable`, a combobox). A native `input` or `textarea` and a
+`contenteditable` keep their own keys. Any other editor needs `data-tree-no-drag`, or the tree's
+arrows, Space and type-ahead act while you type:
 
 ```ts
 const { engine } = useTree<Types>();
