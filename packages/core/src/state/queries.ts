@@ -1,6 +1,7 @@
 // The typed registry of `model.get` and `model.is` keys. Shape from Dockable (fragiola/dockable,
 // packages/core/src/state/queries.ts), same author and licence.
 import { COMMANDS } from "../commands/catalogue";
+import { resolveFlags } from "../commands/rules";
 import type { CommandInfo, NoPayload } from "../commands/types";
 import { checkedSet, checkStateOf } from "./check-state";
 import { deepFreeze } from "./draft";
@@ -122,6 +123,10 @@ export interface ModelIsMap {
     "item-loading": { itemId: string };
     /** an item is disabled: focusable, not actionable */
     "item-disabled": { itemId: string };
+    /** an item can be moved now: movable (its flag or the default) and not disabled */
+    "item-movable": { itemId: string };
+    /** an item can be renamed now: renamable (its flag or the default) and not disabled */
+    "item-renamable": { itemId: string };
     /** an item is a leaf: no children and no children status */
     "item-leaf": { itemId: string };
     /** an item's ancestors are all expanded */
@@ -240,6 +245,16 @@ const QUESTIONS: Questions = {
         itemOf(state, itemId)?.childrenStatus === "loading",
     "item-disabled": (state, { itemId }) =>
         itemOf(state, itemId)?.disabled === true,
+    "item-movable": (state, { itemId }) => {
+        const item = itemOf(state, itemId);
+        const flags = item && resolveFlags(state.settings, item);
+        return flags?.movable === true && !flags.disabled;
+    },
+    "item-renamable": (state, { itemId }) => {
+        const item = itemOf(state, itemId);
+        const flags = item && resolveFlags(state.settings, item);
+        return flags?.renamable === true && !flags.disabled;
+    },
     "item-leaf": (state, { itemId }) => {
         const item = itemOf(state, itemId);
         return item !== undefined && isLeaf(item);

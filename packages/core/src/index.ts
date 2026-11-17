@@ -28,6 +28,50 @@ export type {
     TreeSettingsPatch,
 } from "./commands/types";
 export { veto } from "./commands/types";
+export type {
+    DropContext,
+    DropPosition,
+    DropTarget,
+    HoverPosition,
+} from "./dnd/drop-evaluation";
+export {
+    DRAG_EXEMPT,
+    NO_DRAG_ATTRIBUTE,
+    PART_ATTRIBUTE,
+    PATH_ATTRIBUTE,
+} from "./dom/owner";
+export type {
+    KeyEventInput,
+    PressInput,
+    TreeEngineAdapter,
+} from "./engine/adapter";
+export type { LoadChildren } from "./engine/children-loader";
+export type { AnnounceEvent } from "./engine/host";
+export {
+    createTreeEngine,
+    type TreeEngine,
+    type TreeEngineOptions,
+} from "./engine/tree-engine";
+export type {
+    DropIndicator,
+    EngineActionKey,
+    EngineActionMap,
+    EngineActionPayload,
+    EngineActionResult,
+    EngineGetKey,
+    EngineGetMap,
+    EngineGetPayload,
+    EngineGetResult,
+    EngineIsKey,
+    EngineIsMap,
+    EngineIsPayload,
+} from "./engine/verbs";
+export {
+    DEFAULT_KEY_MAP,
+    type KeyAction,
+    type KeyEventLike,
+    type KeyMap,
+} from "./keyboard/key-map";
 export type { FromSchema } from "./schema/from-schema";
 export { treeSchema } from "./schema/tree";
 export type {

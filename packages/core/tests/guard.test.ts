@@ -31,7 +31,7 @@ const GLOBAL_CRYPTO = /(?<![.\w$])crypto\b(?!\s*:)/;
  * The files ported from React Complex Tree (`../references/react-complex-tree`, MIT, © Lukas
  * Bach): they keep a header naming it, its copyright and its licence.
  */
-const PORTED: readonly string[] = [];
+const PORTED: readonly string[] = ["src/dnd/drop-evaluation.ts"];
 
 /**
  * The exported declarations of a source (comments and strings already blanked): each `export`
