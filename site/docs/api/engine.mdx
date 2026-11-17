@@ -298,10 +298,7 @@ an app never needs it. The adapter forwards events; the core decides.
 | `handlePointerDown(itemId, event)` | a pointer pressed an item's content: it may become a drag |
 | `handleClick(itemId, event)` | a click on an item's content (`PressInput`: its modifiers): focus, select, and expand with `expandOnClick` |
 | `handleToggleClick(itemId)` | a press on an item's toggle: expand or collapse |
-| `handleCheckboxClick(itemId)` | a press on an item's checkbox: toggle its check |
 | `handleFocus(itemId)` | DOM focus entered an item's element: it becomes the focused item |
 | `handleDragEvent(event)` | a native drag event on the root (`dragenter`, `dragover`, `dragleave`, `drop`): foreign content with `foreignDrop`, ignored without it |
-| `commitRename(itemId, label, options?)` | the rename input committed: `item.rename`, then focus goes back to the item, unless `{ focus: false }` (a blur: focus stays where it went) |
-| `cancelRename(itemId, options?)` | the rename input was cancelled: `item.cancel-rename`, then focus goes back, unless `{ focus: false }` |
 | `subscribe(listener)` | calls `listener` when adapters should re-render; returns its remover |
 | `getSnapshot()` | the render revision: a number that changes whenever adapters should re-render |

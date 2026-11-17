@@ -1,12 +1,12 @@
 ---
 title: Inline rename
-description: Edit an item's label in place with Tree.RenameInput, validate the new name with middleware, and show why a name was refused.
+description: Edit an item's label in place with your own input and useTreeItemRename, validate the name with middleware, and show why it was refused.
 ---
 
 Renaming is a short-lived model state: `item.start-rename` (F2 on the focused item) makes an
 item the **renaming** item, `item.rename` sets its label and ends it, `item.cancel-rename` ends it
-unchanged. `Tree.RenameInput` is the text field, rendered only while its item is renaming; the
-rules for a good name are yours.
+unchanged. The text field is yours: `useTreeItemRename(item)` gives it the editing behaviour, and
+you render it only while the item is renaming. The rules for a good name are yours too.
 
 ## The input
 
@@ -15,13 +15,18 @@ Put it in the row, next to (or instead of) the label, and name it:
 <Framework name="react">
 
 ```tsx
+import { type ItemOf, Tree, useTreeItemRename } from "@fragiola/tree-react";
+
 function FileItem({ item }: { item: ItemOf<Types> }) {
+    const rename = useTreeItemRename(item);
     return (
         <Tree.Item item={item}>
             <Tree.ItemContent className="row">
                 <Tree.Toggle>▸</Tree.Toggle>
                 <span className="label">{item.label}</span>
-                <Tree.RenameInput aria-label={`Rename ${item.label}`} className="rename" />
+                {rename.state.renaming && (
+                    <input {...rename.props} aria-label={`Rename ${item.label}`} className="rename" />
+                )}
             </Tree.ItemContent>
             <Tree.Group<Types>>{(child) => <FileItem item={child} />}</Tree.Group>
         </Tree.Item>
@@ -35,10 +40,11 @@ function FileItem({ item }: { item: ItemOf<Types> }) {
 
 ```vue title="file-item.vue"
 <script setup lang="ts">
-import type { ItemOf } from "@fragiola/tree-vue";
+import { type ItemOf, useTreeItemRename } from "@fragiola/tree-vue";
 import { Tree, type Types } from "./tree";
 
-defineProps<{ item: ItemOf<Types> }>();
+const props = defineProps<{ item: ItemOf<Types> }>();
+const { state: rename, props: renameProps } = useTreeItemRename(() => props.item);
 </script>
 
 <template>
@@ -46,7 +52,12 @@ defineProps<{ item: ItemOf<Types> }>();
         <Tree.ItemContent class="row">
             <Tree.Toggle>▸</Tree.Toggle>
             <span class="label">{{ item.label }}</span>
-            <Tree.RenameInput :aria-label="`Rename ${item.label}`" class="rename" />
+            <input
+                v-if="rename.renaming"
+                v-bind="renameProps"
+                :aria-label="`Rename ${item.label}`"
+                class="rename"
+            />
         </Tree.ItemContent>
         <Tree.Group v-slot="{ item: child }">
             <FileItem :item="child" />
@@ -61,18 +72,21 @@ defineProps<{ item: ItemOf<Types> }>();
 
 ```html
 <ng-template [treeItems]="model" let-item>
-    <div [treeItem]="item">
+    <div [treeItem]="item" #node="treeItem">
         <div treeItemContent class="row">
             <span treeToggle>▸</span>
             <span class="label">{{ item.label }}</span>
-            <input treeRenameInput [attr.aria-label]="'Rename ' + item.label" class="rename" />
+            @if (node.state().renaming) {
+                <input treeItemRename [attr.aria-label]="'Rename ' + item.label" class="rename" />
+            }
         </div>
         <div treeGroup></div>
     </div>
 </ng-template>
 ```
 
-The input element stays in the row, hidden (`display: none`) while its item is not renaming.
+`treeItemRename` goes on your own input inside an item. It is the Angular form of
+`useTreeItemRename`.
 
 </Framework>
 
@@ -83,8 +97,27 @@ The input element stays in the row, hidden (`display: none`) while its item is n
 ```
 
 It opens with the label, focused and selected. Enter commits and Escape cancels, and focus goes
-back to the item; leaving the field commits (or cancels, when the name is refused) and leaves
-focus where it went.
+back to the item. Leaving the field commits (or cancels, when the name is refused) and leaves
+focus where it went. The hook adds no part attribute: the element and its look are yours.
+
+## By hand
+
+The hook is a convenience over two engine actions. Wire your own editor with them when you need
+another element (a `contenteditable`, a combobox):
+
+```ts
+const { engine } = useTree<Types>();
+
+// Enter: the label is committed (`item.rename`), then focus goes back to the item
+engine.run("commit-rename", { itemId: item.id, label: value });
+// Escape
+engine.run("cancel-rename", { itemId: item.id });
+// a blur: focus stays where it went
+engine.run("commit-rename", { itemId: item.id, label: value, focus: false });
+```
+
+A refused commit returns the command's failure (`{ ok: false, error }`) and the item keeps
+renaming; `engine.check("commit-rename", …)` answers why without committing.
 
 ## Starting a rename
 
@@ -158,21 +191,29 @@ model.use((ctx, next) => {
 ## Showing why
 
 A refused commit keeps the input open with `aria-invalid` and `data-invalid`, and calls
-`onRenameError` (`@rename-error` in Vue, `(renameError)` in Angular) with the error. Its state (for `className` and
-`render`) has `invalid` and `error`:
+`onRenameError` (an option of the hook; `(renameError)` in Angular) with the error. The hook's
+state has `invalid` and `error`:
 
 <Framework name="react">
 
 ```tsx
 const [error, setError] = useState<string>();
+const rename = useTreeItemRename(item, {
+    onRenameError: (failure) => setError(failure.message),
+});
 
-<Tree.RenameInput
-    aria-label={`Rename ${item.label}`}
-    aria-describedby={error ? errorId : undefined}
-    onRenameError={(failure) => setError(failure.message)}
-    onChange={() => setError(undefined)}
-    className={(state) => (state.invalid ? "rename rename-invalid" : "rename")}
-/>;
+{rename.state.renaming && (
+    <input
+        {...rename.props}
+        aria-label={`Rename ${item.label}`}
+        aria-describedby={error ? errorId : undefined}
+        className={rename.state.invalid ? "rename rename-invalid" : "rename"}
+        onChange={(event) => {
+            rename.props.onChange?.(event);
+            setError(undefined);
+        }}
+    />
+)}
 {error && <span id={errorId} role="alert">{error}</span>}
 ```
 
@@ -185,44 +226,47 @@ const [error, setError] = useState<string>();
 import { ref } from "vue";
 
 const error = ref<string>();
+const { state: rename, props: renameProps } = useTreeItemRename(() => props.item, {
+    onRenameError: (failure) => (error.value = failure.message),
+});
 </script>
 
 <template>
-    <Tree.RenameInput
+    <input
+        v-if="rename.renaming"
+        v-bind="renameProps"
         :aria-label="`Rename ${item.label}`"
         :aria-describedby="error ? errorId : undefined"
-        class="rename"
-        @rename-error="(failure) => (error = failure.message)"
+        :class="['rename', { 'rename-invalid': rename.invalid }]"
         @input="error = undefined"
     />
     <span v-if="error" :id="errorId" role="alert">{{ error }}</span>
 </template>
 ```
 
-A class has no function form in Vue: style the refused state with `.rename[data-invalid]`, or
-read `invalid` and `error` from the `render` slot's `state`.
-
 </Framework>
 
 <Framework name="angular">
 
 ```html
-<input
-    treeRenameInput
-    #rename="treeRenameInput"
-    [attr.aria-label]="'Rename ' + item.label"
-    [attr.aria-describedby]="error() ? errorId : null"
-    class="rename"
-    [class.rename-invalid]="rename.state().invalid"
-    (renameError)="error.set($event.message)"
-    (input)="error.set(undefined)"
-/>
+@if (node.state().renaming) {
+    <input
+        treeItemRename
+        #rename="treeItemRename"
+        [attr.aria-label]="'Rename ' + item.label"
+        [attr.aria-describedby]="error() ? errorId : null"
+        class="rename"
+        [class.rename-invalid]="rename.state().invalid"
+        (renameError)="error.set($event.message)"
+        (input)="error.set(undefined)"
+    />
+}
 @if (error()) {
     <span [id]="errorId" role="alert">{{ error() }}</span>
 }
 ```
 
-`error` is a signal of the component (`signal<string | undefined>(undefined)`); the input's own
+`error` is a signal of the component (`signal<string | undefined>(undefined)`); the directive's
 `state()` has `invalid` and `error` too.
 
 </Framework>

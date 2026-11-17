@@ -92,11 +92,11 @@ root (`TreeRootDirective<T>`).
 | `expandedItemIds` + `onExpandedItemIdsChange` | `[(expandedItemIds)]` (or `[expandedItemIds]` with `(expandedItemIdsChange)`) |
 | `selectedItemIds` + `onSelectedItemIdsChange` | `[(selectedItemIds)]` |
 | `checkedItemIds` + `onCheckedItemIdsChange` | `[(checkedItemIds)]` |
-| `onRenameError` (`Tree.RenameInput`) | the output `(renameError)` |
+| `useTreeItemRename(item, { onRenameError })` | `input[treeItemRename]` on your own input inside an item, rendered with `@if`, and its output `(renameError)` |
 | `treeRef={tree}` | `#tree="treeRoot"` in the template, `viewChild(TreeRootDirective)` in the class: `model()` and `engine` |
 | `defaultTree`, `expandOnClick`, `keyMap`, … | the same inputs (`[defaultTree]`, `expandOnClick`, `[keyMap]`); a boolean input takes a bare attribute (`checkboxes`) |
 | `<Tree.Items<Types>>` and the other type arguments | `[treeItems]="model"` (or the document) |
-| a part that renders nothing (`Tree.Group` while collapsed, `Tree.RenameInput` while not renaming, `Tree.DropIndicator` with no target) | the element stays, hidden (`display: none`); a collapsed group is also empty |
+| a part that renders nothing (`Tree.Group` while collapsed, `Tree.DropIndicator` with no target) | the element stays, hidden (`display: none`); a collapsed group is also empty |
 
 A controlled list the app does not update reverts the change: a one-way `[expandedItemIds]`
 whose output is not handled keeps the tree on the input.
@@ -112,8 +112,7 @@ whose output is not handled keeps the tree on the input.
 | `TreeItemContentDirective` | `[treeItemContent]` | `treeItemContent` | none | none |
 | `TreeGroupDirective` | `[treeGroup]` | `treeGroup` | `keepMounted` | none |
 | `TreeToggleDirective` | `[treeToggle]` | `treeToggle` | none | none |
-| `TreeCheckboxDirective` | `[treeCheckbox]` | `treeCheckbox` | none | none |
-| `TreeRenameInputDirective` | `input[treeRenameInput]` | `treeRenameInput` | none | `renameError` |
+| `TreeItemRenameDirective` | `input[treeItemRename]` | `treeItemRename` | none | `renameError` |
 | `TreeDropIndicatorDirective` | `[treeDropIndicator]` | `treeDropIndicator` | none | none |
 | `TreeLiveRegionDirective` | `[treeLiveRegion]` | `treeLiveRegion` | none | none |
 
@@ -122,8 +121,8 @@ Another model, or another engine option (`keyMap`, `checkboxes`, …), makes ano
 Create the model once, in a field (`readonly model = createTreeModel<Types>(json)`).
 
 Through `exportAs`, every directive has `state()`: `RootState` on the root (with `model()`,
-`engine` and the root's `context`), `TreeItemState` on the parts of an item, `RenameInputState`
-(`invalid`, `error`) on the rename input, `DropIndicatorState | null` on the drop indicator and
+`engine` and the root's `context`), `TreeItemState` on the parts of an item,
+`TreeItemRenameState` (`renaming`, `invalid`, `error`) on `[treeItemRename]`, `DropIndicatorState | null` on the drop indicator and
 `LiveRegionState` (`announcement`) on the live region. A group also has `children()`, the items it
 renders. Drop the indicator from the DOM while there is no drag with
 `@if (tree.state().dragging)` around it.
@@ -148,7 +147,7 @@ on it: the engine starts after the root's first render in the browser (`afterNex
 
 ## Types
 
-`RootState`, `TreeItemState`, `RenameInputState`, `DropIndicatorState`, `LiveRegionState`,
+`RootState`, `TreeItemState`, `TreeItemRenameState`, `DropIndicatorState`, `LiveRegionState`,
 `InjectTreeResult`, `InjectTreeItemResult`, `InjectTreeStateOptions`, and:
 
 | type | description |

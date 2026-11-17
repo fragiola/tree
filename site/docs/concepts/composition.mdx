@@ -87,7 +87,10 @@ In Angular the recursion is one template: `treeItems` renders it with each root 
   hit-tests its rectangle. Put everything the row shows inside it.
 - `Tree.Group` is the `role="group"` element of the children, rendered only while the item is
   expanded.
-- `Tree.Toggle`, `Tree.Checkbox` and `Tree.RenameInput` are optional, anywhere inside the item.
+- `Tree.Toggle` is optional, anywhere inside the item.
+- A check control and a label editor are yours: an element of your own that reads the item's
+  state and runs a command (`item.toggle-check`), and an input wired by `useTreeItemRename`. See
+  the [checkboxes](/docs/guides/checkboxes) and [rename](/docs/guides/rename) guides.
 
 ## Different items, different rows
 

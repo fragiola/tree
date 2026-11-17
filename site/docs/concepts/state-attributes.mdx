@@ -9,9 +9,10 @@ Tailwind's data variants (`data-selected:bg-blue-50`, `data-[drop-position=insid
 
 ## On every part of an item
 
-`Tree.Item`, `Tree.ItemContent`, `Tree.Group`, `Tree.Toggle`, `Tree.Checkbox` and
-`Tree.RenameInput` carry their item's state, so each row styles itself without reaching for an
-ancestor (a selected parent never leaks into its children's rows).
+`Tree.Item`, `Tree.ItemContent`, `Tree.Group` and `Tree.Toggle` carry their item's state, so
+each row styles itself without reaching for an ancestor (a selected parent never leaks into its
+children's rows). Your own check control reads the same state (`useTreeItem(item).state`) and puts
+the attributes it styles with on itself.
 
 | attribute | when |
 | --- | --- |
@@ -46,7 +47,7 @@ ancestor (a selected parent never leaks into its children's rows).
 | attribute | on | when |
 | --- | --- | --- |
 | `data-drop-position` | `Tree.DropIndicator` | where the drop goes: `before`, `after` or `inside` |
-| `data-invalid` | `Tree.RenameInput` | the last commit was refused (with `aria-invalid`) |
+| `data-invalid` | your input, from `useTreeItemRename`'s props | the last commit was refused (with `aria-invalid`) |
 
 ## ARIA
 

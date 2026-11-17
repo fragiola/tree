@@ -13,9 +13,9 @@ framework has an adapter, so **every piece of logic that isn't rendering lives i
 | package | name | contains | depends on |
 |---|---|---|---|
 | `packages/core` | `@fragiola/tree` | the tree model (JSON document v1 and its JSON Schema, the command bus, commands with JSON Schemas, `get`/`is` queries, middleware, events), and the engine (DOM focus, the WAI-ARIA keyboard model with type-ahead, Pointer Events drag and drop with keyboard drag, the async children loader, announcements, the opt-in virtualizer `createTreeVirtualizer`, the opt-in foreign drops `createTreeForeignDrop` and drops outside `createTreeDropOutside`) | DOM only, zero runtime deps |
-| `packages/react` | `@fragiola/tree-react` | the `Tree.*` primitives (`Root`, `Items`, `VirtualItems`, `Item`, `ItemContent`, `Group`, `Toggle`, `Checkbox`, `RenameInput`, `DropIndicator`, `LiveRegion`) and hooks (`useTree`, `useTreeItem`, `useTreeState`, `useTreeRef`, `createTreeRef`, `useTreeVirtualWindow`) over the core, and the core re-exported | the core (`workspace:*`, published as the exact version); peer `react`, `react-dom` (^19) |
-| `packages/vue` | `@fragiola/tree-vue` | the same `Tree.*` primitives as Vue 3.5 components (plain `.ts` render functions, `as` and a `render` scoped slot, default scoped slots for the recursion, `v-model:*-item-ids`), `typedTree<Types>()`, the composables (`useTree`, `useTreeItem`, `useTreeState`, `useTreeRef`, `createTreeRef`, `useTreeVirtualWindow`), and the core re-exported | the core (`workspace:*`, published as the exact version); peer `vue` (^3.5) |
-| `packages/angular` | `@fragiola/tree-angular` | the same primitives as Angular standalone attribute directives on the consumer's elements (`[treeRoot]`, `ng-template[treeItems]` for the recursion, `ng-template[treeVirtualItems]` for a virtualized tree's rows, `[treeItem]`, `[treeItemContent]`, `[treeGroup]`, `[treeToggle]`, `[treeCheckbox]`, `input[treeRenameInput]`, `[treeDropIndicator]`, `[treeLiveRegion]`, the `TREE` array; signals, `host` bindings, zoneless), the injection functions (`injectTree`, `injectTreeItem`, `injectTreeState`, `injectTreeVirtualWindow`), and the core re-exported. Built by ng-packagr (Angular Package Format, partial compilation, ESM only) on TypeScript 6.0.3, pinned in this package (the Angular compiler supports `>=6.0 <6.1`); published from its `dist` (`publishConfig.directory`, its manifest written by `scripts/publish-manifest.ts`) | the core (`workspace:*`, published as the exact version); peer `@angular/core` (^22) |
+| `packages/react` | `@fragiola/tree-react` | the `Tree.*` primitives (`Root`, `Items`, `VirtualItems`, `Item`, `ItemContent`, `Group`, `Toggle`, `DropIndicator`, `LiveRegion`) and hooks (`useTree`, `useTreeItem`, `useTreeItemRename`, `useTreeState`, `useTreeRef`, `createTreeRef`, `useTreeVirtualWindow`) over the core, and the core re-exported | the core (`workspace:*`, published as the exact version); peer `react`, `react-dom` (^19) |
+| `packages/vue` | `@fragiola/tree-vue` | the same `Tree.*` primitives as Vue 3.5 components (plain `.ts` render functions, `as` and a `render` scoped slot, default scoped slots for the recursion, `v-model:*-item-ids`), `typedTree<Types>()`, the composables (`useTree`, `useTreeItem`, `useTreeItemRename`, `useTreeState`, `useTreeRef`, `createTreeRef`, `useTreeVirtualWindow`), and the core re-exported | the core (`workspace:*`, published as the exact version); peer `vue` (^3.5) |
+| `packages/angular` | `@fragiola/tree-angular` | the same primitives as Angular standalone attribute directives on the consumer's elements (`[treeRoot]`, `ng-template[treeItems]` for the recursion, `ng-template[treeVirtualItems]` for a virtualized tree's rows, `[treeItem]`, `[treeItemContent]`, `[treeGroup]`, `[treeToggle]`, `input[treeItemRename]` (the rename on the app's own input, `useTreeItemRename`'s equivalent), `[treeDropIndicator]`, `[treeLiveRegion]`, the `TREE` array; signals, `host` bindings, zoneless), the injection functions (`injectTree`, `injectTreeItem`, `injectTreeState`, `injectTreeVirtualWindow`), and the core re-exported. Built by ng-packagr (Angular Package Format, partial compilation, ESM only) on TypeScript 6.0.3, pinned in this package (the Angular compiler supports `>=6.0 <6.1`); published from its `dist` (`publishConfig.directory`, its manifest written by `scripts/publish-manifest.ts`) | the core (`workspace:*`, published as the exact version); peer `@angular/core` (^22) |
 | `examples/shared` | `examples-shared`, private | what every framework's examples share: the metadata (`src/meta/<id>.ts`), the five example themes (`light`, `dark`, `ide`, `paper`, `terminal`: Dockable's, each changing the tree's shape as well as its colours, read by every example of every framework through the `--tr-*` tokens), the embed protocol, the manifest builder and loader generator, every Playwright spec | no framework |
 | `examples/react` | `examples-react`, private | the 16 React examples (`src/examples/<id>/`), the vendored Fragiola UI (`src/components`, `scripts/vendor-fragiola.ts`), the embed app | `@fragiola/tree-react`, Fragiola UI's stack |
 | `examples/vue` | `examples-vue`, private | the 16 examples in Vue (`src/examples/<id>/index.vue`, `styles.ts` copied from React's), the Vue kit (Dockable's, over Reka UI, with the React kit's classes; `src/styles` and `src/lib/cn.ts` copied from examples/react, `tests/vendored.test.ts`), the embed app; single-file components checked by `vue-tsc` on TypeScript 6.0.3, pinned in this app only | `@fragiola/tree-vue`, Vue 3.5, Reka UI, `@lucide/vue` |
@@ -51,8 +51,8 @@ its own renders its children with the enclosing one (detached views placed in th
 `…Change` outputs, so `[(expandedItemIds)]` binds both ways and a one-way binding reverts (as
 React's controlled props). Behaviour parity: `packages/angular/tests/parity.test.ts` renders one
 document with React and Angular. The one difference: a directive is on the app's element, which
-exists where React renders nothing (a collapsed item's group, the rename input of an item not
-renaming, the drop indicator without a target); the directive empties and hides it
+exists where React renders nothing (a collapsed item's group, the drop indicator without a
+target); the directive empties and hides it
 (`display: none`), and an app that needs it out of the DOM wraps it in `@if` (examples/angular's
 drag-and-drop: `@if (tree.state().dragging)`). The engine is created after the first render
 (`afterNextRender`), the element registration runs after each render (`afterRenderEffect`).
@@ -99,13 +99,18 @@ Do not "fix" these. A change that breaks one is a decision for the maintainer.
    `AGENTS.md`). One namespace, `Tree`: `Tree.Root` (`role="tree"`), `Tree.Items`, `Tree.VirtualItems`, `Tree.Item`
    (`role="treeitem"` with `aria-level`, `aria-posinset`, `aria-setsize`, `aria-expanded`,
    `aria-selected`, `aria-checked`, `aria-disabled`, `aria-busy` and the roving `tabindex`),
-   `Tree.ItemContent`, `Tree.Group` (`role="group"`), `Tree.Toggle`, `Tree.Checkbox`,
-   `Tree.RenameInput`, `Tree.DropIndicator`, `Tree.LiveRegion`, with the same file names in every
-   adapter. `render`, never `asChild`; the developer owns the recursion (children functions over
-   the model's items); no text and no `aria-label` of their own.
+   `Tree.ItemContent`, `Tree.Group` (`role="group"`), `Tree.Toggle`, `Tree.DropIndicator`,
+   `Tree.LiveRegion`, with the same file names in every adapter. `render`, never `asChild`; the
+   developer owns the recursion (children functions over the model's items); no text and no
+   `aria-label` of their own. **Model state that needs only the item's state and a command gets no
+   primitive** (decided by the maintainer on 2026-11-17, Epic #41): an item's check is the app's
+   own control (`useTreeItem(item).state`, `model.run("item.toggle-check")`; the item carries
+   `aria-checked` and Space), and its label editor is the app's own input wired by the part hook
+   `useTreeItemRename` (`input[treeItemRename]` in Angular) or by hand with the engine's
+   `commit-rename` / `cancel-rename`. Do not bring back `Tree.Checkbox` or `Tree.RenameInput`.
 8. **Part and path attributes** (decided by the maintainer on 2026-11-16,
    `../guidelines/decisions.md`). Every element carries **`data-tree-part`** (`root`, `item`,
-   `content`, `group`, `toggle`, `checkbox`, `rename-input`, `drop-indicator`, `live-region`, and
+   `content`, `group`, `toggle`, `drop-indicator`, `live-region`, and
    `spacer` for a virtualized tree's spacers), and
    every item **`data-tree-path`**, its position from the root (`/0/2`: the third child of the
    first root item, `model.get("item-path-by", { itemId })`). e2e selectors and tooling use them,
@@ -163,8 +168,7 @@ Do not "fix" these. A change that breaks one is a decision for the maintainer.
   `subscribe` and `destroy` (a guard test).
 - **`engine.adapter`** (`src/engine/adapter.ts`): the root and item element registration, the
   forwarded events (`handleKeyDown`, `handlePointerDown`, `handleClick`, `handleToggleClick`,
-  `handleCheckboxClick`, `handleFocus`, `handleDragEvent`), the rename input (`commitRename`, `cancelRename`) and the
-  render revision (`subscribe` / `getSnapshot`). An adapter forwards events; the core decides.
+  `handleFocus`, `handleDragEvent`) and the render revision (`subscribe` / `getSnapshot`). An adapter forwards events; the core decides.
 - **Keys** (`src/keyboard/key-map.ts`): the APG Tree View model with type-ahead, overridable
   through the `keyMap` option; Right and Left swap in `rtl`. Adapters never hard-code a key.
 - **Drag and drop** (`src/dnd/`): Pointer Events with pointer capture and a threshold; the target
