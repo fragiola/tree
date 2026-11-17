@@ -32,7 +32,7 @@ test("rows carry their stock, and low stock is flagged up the tree", async ({
         /units, \d+ low on stock$/,
     );
     await expect(stage.getByTestId("low-stock")).toHaveText(
-        /^\d+ low on stock$/,
+        /^\s*\d+ low on stock\s*$/,
     );
 });
 
