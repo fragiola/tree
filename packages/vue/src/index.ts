@@ -1,11 +1,6 @@
 // The whole core, so that a Vue app installs and imports one package. A local export would
 // silently shadow a core name of the same spelling: tests/index.test.ts fails on one.
 export * from "@fragiola/tree";
-export type {
-    DropIndicatorProps,
-    DropIndicatorSlots,
-    DropIndicatorState,
-} from "./components/drop-indicator";
 export type { GroupProps, GroupSlots } from "./components/group";
 export type { ItemProps, ItemSlots } from "./components/item";
 export type {

@@ -1,4 +1,9 @@
-import type { DropPosition } from "@fragiola/tree";
+import type {
+    AnyFeatures,
+    AnyTypes,
+    DropPosition,
+    TreeEngine,
+} from "@fragiola/tree";
 import { useTreeContext } from "../context";
 import {
     definePrimitive,
@@ -41,7 +46,12 @@ export const DropIndicator: TreeComponent<
         const { engine, revision } = useTreeContext("DropIndicator");
         return () => {
             revision.value;
-            const indicator = engine.value?.get("drop-indicator") ?? null;
+            // a drag feature's key (`engine.get` reads nothing without one)
+            const drags = engine.value as TreeEngine<
+                AnyTypes,
+                AnyFeatures
+            > | null;
+            const indicator = drags?.get("drop-indicator") ?? null;
             if (!indicator) return null;
             const state: DropIndicatorState = {
                 position: indicator.position,

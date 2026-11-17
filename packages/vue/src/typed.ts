@@ -1,8 +1,4 @@
 import type { TreeFeatures, TreeTypes } from "@fragiola/tree";
-import type {
-    DropIndicatorProps,
-    DropIndicatorSlots,
-} from "./components/drop-indicator";
 import type { GroupProps, GroupSlots } from "./components/group";
 import type { ItemProps, ItemSlots } from "./components/item";
 import type {
@@ -28,7 +24,6 @@ export interface TypedTree<
     T extends TreeTypes,
     F extends TreeFeatures = readonly [],
 > {
-    DropIndicator: TreeComponent<DropIndicatorProps, DropIndicatorSlots>;
     Group: TreeComponent<GroupProps, GroupSlots<T>>;
     Item: TreeComponent<ItemProps<T>, ItemSlots>;
     ItemContent: TreeComponent<ItemContentProps, ItemContentSlots>;

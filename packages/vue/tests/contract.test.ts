@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { defineComponent, h, ref, type VNode } from "vue";
 import type { ItemOf, RenderSlotProps, TreeItemState } from "../src";
+import { DropIndicator } from "../src/drag-and-drop";
 import {
     bareFiles,
     type FileTypes,
@@ -61,7 +62,7 @@ describe("the primitive contract", () => {
                         ]),
                     ],
                 }),
-                h(Tree.DropIndicator),
+                h(DropIndicator),
                 h(Tree.LiveRegion),
             ]),
         );
