@@ -9,6 +9,8 @@ ordinary CSS.
 
 ## A complete stylesheet
 
+<Framework name="react">
+
 ```tsx
 function FileItem({ item }: { item: ItemOf<Types> }) {
     return (
@@ -24,6 +26,36 @@ function FileItem({ item }: { item: ItemOf<Types> }) {
     );
 }
 ```
+
+</Framework>
+
+<Framework name="vue">
+
+```vue title="file-item.vue"
+<script setup lang="ts">
+import type { ItemOf } from "@fragiola/tree-vue";
+import { ChevronRight } from "@lucide/vue";
+import { Tree, type Types } from "./tree";
+
+defineProps<{ item: ItemOf<Types> }>();
+</script>
+
+<template>
+    <Tree.Item :item="item" class="tree-item">
+        <Tree.ItemContent class="tree-row">
+            <Tree.Toggle class="tree-toggle">
+                <ChevronRight aria-hidden="true" />
+            </Tree.Toggle>
+            <span class="tree-label">{{ item.label }}</span>
+        </Tree.ItemContent>
+        <Tree.Group v-slot="{ item: child }">
+            <FileItem :item="child" />
+        </Tree.Group>
+    </Tree.Item>
+</template>
+```
+
+</Framework>
 
 ```css title="tree.css"
 .tree {

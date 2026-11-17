@@ -30,6 +30,8 @@ itself gets a `childrenStatus` too, and loads when it is expanded.
 `id` gets one from the model. Pass `signal` to `fetch`: the engine aborts a load when the tree
 unmounts, and an aborted or stale load changes nothing.
 
+<Framework name="react">
+
 ```tsx
 import { type LoadChildren, Tree, type TreeItemJson } from "@fragiola/tree-react";
 
@@ -49,6 +51,33 @@ export function Drive() {
 }
 ```
 
+</Framework>
+
+<Framework name="vue">
+
+```vue title="drive.vue"
+<script setup lang="ts">
+import type { LoadChildren, TreeItemJson } from "@fragiola/tree-vue";
+import DriveItem from "./drive-item.vue";
+import { json, Tree, type Types } from "./tree";
+
+const loadChildren: LoadChildren<Types> = async (item, { signal }) => {
+    const response = await fetch(`/api/folders/${item.id}/children`, { signal });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    return (await response.json()) as TreeItemJson<Types>[];
+};
+</script>
+
+<template>
+    <Tree.Root :default-tree="json" :load-children="loadChildren" aria-label="Cloud drive">
+        <Tree.Items v-slot="{ item }"><DriveItem :item="item" /></Tree.Items>
+        <Tree.LiveRegion class="visually-hidden" />
+    </Tree.Root>
+</template>
+```
+
+</Framework>
+
 The engine runs the commands around it (`item.set-children-status` to `loading`, then
 `item.set-children`, or `item.set-children-status` to `error`), so your middleware and listeners
 see a load like any other change.
@@ -57,6 +86,8 @@ see a load like any other change.
 
 While loading, the item carries `aria-busy` and every part `data-loading`; after a failure,
 `data-load-error`. Show a spinner, or an error with a retry button, from the item's status:
+
+<Framework name="react">
 
 ```tsx
 import { type ItemOf, Tree, useTree, useTreeState } from "@fragiola/tree-react";
@@ -87,6 +118,47 @@ function DriveItem({ item }: { item: ItemOf<Types> }) {
     );
 }
 ```
+
+</Framework>
+
+<Framework name="vue">
+
+```vue title="drive-item.vue"
+<script setup lang="ts">
+import { type ItemOf, useTree, useTreeState } from "@fragiola/tree-vue";
+import { Tree, type Types } from "./tree";
+
+const props = defineProps<{ item: ItemOf<Types> }>();
+const { engine } = useTree<Types>();
+// the selector reads the prop: it selects again when the item changes
+const status = useTreeState<Types, string | undefined>((_state, model) =>
+    model.get("children-status-by", { itemId: props.item.id }),
+);
+</script>
+
+<template>
+    <Tree.Item :item="item">
+        <Tree.ItemContent class="row">
+            <Tree.Toggle>▸</Tree.Toggle>
+            <span>{{ item.label }}</span>
+            <Spinner v-if="status === 'loading'" aria-hidden="true" />
+            <button
+                v-if="status === 'error'"
+                type="button"
+                :aria-label="`Retry loading ${item.label}`"
+                @click="engine.run('load-children', { itemId: item.id })"
+            >
+                Retry
+            </button>
+        </Tree.ItemContent>
+        <Tree.Group v-slot="{ item: child }">
+            <DriveItem :item="child" />
+        </Tree.Group>
+    </Tree.Item>
+</template>
+```
+
+</Framework>
 
 `engine.run("load-children", { itemId })` loads again (a retry, or a first load without
 expanding); it is refused while the item is loading. A failed load is announced through your

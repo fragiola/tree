@@ -12,6 +12,8 @@ rules for a good name are yours.
 
 Put it in the row, next to (or instead of) the label, and name it:
 
+<Framework name="react">
+
 ```tsx
 function FileItem({ item }: { item: ItemOf<Types> }) {
     return (
@@ -26,6 +28,34 @@ function FileItem({ item }: { item: ItemOf<Types> }) {
     );
 }
 ```
+
+</Framework>
+
+<Framework name="vue">
+
+```vue title="file-item.vue"
+<script setup lang="ts">
+import type { ItemOf } from "@fragiola/tree-vue";
+import { Tree, type Types } from "./tree";
+
+defineProps<{ item: ItemOf<Types> }>();
+</script>
+
+<template>
+    <Tree.Item :item="item">
+        <Tree.ItemContent class="row">
+            <Tree.Toggle>▸</Tree.Toggle>
+            <span class="label">{{ item.label }}</span>
+            <Tree.RenameInput :aria-label="`Rename ${item.label}`" class="rename" />
+        </Tree.ItemContent>
+        <Tree.Group v-slot="{ item: child }">
+            <FileItem :item="child" />
+        </Tree.Group>
+    </Tree.Item>
+</template>
+```
+
+</Framework>
 
 ```css
 .row[data-renaming] .label {
@@ -42,6 +72,8 @@ focus where it went.
 F2 renames the focused item (rebind it with `keyMap.rename`). From a button, a menu or a double
 click, run the command:
 
+<Framework name="react">
+
 ```tsx
 const { model } = useTree<Types>();
 
@@ -49,6 +81,24 @@ const { model } = useTree<Types>();
     {item.label}
 </Tree.ItemContent>;
 ```
+
+</Framework>
+
+<Framework name="vue">
+
+```vue
+<script setup lang="ts">
+const { model } = useTree<Types>();
+</script>
+
+<template>
+    <Tree.ItemContent @dblclick="model.run('item.start-rename', { itemId: item.id })">
+        {{ item.label }}
+    </Tree.ItemContent>
+</template>
+```
+
+</Framework>
 
 It is refused for a disabled item and for one that is not `renamable` (on the item, or
 `settings.renamable` for all of them).
@@ -79,8 +129,10 @@ model.use((ctx, next) => {
 ## Showing why
 
 A refused commit keeps the input open with `aria-invalid` and `data-invalid`, and calls
-`onRenameError` with the error. Its state (for `className` and `render`) has `invalid` and
-`error`:
+`onRenameError` (`@rename-error` in Vue) with the error. Its state (for `className` and
+`render`) has `invalid` and `error`:
+
+<Framework name="react">
 
 ```tsx
 const [error, setError] = useState<string>();
@@ -94,5 +146,33 @@ const [error, setError] = useState<string>();
 />;
 {error && <span id={errorId} role="alert">{error}</span>}
 ```
+
+</Framework>
+
+<Framework name="vue">
+
+```vue
+<script setup lang="ts">
+import { ref } from "vue";
+
+const error = ref<string>();
+</script>
+
+<template>
+    <Tree.RenameInput
+        :aria-label="`Rename ${item.label}`"
+        :aria-describedby="error ? errorId : undefined"
+        class="rename"
+        @rename-error="(failure) => (error = failure.message)"
+        @input="error = undefined"
+    />
+    <span v-if="error" :id="errorId" role="alert">{{ error }}</span>
+</template>
+```
+
+A class has no function form in Vue: style the refused state with `.rename[data-invalid]`, or
+read `invalid` and `error` from the `render` slot's `state`.
+
+</Framework>
 
 <Example id="rename" />

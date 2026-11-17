@@ -23,9 +23,21 @@ padding keeps the whole width clickable and highlightable.
 `padding-inline-start` follows the writing direction, so the same rule indents from the right in
 a [right-to-left tree](/docs/guides/rtl). With Tailwind:
 
+<Framework name="react">
+
 ```tsx
 <Tree.ItemContent className="ps-[calc(var(--tree-depth)*1.25rem+0.5rem)]">{item.label}</Tree.ItemContent>
 ```
+
+</Framework>
+
+<Framework name="vue">
+
+```vue
+<Tree.ItemContent class="ps-[calc(var(--tree-depth)*1.25rem+0.5rem)]">{{ item.label }}</Tree.ItemContent>
+```
+
+</Framework>
 
 ## Guide lines
 
@@ -59,12 +71,27 @@ During a drag, the pointer's inline position at the end of a sublist picks the l
 lands on, and the drop indicator starts at `(level - 1) * indentation` pixels from the root's
 inline start. Tell the root your indentation in pixels with `indentation` (default `16`):
 
+<Framework name="react">
+
 ```tsx
 <Tree.Root<Types> defaultTree={json} indentation={20} aria-label="Files">
     <Tree.Items<Types>>{(item) => <FileItem item={item} />}</Tree.Items>
     <Tree.DropIndicator className="drop-indicator" />
 </Tree.Root>
 ```
+
+</Framework>
+
+<Framework name="vue">
+
+```vue
+<Tree.Root :default-tree="json" :indentation="20" aria-label="Files">
+    <Tree.Items v-slot="{ item }"><FileItem :item="item" /></Tree.Items>
+    <Tree.DropIndicator class="drop-indicator" />
+</Tree.Root>
+```
+
+</Framework>
 
 The indicator does not know about padding before the first level (the `+ 0.5rem` above, a grip,
 a toggle). Shift it with a margin in its own styles, as the examples do

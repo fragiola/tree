@@ -11,12 +11,27 @@ is yours, so it is in your language and says what your tree holds.
 
 Name the root with `aria-label`, or point at a visible heading with `aria-labelledby`:
 
+<Framework name="react">
+
 ```tsx
 <h2 id="files-heading">Project files</h2>
 <Tree.Root<Types> defaultTree={json} aria-labelledby="files-heading">
     <Tree.Items<Types>>{(item) => <FileItem item={item} />}</Tree.Items>
 </Tree.Root>
 ```
+
+</Framework>
+
+<Framework name="vue">
+
+```vue
+<h2 id="files-heading">Project files</h2>
+<Tree.Root :default-tree="json" aria-labelledby="files-heading">
+    <Tree.Items v-slot="{ item }"><FileItem :item="item" /></Tree.Items>
+</Tree.Root>
+```
+
+</Framework>
 
 `Tree.Root` sets `aria-multiselectable` when the selection mode is `multiple`.
 
@@ -25,6 +40,8 @@ Name the root with `aria-label`, or point at a visible heading with `aria-labell
 An item's accessible name is computed from its content: the text of its row and, since the group
 is inside the item's element, possibly the text of its expanded children too. Keep the label as the row's text, hide the
 icons, and give the item an explicit name only when its content says more than its name:
+
+<Framework name="react">
 
 ```tsx
 <Tree.Item item={item} aria-label={item.label}>
@@ -39,7 +56,26 @@ icons, and give the item an explicit name only when its content says more than i
 </Tree.Item>
 ```
 
-`aria-label={item.label}` keeps a parent's name to its own label rather than its children's. For
+</Framework>
+
+<Framework name="vue">
+
+```vue
+<Tree.Item :item="item" :aria-label="item.label">
+    <Tree.ItemContent>
+        <Tree.Toggle>
+            <ChevronRight aria-hidden="true" />
+        </Tree.Toggle>
+        <FolderIcon aria-hidden="true" />
+        <span>{{ item.label }}</span>
+    </Tree.ItemContent>
+    <Tree.Group v-slot="{ item: child }"><FileItem :item="child" /></Tree.Group>
+</Tree.Item>
+```
+
+</Framework>
+
+An `aria-label` of the item's label keeps a parent's name to its own label rather than its children's. For
 extra facts (a size, "locked"), use `aria-describedby` with the id of an element holding them, as
 the [async loading](/docs/guides/async-loading) and [drag and drop](/docs/guides/drag-and-drop)
 examples do.
@@ -52,14 +88,28 @@ name.
 
 `Tree.RenameInput` is a text field: name it.
 
+<Framework name="react">
+
 ```tsx
 <Tree.RenameInput aria-label={`Rename ${item.label}`} />
 ```
+
+</Framework>
+
+<Framework name="vue">
+
+```vue
+<Tree.RenameInput :aria-label="`Rename ${item.label}`" />
+```
+
+</Framework>
 
 ## Announcements
 
 `Tree.LiveRegion` (`role="status"`) shows what your `announce` function returns for a drag step or
 a failed load. Without `announce`, it stays empty. Write the sentences yourself:
+
+<Framework name="react">
 
 ```tsx
 import type { AnnounceEvent } from "@fragiola/tree-react";
@@ -80,6 +130,36 @@ const announce = (event: AnnounceEvent) => {
     <Tree.LiveRegion className="visually-hidden" />
 </Tree.Root>;
 ```
+
+</Framework>
+
+<Framework name="vue">
+
+```vue
+<script setup lang="ts">
+import type { AnnounceEvent } from "@fragiola/tree-vue";
+
+const announce = (event: AnnounceEvent) => {
+    switch (event.type) {
+        case "drop":
+            return `Moved ${event.itemIds.length} item(s).`;
+        case "load-error":
+            return "Could not load this folder.";
+        default:
+            return undefined;
+    }
+};
+</script>
+
+<template>
+    <Tree.Root :default-tree="json" :announce="announce" aria-label="Files">
+        <Tree.Items v-slot="{ item }"><FileItem :item="item" /></Tree.Items>
+        <Tree.LiveRegion class="visually-hidden" />
+    </Tree.Root>
+</template>
+```
+
+</Framework>
 
 Hide the live region visually with your own visually-hidden class. The events are listed on
 [Tree.LiveRegion](/docs/api/live-region).

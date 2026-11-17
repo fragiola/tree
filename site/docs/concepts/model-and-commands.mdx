@@ -46,6 +46,8 @@ The rules (a disabled item, an item that is not `movable`, a folder that is not 
 selection mode) are enforced by the commands themselves, so `can` and `check` answer exactly what
 `run` would do, middleware included. Ask them to decide what to render:
 
+<Framework name="react">
+
 ```tsx
 function DeleteButton({ itemId }: { itemId: string }) {
     const { model } = useTree<Types>();
@@ -57,6 +59,32 @@ function DeleteButton({ itemId }: { itemId: string }) {
     );
 }
 ```
+
+</Framework>
+
+<Framework name="vue">
+
+```vue title="delete-button.vue"
+<script setup lang="ts">
+import { useTree, useTreeState } from "@fragiola/tree-vue";
+import type { Types } from "./tree";
+
+const props = defineProps<{ itemId: string }>();
+const { model } = useTree<Types>();
+// asked again after every change of the tree
+const removable = useTreeState<Types, boolean>((_state, model) =>
+    model.can("item.remove", { itemIds: [props.itemId] }),
+);
+</script>
+
+<template>
+    <button v-if="removable" type="button" @click="model.run('item.remove', { itemIds: [itemId] })">
+        Delete
+    </button>
+</template>
+```
+
+</Framework>
 
 A drag asks the same question: the engine runs `model.can("item.move", …)` for every drop target,
 and a refused one never shows.

@@ -9,6 +9,8 @@ whole tree, the keys handled on it, and `aria-multiselectable` when the selectio
 `multiple`. It takes a `model`, or a `defaultTree` it creates one from, creates the engine for it
 once mounted, and renders only its children. No provider is needed above it.
 
+<Framework name="react">
+
 ```tsx
 import { createTreeModel, Tree } from "@fragiola/tree-react";
 import { useState } from "react";
@@ -25,9 +27,35 @@ export function Files() {
 }
 ```
 
+</Framework>
+
+<Framework name="vue">
+
+```vue title="files.vue"
+<script setup lang="ts">
+import { createTreeModel } from "@fragiola/tree-vue";
+import FileItem from "./file-item.vue";
+import { json, Tree, type Types } from "./tree";
+
+// created once, outside Vue's reactivity (never in a ref)
+const model = createTreeModel<Types>(json);
+</script>
+
+<template>
+    <Tree.Root :model="model" aria-label="Project files" class="tree">
+        <Tree.Items v-slot="{ item }"><FileItem :item="item" /></Tree.Items>
+        <Tree.DropIndicator class="drop-indicator" />
+        <Tree.LiveRegion class="visually-hidden" />
+    </Tree.Root>
+</template>
+```
+
+</Framework>
+
 `Root` is generic over the model's registry (`RootProps<T>`): `model: TreeModel<Types>` types
 `loadChildren` and `treeRef`. The parts that hand you items through a function (`Tree.Items`,
-`Tree.Group`) cannot infer it through context: pass it as their type argument.
+`Tree.Group`) cannot infer it through context: pass it as their type argument (in Vue, take the
+parts from `typedTree<Types>()`: [Vue primitives](/docs/api/vue)).
 
 The tree's policies live on the model, not on the root: a middleware (`model.use`) sees, rewrites
 or vetoes every command the tree runs, and a listener (`model.subscribe`) every change. See
@@ -115,10 +143,27 @@ and its element's attributes: `DivPrimitiveProps<State>`, `SpanPrimitiveProps<St
 element's attributes, the primitive's `data-*` attributes and a callback `ref`. Spread them onto
 the element it returns; they fit any element's `ref` with no cast:
 
+<Framework name="react">
+
 ```tsx
 <Tree.Item item={item} render={(props, state) => <li {...props} data-kind={item.kind} />}>
     <Tree.ItemContent>{item.label}</Tree.ItemContent>
 </Tree.Item>
 ```
+
+</Framework>
+
+<Framework name="vue">
+
+```vue
+<Tree.Item :item="item">
+    <template #render="{ props, children }">
+        <li v-bind="props" :data-kind="item.kind"><component :is="children" /></li>
+    </template>
+    <Tree.ItemContent>{{ item.label }}</Tree.ItemContent>
+</Tree.Item>
+```
+
+</Framework>
 
 See [The primitive contract](/docs/concepts/primitive-contract).

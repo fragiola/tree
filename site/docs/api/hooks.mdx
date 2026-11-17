@@ -16,6 +16,8 @@ function useTree<T extends TreeTypes = AnyTypes>(): UseTreeResult<T>;
 The model and the engine of the enclosing `Tree.Root`. Pass the registry as the type argument
 (`useTree<Types>()`): a child cannot infer it through context. Outside a root, it throws.
 
+<Framework name="react">
+
 ```tsx
 function CollapseAll() {
     const { model } = useTree<Types>();
@@ -26,6 +28,25 @@ function CollapseAll() {
     );
 }
 ```
+
+</Framework>
+
+<Framework name="vue">
+
+```vue title="collapse-all.vue"
+<script setup lang="ts">
+import { useTree } from "@fragiola/tree-vue";
+import type { Types } from "./tree";
+
+const { model } = useTree<Types>();
+</script>
+
+<template>
+    <button type="button" @click="model.run('tree.collapse-all', {})">Collapse all</button>
+</template>
+```
+
+</Framework>
 
 `UseTreeResult<T>`:
 
@@ -47,6 +68,8 @@ A value selected from the model's state, re-rendering the component only when th
 changes (`Object.is` by default). The selector runs once per state; keep it pure. Inside a
 `Tree.Root` it reads the root's model; pass `model` to read one anywhere.
 
+<Framework name="react">
+
 ```tsx
 const count = useTreeState<Types, number>((state) => state.selectedItemIds.length);
 const status = useTreeState<Types, string | undefined>((_state, model) =>
@@ -54,6 +77,24 @@ const status = useTreeState<Types, string | undefined>((_state, model) =>
 );
 const visible = useTreeState((_state, model) => model.get("visible-items").length, { model });
 ```
+
+</Framework>
+
+<Framework name="vue">
+
+```ts
+// read-only refs: count.value, status.value, visible.value
+const count = useTreeState<Types, number>((state) => state.selectedItemIds.length);
+const status = useTreeState<Types, string | undefined>((_state, model) =>
+    model.get("children-status-by", { itemId: props.item.id }),
+);
+const visible = useTreeState((_state, model) => model.get("visible-items").length, { model });
+```
+
+In Vue, `useTreeState` returns a read-only ref, and selects again when a reactive value the
+selector reads (`props.item`) changes.
+
+</Framework>
 
 `UseTreeStateOptions<T, S>`:
 
@@ -74,6 +115,8 @@ with its ARIA, the roving `tabindex`, the `data-*` state, `data-tree-part="item"
 engine). `Tree.Item` is this hook on a `div`. The parts inside need an item context, so use it for
 an item whose row is your own markup:
 
+<Framework name="react">
+
 ```tsx
 function OutlineItem({ item }: { item: ItemOf<Types> }) {
     const { state, props } = useTreeItem(item);
@@ -84,6 +127,27 @@ function OutlineItem({ item }: { item: ItemOf<Types> }) {
     );
 }
 ```
+
+</Framework>
+
+<Framework name="vue">
+
+```vue title="outline-item.vue"
+<script setup lang="ts">
+import { type ItemOf, useTreeItem } from "@fragiola/tree-vue";
+import type { Types } from "./tree";
+
+const props = defineProps<{ item: ItemOf<Types> }>();
+// the item as a getter: the composable follows the prop
+const { state, props: itemProps } = useTreeItem(() => props.item);
+</script>
+
+<template>
+    <li v-bind="itemProps">{{ state.expanded ? "▾" : "▸" }} {{ item.label }}</li>
+</template>
+```
+
+</Framework>
 
 `UseTreeItemResult`:
 
@@ -125,7 +189,10 @@ function useTreeRef<T extends TreeTypes = AnyTypes>(): TreeRef<T>;
 ```
 
 A tree ref kept by the component, which re-renders when the `Tree.Root` it is given to mounts or
-unmounts: read `tree.current` in render (a toolbar next to the tree) or in handlers.
+unmounts: read `tree.current` in render (a toolbar next to the tree) or in handlers (in Vue,
+`tree.value`).
+
+<Framework name="react">
 
 ```tsx
 function Explorer() {
@@ -142,6 +209,35 @@ function Explorer() {
     );
 }
 ```
+
+</Framework>
+
+<Framework name="vue">
+
+```vue title="explorer.vue"
+<script setup lang="ts">
+import { useTreeRef } from "@fragiola/tree-vue";
+import FileItem from "./file-item.vue";
+import { json, Tree, type Types } from "./tree";
+
+const tree = useTreeRef<Types>();
+// a template unwraps a top-level ref: give the root the ref itself, inside an object
+const root = { treeRef: tree };
+</script>
+
+<template>
+    <button type="button" @click="tree?.model.run('tree.expand-all', {})">Expand all</button>
+    <Tree.Root v-bind="root" :default-tree="json" aria-label="Files">
+        <Tree.Items v-slot="{ item }"><FileItem :item="item" /></Tree.Items>
+    </Tree.Root>
+</template>
+```
+
+In Vue, the ref's handle is `tree.value`. A template unwraps a top-level ref, so it reads the
+handle as `tree`, and a `:tree-ref="tree"` would pass the handle, not the ref: bind the ref
+through an object, as above.
+
+</Framework>
 
 ## `createTreeRef`
 

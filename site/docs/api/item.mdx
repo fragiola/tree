@@ -9,6 +9,8 @@ that selects), `aria-checked` (a root with `checkboxes`), `aria-disabled` and `a
 its children load), and the roving `tabindex` (`0` on the one tab stop, `-1` elsewhere). It is the
 element DOM focus goes to, and it provides its item to the parts inside it.
 
+<Framework name="react">
+
 ```tsx
 function FileItem({ item }: { item: ItemOf<Types> }) {
     return (
@@ -19,6 +21,28 @@ function FileItem({ item }: { item: ItemOf<Types> }) {
     );
 }
 ```
+
+</Framework>
+
+<Framework name="vue">
+
+```vue title="file-item.vue"
+<script setup lang="ts">
+import type { ItemOf } from "@fragiola/tree-vue";
+import { Tree, type Types } from "./tree";
+
+defineProps<{ item: ItemOf<Types> }>();
+</script>
+
+<template>
+    <Tree.Item :item="item" :aria-label="item.label" class="item">
+        <Tree.ItemContent class="row">{{ item.label }}</Tree.ItemContent>
+        <Tree.Group v-slot="{ item: child }"><FileItem :item="child" /></Tree.Group>
+    </Tree.Item>
+</template>
+```
+
+</Framework>
 
 Its element holds the row and the group of children: style the row (`Tree.ItemContent`), and
 draw the focus ring through the item (`.item:focus-visible > .row`). It is `useTreeItem` on a
