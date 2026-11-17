@@ -7,6 +7,7 @@ import type {
 } from "@fragiola/tree";
 import * as React from "react";
 import { useTreeContext } from "../context";
+import { selectionModeOf } from "../utils/feature-state";
 import type { RenderedProps } from "../utils/use-render";
 import { depthStyle, itemDataAttributes, useTreeItemState } from "./internal";
 
@@ -93,7 +94,9 @@ export function useTreeItem<T extends TreeTypes = AnyTypes>(
             engine?.adapter.handleFocus(itemId);
         }
     };
-    const selectable = treeState.settings.selectionMode !== "none";
+    // a tree that selects: the selection feature, in a mode other than none
+    const mode = selectionModeOf(treeState);
+    const selectable = mode !== undefined && mode !== "none";
     const props = {
         ref,
         role: "treeitem",

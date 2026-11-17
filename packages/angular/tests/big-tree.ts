@@ -1,15 +1,17 @@
 // A virtualized tree for the tests: 50 folders of 20 files, all expanded (1050 visible items),
 // rendered flat by `ng-template[treeVirtualItems]` (the same tree as packages/react's virtual
 // tests).
-import { Component, input } from "@angular/core";
+import { Component, computed, input } from "@angular/core";
 import {
     createTreeModel,
-    createTreeVirtualizer,
     TREE,
     type TreeJson,
     type TreeModel,
-    type TreeVirtualizer,
 } from "../src/public-api";
+import {
+    type VirtualizationFeature,
+    virtualization,
+} from "../virtualization/public-api";
 import type { FileTypes } from "./tree";
 
 export function bigTree(): TreeJson<FileTypes> {
@@ -31,24 +33,29 @@ export function bigTree(): TreeJson<FileTypes> {
     return { version: 1, rootItemIds, items, expandedItemIds: rootItemIds };
 }
 
-export const virtual = createTreeVirtualizer({
+export const virtual = virtualization({
     rowSize: 20,
     overscan: 2,
     initialViewportSize: 100,
 });
 
-/** `[treeRoot]` with `virtual` and its rows: an item, its row, its toggle and its label. */
+/** A model of `bigTree()` with the virtualization feature. */
+export const virtualModel = () =>
+    createTreeModel<FileTypes, readonly [typeof virtual]>(bigTree(), {
+        features: [virtual],
+    });
+
+/** `[treeRoot]` with a model of the `virtual` feature (none: not virtualized) and its rows: an item, its row, its toggle and its label. */
 @Component({
     selector: "test-big-tree",
     imports: [TREE],
     template: `
         <div
-            [treeRoot]="model"
-            [virtual]="virtual()"
+            [treeRoot]="model()"
             aria-label="Files"
             style="height: 100px; overflow: auto"
         >
-            <ng-template [treeVirtualItems]="model" let-item let-row="row">
+            <ng-template [treeVirtualItems]="model()" let-item let-row="row">
                 <div [treeItem]="item" [attr.data-offset]="row.offset">
                     <div treeItemContent>
                         <span treeToggle></span>
@@ -60,8 +67,14 @@ export const virtual = createTreeVirtualizer({
     `,
 })
 export class BigTree {
-    readonly model: TreeModel<FileTypes> = createTreeModel<FileTypes>(
-        bigTree(),
-    );
-    readonly virtual = input<TreeVirtualizer | undefined>(virtual);
+    readonly virtual = input<VirtualizationFeature | undefined>(virtual);
+    readonly model = computed<TreeModel<FileTypes>>(() => {
+        const feature = this.virtual();
+        return feature
+            ? createTreeModel<FileTypes, readonly [VirtualizationFeature]>(
+                  bigTree(),
+                  { features: [feature] },
+              )
+            : createTreeModel<FileTypes>(bigTree());
+    });
 }

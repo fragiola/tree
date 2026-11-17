@@ -23,7 +23,7 @@ import {
     type TreeJson,
     type TreeModel,
 } from "../src/public-api";
-import { BigTree, bigTree, virtual } from "./big-tree";
+import { BigTree, virtualModel } from "./big-tree";
 import {
     type FileTypes,
     files,
@@ -228,9 +228,8 @@ describe("parity with @fragiola/tree-react in a virtualized tree", () => {
                 r(
                     ReactTree.Root,
                     {
-                        model: createTreeModel(bigTree()) as never,
+                        model: virtualModel() as never,
                         "aria-label": "Files",
-                        virtual,
                     },
                     r(ReactTree.VirtualItems, {
                         children: (item: Item) =>

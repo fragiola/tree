@@ -12,6 +12,7 @@ import {
     type TreeContext,
     type TreeItemContext,
 } from "../context";
+import { selectionModeOf } from "../utils/feature-state";
 import {
     beforeInputs,
     bindStructuralStyle,
@@ -86,8 +87,9 @@ export class TreeItemDirective<T extends TreeTypes = AnyTypes>
 
     protected readonly aria = computed(() => {
         const state = this.state();
-        const selectable =
-            this.context.state().settings.selectionMode !== "none";
+        // a tree that selects: the selection feature, in a mode other than none
+        const mode = selectionModeOf(this.context.state());
+        const selectable = mode !== undefined && mode !== "none";
         return {
             expanded: state.leaf ? null : String(state.expanded),
             selected: selectable ? String(state.selected) : null,

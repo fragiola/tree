@@ -8,11 +8,11 @@ import {
     type TransferHandler,
     type TreeDropOutside,
     type TreeEngine,
+    type TreeFeatures,
     type TreeForeignDrop,
     type TreeJson,
     type TreeModel,
     type TreeTypes,
-    type TreeVirtualizer,
 } from "@fragiola/tree";
 import * as React from "react";
 import { eraseModel, TreeContext, type TreeContextValue } from "../context";
@@ -23,6 +23,7 @@ import {
     useIsomorphicLayoutEffect,
 } from "../hooks/internal";
 import { createEngineFacade } from "../utils/engine-facade";
+import { selectionModeOf } from "../utils/feature-state";
 import {
     type DivPrimitiveProps,
     dataAttributes,
@@ -52,6 +53,11 @@ export interface RootProps<T extends TreeTypes = AnyTypes>
     model?: TreeModel<T> | undefined;
     /** the document of a model the root creates and keeps (read once, at mount) */
     defaultTree?: TreeJson<T> | undefined;
+    /**
+     * the opt-in features of the model the root creates from `defaultTree` (read once, at mount):
+     * `[selection(), virtualization({ rowSize: 28 })]`. A `model` has its own
+     */
+    features?: TreeFeatures | undefined;
     /** controlled expansion: the expanded items (with `onExpandedItemIdsChange`) */
     expandedItemIds?: readonly string[] | undefined;
     /** called with the expanded items after every command that changes them */
@@ -84,12 +90,6 @@ export interface RootProps<T extends TreeTypes = AnyTypes>
     indicatorInset?: number | undefined;
     /** how long (ms) between two typed characters keeps one type-ahead search (default 500) */
     typeAheadTimeout?: number | undefined;
-    /**
-     * renders only the visible items in view (`createTreeVirtualizer(options)`, rendered by
-     * `Tree.VirtualItems`). Create it once (at module level, or memoized): another virtualizer
-     * creates another engine
-     */
-    virtual?: TreeVirtualizer | undefined;
     /**
      * joins the trees of the document with the same group name: items drag between them, by pointer
      * and keyboard (over one model a drop is one `item.move`, over two a transfer)
@@ -131,6 +131,7 @@ export function Root<T extends TreeTypes = AnyTypes>(props: RootProps<T>) {
     const {
         model: modelProp,
         defaultTree,
+        features,
         expandedItemIds,
         onExpandedItemIdsChange,
         selectedItemIds,
@@ -147,7 +148,6 @@ export function Root<T extends TreeTypes = AnyTypes>(props: RootProps<T>) {
         indentation,
         indicatorInset,
         typeAheadTimeout,
-        virtual,
         dragGroup,
         transfer,
         foreignDrop,
@@ -157,7 +157,11 @@ export function Root<T extends TreeTypes = AnyTypes>(props: RootProps<T>) {
         ...rest
     } = props;
     const [ownModel] = React.useState(() =>
-        modelProp ? null : createTreeModel<T>(defaultTree),
+        modelProp
+            ? null
+            : (createTreeModel<T, TreeFeatures>(defaultTree, {
+                  features,
+              }) as unknown as TreeModel<T>),
     );
     const typed = (modelProp ?? ownModel) as TreeModel<T>;
     // the parts below work on the erased registry; the typed surface is their props
@@ -195,7 +199,6 @@ export function Root<T extends TreeTypes = AnyTypes>(props: RootProps<T>) {
             indentation,
             indicatorInset,
             typeAheadTimeout,
-            virtual,
             dragGroup,
             transfer: hasTransfer
                 ? (event) => latest.current.transfer?.(event)
@@ -223,7 +226,6 @@ export function Root<T extends TreeTypes = AnyTypes>(props: RootProps<T>) {
         indentation,
         indicatorInset,
         typeAheadTimeout,
-        virtual,
         dragGroup,
         hasTransfer,
         foreignDrop,
@@ -303,7 +305,7 @@ export function Root<T extends TreeTypes = AnyTypes>(props: RootProps<T>) {
     );
 
     const rootState: RootState = {
-        multiselectable: state.settings.selectionMode === "multiple",
+        multiselectable: selectionModeOf(state) === "multiple",
         dragging: live?.is("dragging") ?? false,
         keyboardDragging: live?.is("keyboard-dragging") ?? false,
         draggingFromOtherTree: live?.is("dragging-from-other-tree") ?? false,

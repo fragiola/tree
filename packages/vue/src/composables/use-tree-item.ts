@@ -12,6 +12,7 @@ import {
     toValue,
 } from "vue";
 import { useTreeContext } from "../context";
+import { selectionModeOf } from "../utils/feature-state";
 import { registerElement } from "../utils/registration";
 import { type ElementRef, elementRef } from "../utils/render";
 import { depthStyle, itemDataAttributes, treeItemState } from "./internal";
@@ -130,8 +131,9 @@ export function useTreeItem<T extends TreeTypes = AnyTypes>(
     };
     const props = computed<TreeItemElementProps>(() => {
         const value = state.value;
-        const selectable =
-            context.state.value.settings.selectionMode !== "none";
+        // a tree that selects: the selection feature, in a mode other than none
+        const mode = selectionModeOf(context.state.value);
+        const selectable = mode !== undefined && mode !== "none";
         return {
             ref,
             role: "treeitem",

@@ -3,6 +3,7 @@ import { defineComponent, h, type PropType, ref } from "vue";
 import {
     createTreeRef,
     type ItemOf,
+    type TreeStateOf,
     type UseTreeResult,
     useTree,
     useTreeItem,
@@ -10,6 +11,7 @@ import {
     useTreeState,
 } from "../src";
 import {
+    type FEATURES,
     type FileTypes,
     files,
     filesModel,
@@ -52,7 +54,9 @@ describe("the composables", () => {
         const Count = defineComponent({
             setup() {
                 const count = useTreeState<FileTypes, number>(
-                    (state) => state.selectedItemIds.length,
+                    (state) =>
+                        (state as TreeStateOf<FileTypes, typeof FEATURES>)
+                            .selectedItemIds.length,
                 );
                 return () =>
                     h("output", { "data-testid": "count" }, count.value);

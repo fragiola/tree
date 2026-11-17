@@ -11,7 +11,7 @@ import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { describe, expect, it } from "vitest";
 import { createTreeForeignDrop, createTreeModel, type TreeJson } from "../src";
-import { bigFileTree, bigTree, virtual } from "./big-tree";
+import { bigFileTree, virtualModel } from "./big-tree";
 import {
     type FileTypes,
     files,
@@ -282,9 +282,8 @@ describe("parity with @fragiola/tree-react in a virtualized tree", () => {
                 r(
                     ReactTree.Root,
                     {
-                        model: createTreeModel(bigTree()) as never,
+                        model: virtualModel() as never,
                         "aria-label": "Files",
-                        virtual,
                     },
                     r(ReactTree.VirtualItems, {
                         children: (item: Item) =>

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { defineComponent, h } from "vue";
-import { createTreeModel, useTreeVirtualWindow } from "../src";
-import { bigFileTree, bigTree, virtual } from "./big-tree";
+import { useTreeVirtualWindow } from "../src";
+import { bigFileTree, virtualModel } from "./big-tree";
 import { render, settle, Tree } from "./tree";
 
 const treeItems = () => [
@@ -59,7 +59,7 @@ describe("Tree.VirtualItems", () => {
         await render(() =>
             h(
                 Tree.Root,
-                { model: createTreeModel(bigTree()), virtual },
+                { model: virtualModel() },
                 { default: () => [h(Count)] },
             ),
         );

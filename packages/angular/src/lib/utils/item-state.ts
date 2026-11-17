@@ -1,5 +1,6 @@
 // The state of an item, as packages/vue's `treeItemState` (composables/internal.ts) computes it,
 // and the `data-*` every part of an item carries.
+
 import type {
     AnyTypes,
     CheckState,
@@ -7,6 +8,7 @@ import type {
     ItemOf,
 } from "@fragiola/tree";
 import type { TreeContext } from "../context";
+import { selectedIdsOf } from "./feature-state";
 import { dataAttr } from "./helpers";
 
 /** What an item shows: its place in the tree and its state. Every part of an item renders it. */
@@ -111,7 +113,7 @@ export function treeItemState(
         posinset: Number(segments.at(-1) ?? 0) + 1,
         setsize: siblings,
         expanded: model.is("item-expanded", { itemId }),
-        selected: model.is("item-selected", { itemId }),
+        selected: selectedIdsOf(model.state).includes(itemId),
         focused: model.is("item-focused", { itemId }),
         tabStop: context.tabStopItemId() === itemId,
         checkState,

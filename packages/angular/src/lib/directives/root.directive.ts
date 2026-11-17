@@ -20,11 +20,11 @@ import {
     type TransferHandler,
     type TreeDropOutside,
     type TreeEngine,
+    type TreeFeatures,
     type TreeForeignDrop,
     type TreeJson,
     type TreeModel,
     type TreeTypes,
-    type TreeVirtualizer,
 } from "@fragiola/tree";
 import {
     eraseModel,
@@ -35,6 +35,7 @@ import {
 } from "../context";
 import { bindControlledState } from "../utils/controlled";
 import { createEngineFacade } from "../utils/engine-facade";
+import { selectionModeOf } from "../utils/feature-state";
 import {
     bindStructuralStyle,
     dataAttr,
@@ -99,6 +100,11 @@ export class TreeRootDirective<T extends TreeTypes = AnyTypes> {
     readonly treeRoot = input<TreeModel<T> | "" | undefined>(undefined);
     /** the document of a model the root creates and keeps (read once, when first set) */
     readonly defaultTree = input<TreeJson<T> | undefined>(undefined);
+    /**
+     * the opt-in features of the model the root creates from `defaultTree` (read once, when it
+     * creates it): `[selection(), virtualization({ rowSize: 28 })]`. A model has its own
+     */
+    readonly features = input<TreeFeatures | undefined>(undefined);
     /** controlled expansion: the expanded items (`[(expandedItemIds)]`) */
     readonly expandedItemIds = input<readonly string[] | undefined>(undefined);
     /** controlled selection: the selected items (`[(selectedItemIds)]`) */
@@ -127,12 +133,6 @@ export class TreeRootDirective<T extends TreeTypes = AnyTypes> {
     readonly indicatorInset = input<number | undefined>(undefined);
     /** how long (ms) between two typed characters keeps one type-ahead search (default 500) */
     readonly typeAheadTimeout = input<number | undefined>(undefined);
-    /**
-     * renders only the visible items in view (`createTreeVirtualizer(options)`, rendered by
-     * `ng-template[treeVirtualItems]`). Create it once (a field): another virtualizer makes
-     * another engine
-     */
-    readonly virtual = input<TreeVirtualizer | undefined>(undefined);
     /**
      * joins the trees of the document with the same group name: items drag between them, by pointer
      * and keyboard (over one model a drop is one `item.move`, over two a transfer)
@@ -180,7 +180,11 @@ export class TreeRootDirective<T extends TreeTypes = AnyTypes> {
                 this.empty ??= createTreeModel();
                 return this.empty as unknown as TreeModel<T>;
             }
-            this.own = eraseModel(createTreeModel<T>(json));
+            this.own = eraseModel(
+                createTreeModel<T, TreeFeatures>(json, {
+                    features: untracked(this.features),
+                }) as unknown as TreeModel<T>,
+            );
         }
         return this.own as unknown as TreeModel<T>;
     });
@@ -222,7 +226,7 @@ export class TreeRootDirective<T extends TreeTypes = AnyTypes> {
         this.tick();
         const live = this.current();
         return {
-            multiselectable: tree.settings.selectionMode === "multiple",
+            multiselectable: selectionModeOf(tree) === "multiple",
             dragging: live?.is("dragging") ?? false,
             keyboardDragging: live?.is("keyboard-dragging") ?? false,
             draggingFromOtherTree:
@@ -271,9 +275,7 @@ export class TreeRootDirective<T extends TreeTypes = AnyTypes> {
             if (!rendered()) return;
             const model = this.erased();
             this.options();
-            // a virtualizer, a foreign drop, a drop outside by identity (they hold functions JSON
-            // leaves out)
-            this.virtual();
+            // a foreign drop, a drop outside by identity (they hold functions JSON leaves out)
             this.foreignDrop();
             this.dropOutside();
             untracked(() => {
@@ -346,7 +348,6 @@ export class TreeRootDirective<T extends TreeTypes = AnyTypes> {
             indentation: untracked(this.indentation),
             indicatorInset: untracked(this.indicatorInset),
             typeAheadTimeout: untracked(this.typeAheadTimeout),
-            virtual: untracked(this.virtual),
             dragGroup: untracked(this.dragGroup),
             transfer:
                 untracked(this.transfer) === undefined

@@ -1,5 +1,6 @@
 // Controlled and uncontrolled state through commands, as packages/react's `useControlledState`
 // and packages/vue's (composables/internal.ts).
+
 import {
     afterNextRender,
     DestroyRef,
@@ -10,6 +11,7 @@ import {
     untracked,
 } from "@angular/core";
 import type { TreeModel } from "@fragiola/tree";
+import { selectedIdsOf } from "./feature-state";
 
 /** The `meta` of the commands that bring the model to the controlled inputs. */
 export const CONTROLLED_META = Object.freeze({ source: "controlled" });
@@ -78,8 +80,15 @@ export function syncControlled(
         const itemIds = values.selectedItemIds.filter(
             (id) => model.get("item-by", { id }) !== undefined,
         );
-        if (!sameSet(itemIds, model.state.selectedItemIds)) {
-            model.run("tree.select", { itemIds }, { meta: CONTROLLED_META });
+        if (!sameSet(itemIds, selectedIdsOf(model.state))) {
+            // the selection feature's command: a tree with `selectedItemIds` installs it
+            (
+                model.run as (
+                    command: string,
+                    payload: object,
+                    options: object,
+                ) => unknown
+            )("tree.select", { itemIds }, { meta: CONTROLLED_META });
         }
     }
     if (
@@ -144,8 +153,8 @@ export function bindControlledState(
                 if (!sameSet(before.expandedItemIds, after.expandedItemIds)) {
                     emit("expandedItemIds", [...after.expandedItemIds]);
                 }
-                if (!sameSet(before.selectedItemIds, after.selectedItemIds)) {
-                    emit("selectedItemIds", [...after.selectedItemIds]);
+                if (!sameSet(selectedIdsOf(before), selectedIdsOf(after))) {
+                    emit("selectedItemIds", [...selectedIdsOf(after)]);
                 }
                 if (!sameSet(before.checkedItemIds, after.checkedItemIds)) {
                     emit("checkedItemIds", [...after.checkedItemIds]);

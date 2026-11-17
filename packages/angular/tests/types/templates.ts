@@ -2,6 +2,7 @@
 // model into the root's inputs, the items template's context and the injection functions, with no
 // cast. `@ts-expect-error` marks what must not compile.
 import { Component, signal } from "@angular/core";
+import type { SelectionFeature } from "../../selection/public-api";
 import {
     createTreeModel,
     type InjectTreeItemResult,
@@ -15,6 +16,7 @@ import {
     TreeItemsDirective,
     type TreeModel,
     type TreeRootDirective,
+    type TreeStateOf,
 } from "../../src/public-api";
 
 type Types = {
@@ -95,7 +97,9 @@ export class Injected {
     readonly tree: InjectTreeResult<Types> = injectTree<Types>();
     readonly item: InjectTreeItemResult<Types> = injectTreeItem<Types>();
     readonly count = injectTreeState<Types, number>(
-        (state) => state.selectedItemIds.length,
+        (state) =>
+            (state as TreeStateOf<Types, readonly [SelectionFeature]>)
+                .selectedItemIds.length,
     );
     readonly size = injectTreeState(
         (state) => {

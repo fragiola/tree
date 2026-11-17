@@ -8,11 +8,11 @@ import {
     type TransferHandler,
     type TreeDropOutside,
     type TreeEngine,
+    type TreeFeatures,
     type TreeForeignDrop,
     type TreeJson,
     type TreeModel,
     type TreeTypes,
-    type TreeVirtualizer,
 } from "@fragiola/tree";
 import {
     computed,
@@ -37,6 +37,7 @@ import {
     TreeKey,
 } from "../context";
 import { createEngineFacade } from "../utils/engine-facade";
+import { selectionModeOf } from "../utils/feature-state";
 import {
     definePrimitive,
     type PrimitiveProps,
@@ -74,6 +75,11 @@ export interface RootProps<T extends TreeTypes = AnyTypes>
     model?: TreeModel<T> | undefined;
     /** the document of a model the root creates and keeps (read once, at mount) */
     defaultTree?: TreeJson<T> | undefined;
+    /**
+     * the opt-in features of the model the root creates from `defaultTree` (read once, at mount):
+     * `[selection(), virtualization({ rowSize: 28 })]`. A `model` has its own
+     */
+    features?: TreeFeatures | undefined;
     /** controlled expansion: the expanded items (`v-model:expanded-item-ids`) */
     expandedItemIds?: readonly string[] | undefined;
     /** controlled selection: the selected items (`v-model:selected-item-ids`) */
@@ -100,12 +106,6 @@ export interface RootProps<T extends TreeTypes = AnyTypes>
     indicatorInset?: number | undefined;
     /** how long (ms) between two typed characters keeps one type-ahead search (default 500) */
     typeAheadTimeout?: number | undefined;
-    /**
-     * renders only the visible items in view (`createTreeVirtualizer(options)`, rendered by
-     * `Tree.VirtualItems`). Create it once (in `setup`, or at module level): another virtualizer
-     * creates another engine
-     */
-    virtual?: TreeVirtualizer | undefined;
     /**
      * joins the trees of the document with the same group name: items drag between them, by pointer
      * and keyboard (over one model a drop is one `item.move`, over two a transfer)
@@ -152,6 +152,7 @@ export type RootEmits = {
 const ROOT_PROPS = [
     "model",
     "defaultTree",
+    "features",
     "expandedItemIds",
     "selectedItemIds",
     "checkedItemIds",
@@ -165,7 +166,6 @@ const ROOT_PROPS = [
     "indentation",
     "indicatorInset",
     "typeAheadTimeout",
-    "virtual",
     "dragGroup",
     "transfer",
     "foreignDrop",
@@ -186,10 +186,7 @@ const ROOT_EMITS = [
     "update:checkedItemIds",
 ] as const satisfies readonly (keyof RootEmits)[];
 
-/**
- * a key per object: another model remounts the tree, another virtualizer makes another engine
- * (`-1` for none)
- */
+/** a key per object: another model remounts the tree (`-1` for none) */
 const modelKeys = new WeakMap<object, number>();
 let nextModelKey = 0;
 function keyOfModel(model: object | undefined): number {
@@ -208,7 +205,10 @@ const RootTree = definePrimitive<RootProps, RootSlots, RootEmits>(
     ROOT_PROPS,
     (props, { attrs, slots, emit }) => {
         const model = eraseModel(
-            props.model ?? createTreeModel(props.defaultTree),
+            props.model ??
+                createTreeModel<AnyTypes, TreeFeatures>(props.defaultTree, {
+                    features: props.features,
+                }),
         );
         const state = useExternal(
             (listener) => model.subscribe(() => listener()),
@@ -243,8 +243,6 @@ const RootTree = definePrimitive<RootProps, RootSlots, RootEmits>(
             indentation: props.indentation,
             indicatorInset: props.indicatorInset,
             typeAheadTimeout: props.typeAheadTimeout,
-            // a virtualizer by identity (it holds functions JSON leaves out)
-            virtual: keyOfModel(props.virtual),
             dragGroup: props.dragGroup,
             hasTransfer: props.transfer !== undefined,
             foreignDrop: keyOfModel(props.foreignDrop),
@@ -273,7 +271,6 @@ const RootTree = definePrimitive<RootProps, RootSlots, RootEmits>(
                 indentation: props.indentation,
                 indicatorInset: props.indicatorInset,
                 typeAheadTimeout: props.typeAheadTimeout,
-                virtual: props.virtual,
                 dragGroup: props.dragGroup,
                 transfer:
                     props.transfer !== undefined
@@ -368,7 +365,7 @@ const RootTree = definePrimitive<RootProps, RootSlots, RootEmits>(
             revision.value;
             const live = engine.value;
             const rootState: RootState = {
-                multiselectable: tree.settings.selectionMode === "multiple",
+                multiselectable: selectionModeOf(tree) === "multiple",
                 dragging: live?.is("dragging") ?? false,
                 keyboardDragging: live?.is("keyboard-dragging") ?? false,
                 draggingFromOtherTree:

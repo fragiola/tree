@@ -35,6 +35,16 @@
             "types": "./dist/types/fragiola-tree-angular.d.ts",
             "default": "./dist/fesm2022/fragiola-tree-angular.mjs"
         },
+        "./selection": {
+            "@fragiola/source": "./selection/public-api.ts",
+            "types": "./dist/types/fragiola-tree-angular-selection.d.ts",
+            "default": "./dist/fesm2022/fragiola-tree-angular-selection.mjs"
+        },
+        "./virtualization": {
+            "@fragiola/source": "./virtualization/public-api.ts",
+            "types": "./dist/types/fragiola-tree-angular-virtualization.d.ts",
+            "default": "./dist/fesm2022/fragiola-tree-angular-virtualization.mjs"
+        },
         "./package.json": "./package.json"
     },
     "publishConfig": {

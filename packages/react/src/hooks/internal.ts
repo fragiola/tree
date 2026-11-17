@@ -8,6 +8,7 @@ import type {
 } from "@fragiola/tree";
 import * as React from "react";
 import { useTreeContext } from "../context";
+import { selectedIdsOf } from "../utils/feature-state";
 import { dataAttributes } from "../utils/use-render";
 import type { TreeItemState } from "./use-tree-item";
 
@@ -44,7 +45,7 @@ export function useTreeItemState<T extends TreeTypes = AnyTypes>(
         posinset: Number(segments.at(-1) ?? 0) + 1,
         setsize: siblings,
         expanded: model.is("item-expanded", { itemId }),
-        selected: model.is("item-selected", { itemId }),
+        selected: selectedIdsOf(state).includes(itemId),
         focused: model.is("item-focused", { itemId }),
         tabStop: context.tabStopItemId === itemId,
         checkState,
@@ -152,8 +153,15 @@ function sync(model: TreeModel, props: ControlledProps): void {
         const itemIds = props.selectedItemIds.filter(
             (id) => model.get("item-by", { id }) !== undefined,
         );
-        if (!sameSet(itemIds, model.state.selectedItemIds)) {
-            model.run("tree.select", { itemIds }, { meta: CONTROLLED_META });
+        if (!sameSet(itemIds, selectedIdsOf(model.state))) {
+            // the selection feature's command: a tree with `selectedItemIds` installs it
+            (
+                model.run as (
+                    command: string,
+                    payload: object,
+                    options: object,
+                ) => unknown
+            )("tree.select", { itemIds }, { meta: CONTROLLED_META });
         }
     }
     if (
@@ -221,9 +229,9 @@ export function useControlledState(
                         ...after.expandedItemIds,
                     ]);
                 }
-                if (!sameSet(before.selectedItemIds, after.selectedItemIds)) {
+                if (!sameSet(selectedIdsOf(before), selectedIdsOf(after))) {
                     current.onSelectedItemIdsChange?.([
-                        ...after.selectedItemIds,
+                        ...selectedIdsOf(after),
                     ]);
                 }
                 if (!sameSet(before.checkedItemIds, after.checkedItemIds)) {

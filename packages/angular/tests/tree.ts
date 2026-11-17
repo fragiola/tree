@@ -9,6 +9,7 @@ import {
     viewChild,
 } from "@angular/core";
 import { type ComponentFixture, TestBed } from "@angular/core/testing";
+import { selection } from "../selection/public-api";
 import {
     type AnnounceEvent,
     createTreeModel,
@@ -57,8 +58,13 @@ export function files(
     };
 }
 
+/** The features the tests' trees install: the selection. */
+export const FEATURES = [selection()] as const;
+
 export const filesModel = (patch: Partial<TreeJson<FileTypes>> = {}) =>
-    createTreeModel<FileTypes>(files(patch));
+    createTreeModel<FileTypes, typeof FEATURES>(files(patch), {
+        features: FEATURES,
+    });
 
 /** The inputs of {@link FileTree}: the root's. */
 export interface FileTreeInputs {
@@ -93,6 +99,7 @@ export type Emitted = [list: string, itemIds: string[]];
             [treeRoot]="model()"
             #tree="treeRoot"
             [defaultTree]="defaultTree()"
+            [features]="features"
             [expandedItemIds]="expandedItemIds()"
             [selectedItemIds]="selectedItemIds()"
             [checkedItemIds]="checkedItemIds()"
@@ -142,6 +149,7 @@ export type Emitted = [list: string, itemIds: string[]];
     `,
 })
 export class FileTree {
+    protected readonly features = FEATURES;
     readonly model = input<TreeModel<FileTypes> | undefined>(undefined);
     readonly defaultTree = input<TreeJson<FileTypes> | undefined>(undefined);
     readonly expandedItemIds = input<readonly string[] | undefined>(undefined);

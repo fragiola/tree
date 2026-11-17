@@ -2,6 +2,7 @@
 import type { AnyTypes, CheckState, ItemOf, TreeModel } from "@fragiola/tree";
 import { nextTick, onScopeDispose, watch } from "vue";
 import type { TreeContextValue } from "../context";
+import { selectedIdsOf } from "../utils/feature-state";
 import { dataAttributes, onClient } from "../utils/render";
 import type { TreeItemState } from "./use-tree-item";
 
@@ -40,7 +41,7 @@ export function treeItemState(
         posinset: Number(segments.at(-1) ?? 0) + 1,
         setsize: siblings,
         expanded: model.is("item-expanded", { itemId }),
-        selected: model.is("item-selected", { itemId }),
+        selected: selectedIdsOf(state).includes(itemId),
         focused: model.is("item-focused", { itemId }),
         tabStop: context.tabStopItemId.value === itemId,
         checkState,
@@ -151,8 +152,15 @@ function sync(model: TreeModel, props: ControlledProps): void {
         const itemIds = props.selectedItemIds.filter(
             (id) => model.get("item-by", { id }) !== undefined,
         );
-        if (!sameSet(itemIds, model.state.selectedItemIds)) {
-            model.run("tree.select", { itemIds }, { meta: CONTROLLED_META });
+        if (!sameSet(itemIds, selectedIdsOf(model.state))) {
+            // the selection feature's command: a tree with `selectedItemIds` installs it
+            (
+                model.run as (
+                    command: string,
+                    payload: object,
+                    options: object,
+                ) => unknown
+            )("tree.select", { itemIds }, { meta: CONTROLLED_META });
         }
     }
     if (
@@ -227,8 +235,8 @@ export function useControlledState(
                 if (!sameSet(before.expandedItemIds, after.expandedItemIds)) {
                     emit("update:expandedItemIds", [...after.expandedItemIds]);
                 }
-                if (!sameSet(before.selectedItemIds, after.selectedItemIds)) {
-                    emit("update:selectedItemIds", [...after.selectedItemIds]);
+                if (!sameSet(selectedIdsOf(before), selectedIdsOf(after))) {
+                    emit("update:selectedItemIds", [...selectedIdsOf(after)]);
                 }
                 if (!sameSet(before.checkedItemIds, after.checkedItemIds)) {
                     emit("update:checkedItemIds", [...after.checkedItemIds]);

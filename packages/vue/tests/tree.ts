@@ -18,6 +18,7 @@ import {
     useTreeItem,
     useTreeItemRename,
 } from "../src";
+import { selection } from "../src/selection";
 
 export type FileTypes = {
     items: { folder: undefined; file: { size: number } };
@@ -56,8 +57,13 @@ export function files(
     };
 }
 
+/** The features the tests' trees install: the selection. */
+export const FEATURES = [selection()] as const;
+
 export const filesModel = (patch: Partial<TreeJson<FileTypes>> = {}) =>
-    createTreeModel<FileTypes>(files(patch));
+    createTreeModel<FileTypes, typeof FEATURES>(files(patch), {
+        features: FEATURES,
+    });
 
 /**
  * The app's own check control: a native button out of the tab order and hidden from assistive
@@ -143,7 +149,7 @@ export function fileTree(
 ): VNodeChild {
     return h(
         Tree.Root,
-        { "aria-label": "Files", ...props },
+        { "aria-label": "Files", features: FEATURES, ...props },
         {
             default: () => [
                 h(Tree.Items, null, {
