@@ -219,7 +219,7 @@ describe("a pointer drag", () => {
             level: 1,
             inlineOffset: 28,
         });
-        // the middle of utils: inside it, at the row's own start
+        // the middle of utils: inside it, with no inset (its child level)
         pointer(m.content("readme"), "pointermove", 40, m.rowY("utils", 0.5));
         expect(m.engine.get("drop-indicator")).toMatchObject({
             position: "inside",

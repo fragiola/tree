@@ -32,13 +32,16 @@ export class KeyboardDrag {
         if (!itemIds.every((itemId) => model.is("item-movable", { itemId }))) {
             return false;
         }
-        const targets = viablePositions(dropContext(this.host, itemIds)).filter(
-            (target) => accepts(this.host, itemIds, target),
+        const context = dropContext(this.host, itemIds);
+        const targets = viablePositions(context).filter((target) =>
+            accepts(this.host, itemIds, target),
         );
         if (targets.length === 0) return false;
         this.itemIds = [...itemIds];
         this.targets = targets;
-        this.at = nearestStart(targets, dropContext(this.host, itemIds));
+        this.at = nearestStart(targets, context, (itemId) =>
+            model.get("item-parent-by", { itemId }),
+        );
         this.host.setDrag({
             mode: "keyboard",
             itemIds: this.itemIds,
@@ -118,38 +121,52 @@ export class KeyboardDrag {
 }
 
 /**
- * Where a keyboard drag starts, next to the first dragged item: the place it already is (its
- * "before", or the "after" of the sibling above it, the same place), then its "after", then the
- * valid position nearest to it by visible rows (the first in render order on a tie). Never the
- * top of the tree when a closer position exists.
+ * Where a keyboard drag starts, next to the dragged items: the first of them in render order (or,
+ * when none shows, the nearest shown ancestor of the first). Its own place first (its "before", or
+ * the "after" of the sibling above it, the same place), then its "after", then the valid position
+ * nearest to it by visible rows (the first in render order on a tie). Never the top of the tree
+ * when a closer position exists.
  */
 function nearestStart(
     targets: readonly DropTarget[],
     context: DropContext,
+    parentOf: (itemId: string) => { readonly id: string } | undefined,
 ): number {
-    const first = context.draggingItemIds[0];
+    const { visible } = context;
+    const rows = new Map(visible.map((item, index) => [item.itemId, index]));
     const row = (itemId: string | null) =>
-        itemId === null
-            ? -1
-            : context.visible.findIndex((item) => item.itemId === itemId);
-    const from = first === undefined ? -1 : row(first);
-    if (first === undefined || from < 0) return 0;
-    const parentItemId = context.visible[from]?.parentItemId ?? null;
-    const index = context.childIdsOf(parentItemId).indexOf(first);
-    const at = (offset: number) =>
-        targets.findIndex(
-            (target) =>
-                target.parentItemId === parentItemId &&
-                target.index === index + offset &&
-                target.position !== "inside",
-        );
-    for (const offset of [0, 1]) {
-        const found = at(offset);
-        if (found >= 0) return found;
+        itemId === null ? -1 : (rows.get(itemId) ?? -1);
+    // the anchor: the first dragged item on screen, or the shown ancestor of a hidden one
+    let from = Math.min(
+        ...context.draggingItemIds.map(row).filter((index) => index >= 0),
+    );
+    const ownPlace = Number.isFinite(from);
+    if (!ownPlace) {
+        let itemId: string | undefined = context.draggingItemIds[0];
+        while (itemId !== undefined && row(itemId) < 0) {
+            itemId = parentOf(itemId)?.id;
+        }
+        if (itemId === undefined) return 0;
+        from = row(itemId);
+    }
+    const anchor = visible[from];
+    if (!anchor) return 0;
+    if (ownPlace) {
+        const index = context
+            .childIdsOf(anchor.parentItemId)
+            .indexOf(anchor.itemId);
+        for (const offset of [0, 1]) {
+            const found = targets.findIndex(
+                (target) =>
+                    target.parentItemId === anchor.parentItemId &&
+                    target.index === index + offset &&
+                    target.position !== "inside",
+            );
+            if (found >= 0) return found;
+        }
     }
     // where a position is between the rows: before an item is at its top edge, after it is below
-    // its last visible descendant, inside it is in its middle; the dragged item is at from + 0.5
-    const { visible } = context;
+    // its last visible descendant, inside it is in its middle; the anchor is at from + 0.5
     const gap = (target: DropTarget) => {
         const start = row(target.itemId);
         if (target.position === "before") return start;

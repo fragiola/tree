@@ -188,7 +188,6 @@ describe("a keyboard drag", () => {
         // nothing can be dropped into utils: neither b's place nor its neighbours' are valid
         m.model.run("item.set-flags", { itemId: "utils", droppable: false });
         m.engine.run("start-keyboard-drag", { itemIds: ["b"] });
-        expect(describeTarget(m)).not.toBe("before src");
         expect(describeTarget(m)).toBe("after utils");
     });
 
@@ -204,5 +203,21 @@ describe("a keyboard drag", () => {
         );
         m.engine.run("start-keyboard-drag", { itemIds: ["lib"] });
         expect(describeTarget(m)).toBe("after lib");
+    });
+
+    it("starts next to the first dragged item in render order", () => {
+        const { m } = setup();
+        // the selection's order is not the screen's: lib is above readme
+        m.engine.run("start-keyboard-drag", { itemIds: ["readme", "lib"] });
+        expect(describeTarget(m)).toBe("after app");
+    });
+
+    it("starts next to the shown ancestor of a hidden dragged item", () => {
+        const { m } = setup();
+        // b is inside utils, collapsed: the drag starts by utils, not at the top
+        m.model.run("item.collapse", { itemId: "utils" });
+        m.engine.run("start-keyboard-drag", { itemIds: ["b"] });
+        const target = m.engine.get("drop-target");
+        expect(target?.itemId).toBe("utils");
     });
 });

@@ -67,8 +67,9 @@ export interface TreeEngineOptions<T extends TreeTypes = AnyTypes> {
     indentation?: number | undefined;
     /**
      * how far (px) a drop line (`before`, `after`) starts past its level's inline start, for rows
-     * whose label starts after a toggle, a grip or padding (default 0); the `inside` box keeps
-     * the row's start. `engine.get("drop-indicator").inlineOffset` includes it
+     * whose label starts after a toggle, a grip or padding (default 0); the `inside` box gets no
+     * inset (it starts at its child level, `(level - 1) * indentation`).
+     * `engine.get("drop-indicator").inlineOffset` includes it
      */
     indicatorInset?: number | undefined;
     /** how close (px) to a scroll container's edge a drag scrolls it, and how fast (px per frame) */
