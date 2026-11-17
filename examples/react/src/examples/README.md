@@ -47,8 +47,8 @@ The ids are final: Vue and Angular port every one, with the same id.
    `examples/shared/src/meta/<slug>.ts` (see `meta-types.ts`).
 2. `pnpm dev` at the root lists it in the playground (`apps/playground`), with hot reload, both
    themes and its source: `http://localhost:5173/?example=<slug>`. The embed alone is
-   `pnpm --filter examples-react dev` (`http://localhost:5183/?id=<slug>`);
-   `pnpm site:dev --base /tree --port 5183` serves it the way the site proxies it.
+   `pnpm --filter examples-react dev` (`http://localhost:5190/?id=<slug>`);
+   `pnpm site:dev --base /tree --port 5190` serves it the way the site proxies it.
 3. The smoke e2e visits it in both themes, and inside an iframe. Add a spec for its main behaviour
    in `examples/shared/e2e/examples/<slug>.spec.ts`: it reaches the example only through
    `data-tree-part`, `data-tree-path`, roles, accessible names and test ids, so every framework's
