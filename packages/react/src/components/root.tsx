@@ -9,6 +9,7 @@ import {
     type TreeJson,
     type TreeModel,
     type TreeTypes,
+    type TreeVirtualizer,
 } from "@fragiola/tree";
 import * as React from "react";
 import { eraseModel, TreeContext, type TreeContextValue } from "../context";
@@ -78,6 +79,12 @@ export interface RootProps<T extends TreeTypes = AnyTypes>
     indicatorInset?: number | undefined;
     /** how long (ms) between two typed characters keeps one type-ahead search (default 500) */
     typeAheadTimeout?: number | undefined;
+    /**
+     * renders only the visible items in view (`createTreeVirtualizer(options)`, rendered by
+     * `Tree.VirtualItems`). Create it once (at module level, or memoized): another virtualizer
+     * creates another engine
+     */
+    virtual?: TreeVirtualizer | undefined;
     /** access to the model and the engine from outside the root (`useTreeRef`, `createTreeRef`) */
     treeRef?: TreeRef<T> | undefined;
     children?: React.ReactNode;
@@ -111,6 +118,7 @@ export function Root<T extends TreeTypes = AnyTypes>(props: RootProps<T>) {
         indentation,
         indicatorInset,
         typeAheadTimeout,
+        virtual,
         treeRef,
         children,
         ...rest
@@ -153,6 +161,7 @@ export function Root<T extends TreeTypes = AnyTypes>(props: RootProps<T>) {
             indentation,
             indicatorInset,
             typeAheadTimeout,
+            virtual,
             // a remount (StrictMode, a route change) loads what this engine was loading
             resetLoadsOnDestroy: true,
         });
@@ -174,6 +183,7 @@ export function Root<T extends TreeTypes = AnyTypes>(props: RootProps<T>) {
         indentation,
         indicatorInset,
         typeAheadTimeout,
+        virtual,
     ]);
     // a destroyed engine (StrictMode's first mount, a replaced model) is never used again
     const live = engine && engine.adapter.model === model ? engine : null;

@@ -9,3 +9,4 @@ export { LiveRegion } from "./components/live-region";
 export { RenameInput } from "./components/rename-input";
 export { Root } from "./components/root";
 export { Toggle } from "./components/toggle";
+export { VirtualItems } from "./components/virtual-items";

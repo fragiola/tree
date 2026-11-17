@@ -21,6 +21,7 @@ import {
     type TreeJson,
     type TreeModel,
     type TreeTypes,
+    type TreeVirtualizer,
 } from "@fragiola/tree";
 import {
     eraseModel,
@@ -116,6 +117,12 @@ export class TreeRootDirective<T extends TreeTypes = AnyTypes> {
     readonly indicatorInset = input<number | undefined>(undefined);
     /** how long (ms) between two typed characters keeps one type-ahead search (default 500) */
     readonly typeAheadTimeout = input<number | undefined>(undefined);
+    /**
+     * renders only the visible items in view (`createTreeVirtualizer(options)`, rendered by
+     * `ng-template[treeVirtualItems]`). Create it once (a field): another virtualizer makes
+     * another engine
+     */
+    readonly virtual = input<TreeVirtualizer | undefined>(undefined);
 
     /** the expanded items, after every command that changes them */
     readonly expandedItemIdsChange = output<string[]>();
@@ -226,6 +233,8 @@ export class TreeRootDirective<T extends TreeTypes = AnyTypes> {
             if (!rendered()) return;
             const model = this.erased();
             this.options();
+            // a virtualizer by identity (it holds functions JSON leaves out)
+            this.virtual();
             untracked(() => {
                 const engine = this.create(model);
                 engine.adapter.attachRoot(this.host);
@@ -296,6 +305,7 @@ export class TreeRootDirective<T extends TreeTypes = AnyTypes> {
             indentation: untracked(this.indentation),
             indicatorInset: untracked(this.indicatorInset),
             typeAheadTimeout: untracked(this.typeAheadTimeout),
+            virtual: untracked(this.virtual),
             // a new engine (a new model or option, a re-render) loads what this one was loading
             resetLoadsOnDestroy: true,
         });

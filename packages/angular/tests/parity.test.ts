@@ -9,8 +9,9 @@ import * as React from "react";
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { describe, expect, it } from "vitest";
-import type { TreeJson } from "../src/public-api";
-import { type FileTypes, files, filesModel, renderFiles } from "./tree";
+import { createTreeModel, type TreeJson } from "../src/public-api";
+import { BigTree, bigTree, virtual } from "./big-tree";
+import { type FileTypes, files, filesModel, render, renderFiles } from "./tree";
 
 type Item = { id: string; label: string; childItemIds?: string[] };
 
@@ -133,6 +134,60 @@ describe("parity with @fragiola/tree-react", () => {
                 (part) => part.attributes["data-tree-part"] === "rename-input",
             ),
         ).toBeDefined();
+        expect(angular).toEqual(react);
+    });
+});
+
+describe("parity with @fragiola/tree-react in a virtualized tree", () => {
+    it("renders the same rows and spacers, flat, for the same window", async () => {
+        await render(BigTree);
+        const angular = snapshot(
+            document.querySelector('[role="tree"]') as Element,
+            true,
+        ).map((part) => {
+            // the test's own attribute (the row's offset), not a part's
+            const { "data-offset": _offset, ...attributes } = part.attributes;
+            return { ...part, attributes };
+        });
+        document.body.innerHTML = "";
+        const host = document.createElement("div");
+        document.body.append(host);
+        const root = createRoot(host);
+        (
+            globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
+        ).IS_REACT_ACT_ENVIRONMENT = true;
+        await act(async () => {
+            root.render(
+                r(
+                    ReactTree.Root,
+                    {
+                        model: createTreeModel(bigTree()) as never,
+                        "aria-label": "Files",
+                        virtual,
+                    },
+                    r(ReactTree.VirtualItems, {
+                        children: (item: Item) =>
+                            r(
+                                ReactTree.Item,
+                                { item: item as never },
+                                r(
+                                    ReactTree.ItemContent,
+                                    null,
+                                    r(ReactTree.Toggle),
+                                    r("span", null, item.label),
+                                ),
+                            ),
+                    } as never),
+                ),
+            );
+        });
+        const react = snapshot(host.firstElementChild as Element, false);
+        act(() => root.unmount());
+        expect(
+            angular.filter(
+                (part) => part.attributes["data-tree-part"] === "item",
+            ),
+        ).toHaveLength(7);
         expect(angular).toEqual(react);
     });
 });

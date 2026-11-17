@@ -22,6 +22,10 @@ import type {
 } from "./components/rename-input";
 import type { RootEmits, RootProps, RootSlots } from "./components/root";
 import type { ToggleProps, ToggleSlots } from "./components/toggle";
+import type {
+    VirtualItemsProps,
+    VirtualItemsSlots,
+} from "./components/virtual-items";
 import * as parts from "./parts";
 import type { TreeComponent } from "./utils/primitive";
 
@@ -41,6 +45,7 @@ export interface TypedTree<T extends TreeTypes> {
     >;
     Root: TreeComponent<RootProps<T>, RootSlots, RootEmits>;
     Toggle: TreeComponent<ToggleProps, ToggleSlots>;
+    VirtualItems: TreeComponent<VirtualItemsProps, VirtualItemsSlots<T>>;
 }
 
 /**

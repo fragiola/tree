@@ -24,9 +24,11 @@ export {
 } from "./lib/directives/root.directive";
 export type {
     TreeItemsContext,
+    TreeVirtualItemsContext,
     TypedBy,
 } from "./lib/directives/templates.directive";
 export { TreeToggleDirective } from "./lib/directives/toggle.directive";
+export { TreeVirtualItemsDirective } from "./lib/directives/virtual-items.directive";
 export {
     type InjectTreeResult,
     injectTree,
@@ -39,5 +41,6 @@ export {
     type InjectTreeStateOptions,
     injectTreeState,
 } from "./lib/inject/inject-tree-state";
+export { injectTreeVirtualWindow } from "./lib/inject/inject-tree-virtual-window";
 export { TREE } from "./lib/tree";
 export type { TreeItemState } from "./lib/utils/item-state";

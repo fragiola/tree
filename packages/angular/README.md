@@ -6,7 +6,7 @@ single and multiple selection, the WAI-ARIA keyboard model with type-ahead, drag
 children, inline rename and tri-state checkboxes.
 
 Fragiola Tree is **headless**. It ships the behaviour, the accessibility and the primitives, here
-standalone attribute directives you put on your own elements (`[treeRoot]`, `treeItems`,
+standalone attribute directives you put on your own elements (`[treeRoot]`, `treeItems`, `treeVirtualItems`,
 `[treeItem]`, `treeItemContent`, `treeGroup`, `treeToggle`, `treeCheckbox`, `treeRenameInput`,
 `treeDropIndicator`, `treeLiveRegion`), and **no CSS, no icons and no text**: you style every
 element with `class`, `style` and the `data-*` attributes the directives set, and every visible

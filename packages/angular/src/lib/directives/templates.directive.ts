@@ -4,6 +4,7 @@ import type {
     TreeJson,
     TreeModel,
     TreeTypes,
+    VirtualRow,
 } from "@fragiola/tree";
 
 /**
@@ -23,4 +24,14 @@ export interface TreeItemsContext<T extends TreeTypes = AnyTypes> {
     $implicit: ItemOf<T>;
     /** the same item (`let-item="item"`) */
     item: ItemOf<T>;
+}
+
+/** The context of an `<ng-template treeVirtualItems>`: the item to render, and its row. */
+export interface TreeVirtualItemsContext<T extends TreeTypes = AnyTypes> {
+    /** the item (`let-item`), as the model holds it (plain, immutable) */
+    $implicit: ItemOf<T>;
+    /** the same item (`let-item="item"`) */
+    item: ItemOf<T>;
+    /** its row (`let-row="row"`): its level, offset and size */
+    row: VirtualRow;
 }
