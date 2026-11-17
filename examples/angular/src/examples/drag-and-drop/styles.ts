@@ -50,12 +50,16 @@ export const label = "min-w-0 flex-1 truncate";
 export const lock = "size-3.5 shrink-0 text-palette-accent/85";
 
 /**
- * The package positions the indicator (absolute, from the inline start of the target's level) and
- * gives a line no height: before and after draw a 2px line with a dot at its start, moved past the
- * grip and the toggle to start at the icon; inside outlines the row.
+ * The package positions the indicator (absolute, from the inline start of the target's level, past
+ * the grip and the toggle by `indicatorInset`) and gives a line no height: before and after draw a
+ * line with a dot at its start, at the icon; inside outlines the row.
  */
+/** Where a drop line starts past its level (px), the root's `indicatorInset`: past the grip (14px,
+ * pulled 2px back), the toggle (16px) and their gaps, at the icon. */
+export const indicatorInset = 44;
+
 export const dropIndicator = cn(
-    "pointer-events-none z-10 ms-11 data-[drop-position=inside]:ms-0",
+    "pointer-events-none z-10",
     "data-[drop-position=before]:-mt-px data-[drop-position=before]:border-t-(length:--tr-indicator-width) data-[drop-position=before]:[border-top-style:var(--tr-indicator-style)] data-[drop-position=before]:border-(--tr-indicator)",
     "data-[drop-position=after]:-mt-px data-[drop-position=after]:border-t-(length:--tr-indicator-width) data-[drop-position=after]:[border-top-style:var(--tr-indicator-style)] data-[drop-position=after]:border-(--tr-indicator)",
     "before:absolute before:-start-1 before:-top-[4px] before:size-1.5 before:rounded-full before:border-2 before:border-(--tr-indicator) before:bg-palette-base",

@@ -80,7 +80,12 @@ const reset = () => model.run("tree.load", { json: fileSystem() });
                 Reset
             </Clickable.Button>
         </div>
-        <Tree.Root :model="model" aria-label="Project files" :class="styles.root">
+        <Tree.Root
+            :model="model"
+            :indicator-inset="styles.indicatorInset"
+            aria-label="Project files"
+            :class="styles.root"
+        >
             <Tree.Items v-slot="{ item }">
                 <FileItem :item="item" />
             </Tree.Items>

@@ -47,9 +47,13 @@ export const label = "min-w-0 truncate [[data-renaming]>&]:hidden";
 export const input =
     "h-[calc(var(--tr-row-height)-6px)] min-w-0 flex-1 rounded-[4px] border border-palette-line bg-palette-base px-1.5 text-palette-contrast outline-none focus:border-palette-ring";
 
-/** The line starts at the icon, past the toggle (the package places it at the level's start). */
+/** Where a drop line starts past its level (px), the root's `indicatorInset`: past the row's
+ * padding (4px), the toggle (16px) and the gap, at the icon. */
+export const indicatorInset = 28;
+
+/** A line before or after a row (from the icon), the row's box inside a folder. */
 export const dropIndicator = cn(
-    "pointer-events-none z-10 ms-7 data-[drop-position=inside]:ms-0",
+    "pointer-events-none z-10",
     "data-[drop-position=before]:-mt-px data-[drop-position=before]:border-t-(length:--tr-indicator-width) data-[drop-position=before]:[border-top-style:var(--tr-indicator-style)] data-[drop-position=before]:border-(--tr-indicator)",
     "data-[drop-position=after]:-mt-px data-[drop-position=after]:border-t-(length:--tr-indicator-width) data-[drop-position=after]:[border-top-style:var(--tr-indicator-style)] data-[drop-position=after]:border-(--tr-indicator)",
     "data-[drop-position=inside]:rounded-(--tr-radius) data-[drop-position=inside]:border-(length:--tr-indicator-width) data-[drop-position=inside]:[border-style:var(--tr-indicator-style)] data-[drop-position=inside]:border-(--tr-indicator)",

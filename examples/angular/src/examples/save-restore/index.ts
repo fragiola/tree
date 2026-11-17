@@ -61,7 +61,7 @@ function restore(): { model: TreeModel<FileTypes>; restored: boolean } {
                     Reset
                 </button>
             </div>
-            <div [treeRoot]="model" aria-label="Project files" [class]="styles.root">
+            <div [treeRoot]="model" [indicatorInset]="styles.indicatorInset" aria-label="Project files" [class]="styles.root">
                 <ng-template [treeItems]="model" let-item>
                     <div [treeItem]="item" [class]="styles.item">
                         <div treeItemContent [class]="styles.row">

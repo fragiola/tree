@@ -92,6 +92,7 @@ export default function UndoRedo() {
             </div>
             <div className={styles.body}>
                 <Tree.Root<FileTypes>
+                    indicatorInset={styles.indicatorInset}
                     model={model}
                     onKeyDown={onKeyDown}
                     aria-label="Project files"

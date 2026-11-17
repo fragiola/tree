@@ -74,6 +74,21 @@ test("a keyboard drag is announced at every step, and drops with Enter", async (
     await expect(files).not.toHaveAttribute("data-keyboard-dragging");
 });
 
+test("a keyboard drag starts next to the dragged item, not at the top", async ({
+    page,
+}) => {
+    const stage = await openExample(page, "keyboard");
+    const files = tree(page, "Project files");
+    const status = stage.getByRole("status");
+    // main.tsx is the last child of src: its place is right after app.tsx
+    await item(files, "main.tsx").focus();
+    await page.keyboard.press("Control+Shift+D");
+    await expect(status).toHaveText(
+        /^Picked up main\.tsx\. .* Drop after app\.tsx\.$/,
+    );
+    await page.keyboard.press("Escape");
+});
+
 test("F2 opens the rename input", async ({ page }) => {
     const stage = await openExample(page, "keyboard");
     const files = tree(page, "Project files");

@@ -90,6 +90,7 @@ const onKeydown = (event: KeyboardEvent) => {
         </div>
         <div :class="styles.body">
             <Tree.Root
+                :indicator-inset="styles.indicatorInset"
                 :model="model"
                 aria-label="Project files"
                 :class="styles.root"
