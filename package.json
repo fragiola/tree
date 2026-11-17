@@ -1,0 +1,39 @@
+{
+    "name": "tree",
+    "version": "0.0.0",
+    "private": true,
+    "license": "MIT",
+    "type": "module",
+    "author": {
+        "name": "Mauro de Souza",
+        "email": "maurodesouza.me@gmail.com",
+        "url": "https://github.com/maurodesouza"
+    },
+    "packageManager": "pnpm@11.23.0",
+    "engines": {
+        "node": ">=24",
+        "pnpm": ">=11"
+    },
+    "scripts": {
+        "format": "biome format --write",
+        "lint": "biome lint",
+        "check": "biome check && pnpm check:layout && pnpm check:commands",
+        "check:layout": "node scripts/check-layout.ts",
+        "check:commands": "pnpm --filter @fragiola/tree build && node packages/core/scripts/generate-command-docs.ts --check",
+        "check:fix": "biome check --write",
+        "typecheck": "pnpm -r typecheck",
+        "test": "vitest run",
+        "build": "pnpm -r build && node scripts/check-dts.ts",
+        "check:package": "pnpm --filter \"./packages/*\" build && node scripts/check-package.ts",
+        "changeset": "changeset",
+        "release:version": "changeset version"
+    },
+    "devDependencies": {
+        "@arethetypeswrong/cli": "0.18.5",
+        "@biomejs/biome": "2.5.14",
+        "@changesets/changelog-github": "1.0.1",
+        "@changesets/cli": "3.0.3",
+        "publint": "0.3.24",
+        "vitest": "5.0.2"
+    }
+}
