@@ -298,7 +298,7 @@ describe("foreign drops", () => {
         const tree = screen.getByRole("tree");
         expect(
             nativeDrag(tree, "dragover", rowY("app.ts", 0.1), ["text/plain"]),
-        ).toBe(false);
+        ).toBe(true);
         expect(content("app.ts")).not.toHaveAttribute("data-drop-target");
         unmount();
         render(<FileTree model={filesModel()} />);

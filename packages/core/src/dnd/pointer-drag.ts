@@ -214,7 +214,15 @@ export class PointerDrag {
     private hover(): void {
         const session = this.session;
         if (!session) return;
-        const over = this.treeAt(session);
+        let over = this.treeAt(session);
+        // with a drop outside, the part of the source's root its scroll container hides (a
+        // virtualized tree's rows out of view) is outside too
+        if (
+            over === this.host &&
+            this.host.dropOutside() &&
+            !overRoot(this.host, session.x, session.y, true)
+        )
+            over = undefined;
         const host = over ?? this.host;
         const target = over
             ? targetAt(
@@ -297,7 +305,11 @@ export class PointerDrag {
     private updateScroll(): void {
         const session = this.session;
         if (!session || !this.host.root()) return;
-        const container = session.over.scrollContainer();
+        // a drag outside every tree, toward the app's targets, scrolls nothing
+        const container =
+            session.outside && this.host.dropOutside()
+                ? undefined
+                : session.over.scrollContainer();
         if (session.container !== container) {
             session.cancelScroll?.();
             session.cancelScroll = undefined;

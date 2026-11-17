@@ -516,6 +516,7 @@ class Engine<T extends TreeTypes> implements TreeEngine<T>, EngineHost {
             this.dragState.origin?.cancel();
             this.pointerDrag.cancel();
             this.keyboardDrag.cancel();
+            this.foreign?.cancel();
         }
         return ok({});
     }

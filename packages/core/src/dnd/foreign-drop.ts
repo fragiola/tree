@@ -9,7 +9,7 @@
 // reads no file and makes no network call. The engine reaches this file only through the option,
 // so a bundle that never imports `createTreeForeignDrop` leaves it out.
 import type { EngineHost } from "../engine/host";
-import { containsPoint, rectOf } from "../geometry/rect";
+import { rectOf } from "../geometry/rect";
 import type { TreeModel } from "../state/model";
 import type { AnyTypes, TreeTypes } from "../state/types";
 import type { DropTarget } from "./drop-evaluation";
@@ -99,6 +99,12 @@ export function createTreeForeignDrop<T extends TreeTypes = AnyTypes>(
 /** How long (ms) a foreign drag stays without a `dragover` before it is over (browsers fire one at least every 350 ms). */
 const STALE = 1000;
 
+/**
+ * How long (ms) a `dragleave` with no related target (a move between children in some browsers,
+ * Escape, the window left) waits for a `dragover` before it ends the drag.
+ */
+const LEAVE = 100;
+
 class ForeignDragSession implements ForeignDropController {
     /** the types of the drag over the tree, while there is one */
     private types: readonly string[] | undefined;
@@ -111,6 +117,7 @@ class ForeignDragSession implements ForeignDropController {
     private cancelStale: (() => void) | undefined;
     /** a `dragover` came since the stale check was scheduled */
     private seen = false;
+    private cancelLeave: (() => void) | undefined;
 
     constructor(
         private readonly host: EngineHost,
@@ -125,15 +132,19 @@ class ForeignDragSession implements ForeignDropController {
 
     handle(event: DragEvent): void {
         const drag = this.host.drag();
-        // a tree's own drag (pointer, keyboard, another tree's) is not a foreign one
-        if (drag && drag.mode !== "foreign") return;
+        // a tree's own drag (a keyboard drag under way) takes no foreign drop, and the browser
+        // does not open what is dropped either
+        if (drag && drag.mode !== "foreign") {
+            if (event.type !== "dragleave") refuse(event);
+            return;
+        }
         switch (event.type) {
             case "dragenter":
             case "dragover":
                 this.over(event);
                 return;
             case "dragleave":
-                if (!this.inside(event)) this.cancel();
+                this.leave(event);
                 return;
             case "drop":
                 this.drop(event);
@@ -161,12 +172,15 @@ class ForeignDragSession implements ForeignDropController {
             }
         }
         this.seen = true;
+        this.cancelLeave?.();
+        this.cancelLeave = undefined;
         const target = this.targetOf(event);
-        if (target) {
-            // a cancelled dragover is what makes the root a drop target
-            event.preventDefault();
-            transfer.dropEffect = this.options.dropEffect ?? "copy";
-        }
+        // a cancelled dragover makes the root a drop zone: the browser never opens a file dropped
+        // on it, and `none` where there is no target refuses the drop there
+        event.preventDefault();
+        transfer.dropEffect = target
+            ? (this.options.dropEffect ?? "copy")
+            : "none";
         const previous = host.drag();
         if (!previous || !sameTarget(previous.target, target)) {
             host.setDrag({ mode: "foreign", itemIds: [], target });
@@ -180,38 +194,62 @@ class ForeignDragSession implements ForeignDropController {
         this.scroll(event.clientY);
     }
 
-    /** Whether a `dragleave` only moved between the root's own elements. */
-    private inside(event: DragEvent): boolean {
+    /** A `dragleave`: to another element of the root it is nothing; out of it the drag ends. */
+    private leave(event: DragEvent): void {
         const root = this.host.root();
-        if (!root) return false;
         const related = event.relatedTarget as Node | null;
-        if (related) return root.contains(related);
-        // some browsers give no related target between children: the point decides (a drag that
-        // leaves the window reports 0, 0)
-        return (
-            (event.clientX !== 0 || event.clientY !== 0) &&
-            containsPoint(rectOf(root), event.clientX, event.clientY)
-        );
+        if (root && related && root.contains(related)) return;
+        if (related || this.types === undefined) {
+            this.cancel();
+            return;
+        }
+        // no related target: a move between children (some browsers), Escape, or the window
+        // left; the hovered folder stops expanding now, and a `dragover` soon says it goes on
+        this.hoveredItemId = undefined;
+        this.cancelExpand?.();
+        this.cancelExpand = undefined;
+        this.cancelLeave?.();
+        this.cancelLeave = this.host.scheduler().setTimeout(() => {
+            this.cancelLeave = undefined;
+            this.cancel();
+        }, LEAVE);
     }
 
     private drop(event: DragEvent): void {
         const transfer = event.dataTransfer;
+        // the drop fired because a dragover was cancelled: the browser opens nothing
+        event.preventDefault();
         if (transfer && this.types === undefined) {
             this.types = Array.from(transfer.types);
             this.accepted.clear();
         }
         const types = this.types ?? [];
         const target = transfer ? this.targetOf(event) : null;
-        this.cancel();
+        this.end();
         if (!transfer || !target) return;
-        event.preventDefault();
         const { model } = this.host;
         this.options.onDrop({ dataTransfer: transfer, to: target, model });
         this.host.announce({ type: "foreign-drop", types, target });
     }
 
     cancel(): void {
+        const types = this.types;
+        const shown = this.host.drag()?.target;
+        this.end();
+        // the live region no longer says where the files would go
+        if (types && shown)
+            this.host.announce({
+                type: "foreign-drag-over",
+                types,
+                target: null,
+            });
+    }
+
+    /** Ends the foreign drag, if any. */
+    private end(): void {
         this.types = undefined;
+        this.cancelLeave?.();
+        this.cancelLeave = undefined;
         this.hoveredItemId = undefined;
         this.cancelExpand?.();
         this.cancelExpand = undefined;
@@ -293,6 +331,13 @@ class ForeignDragSession implements ForeignDropController {
         else if (rect.top + rect.height - y < edge)
             container.scrollTop += speed;
     }
+}
+
+/** Refuses a native drag: the browser shows no drop and, at a drop, opens nothing. */
+function refuse(event: DragEvent): void {
+    event.preventDefault();
+    if (event.dataTransfer && event.type !== "drop")
+        event.dataTransfer.dropEffect = "none";
 }
 
 /** Whether a parent (`null`: the root) takes drops: enabled and droppable. */

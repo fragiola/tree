@@ -144,17 +144,22 @@ describe("a foreign drop", () => {
         const text = dataTransfer(["text/plain"], {
             text: { "text/plain": "hi" },
         });
+        // the root is a drop zone: the dragover is cancelled, with no drop where nothing is taken
         for (let i = 0; i < 5; i++)
             expect(
                 nativeDrag(m.root, "dragover", 40, m.rowY("app", 0.1), text),
-            ).toBe(false);
+            ).toBe(true);
+        expect(text.dropEffect).toBe("none");
         expect(m.engine.get("drop-target")).toBeNull();
         expect(m.engine.get("drop-indicator")).toBeNull();
         const calls = asked.length;
         expect(calls).toBeGreaterThan(0);
         nativeDrag(m.root, "dragover", 40, m.rowY("app", 0.1), text);
         expect(asked.length).toBe(calls);
-        nativeDrag(m.root, "drop", 40, m.rowY("app", 0.1), text);
+        // a drop there opens nothing in the browser, and reaches no onDrop
+        expect(nativeDrag(m.root, "drop", 40, m.rowY("app", 0.1), text)).toBe(
+            true,
+        );
         expect(dropped).toHaveLength(0);
     });
 
@@ -217,6 +222,37 @@ describe("a foreign drop", () => {
         expect(m.engine.get("drop-target")).toBeNull();
     });
 
+    it("a dragleave with no related target ends the drag unless a dragover follows", async () => {
+        const { foreignDrop } = recording();
+        const { m, announced } = setup({ foreignDrop });
+        const transfer = files();
+        nativeDrag(m.root, "dragover", 40, m.rowY("utils", 0.5), transfer);
+        // between two children (some browsers): a dragover follows, the drag goes on
+        nativeDrag(m.root, "dragleave", 40, m.rowY("utils", 0.5), transfer);
+        nativeDrag(m.root, "dragover", 40, m.rowY("app", 0.1), transfer);
+        await wait(150);
+        expect(m.engine.is("dragging")).toBe(true);
+        // Escape: nothing follows, the drag ends and no folder expands
+        nativeDrag(m.root, "dragover", 40, m.rowY("utils", 0.5), transfer);
+        nativeDrag(m.root, "dragleave", 40, m.rowY("utils", 0.5), transfer);
+        await wait(150);
+        expect(m.engine.is("dragging")).toBe(false);
+        expect(m.model.is("item-expanded", { itemId: "utils" })).toBe(false);
+        expect(announced.at(-1)).toMatchObject({
+            type: "foreign-drag-over",
+            target: null,
+        });
+    });
+
+    it("cancel-drag ends a foreign drag", () => {
+        const { foreignDrop } = recording();
+        const { m } = setup({ foreignDrop });
+        nativeDrag(m.root, "dragover", 40, m.rowY("app", 0.1), files());
+        expect(m.engine.run("cancel-drag").ok).toBe(true);
+        expect(m.engine.is("dragging")).toBe(false);
+        expect(m.engine.get("drop-target")).toBeNull();
+    });
+
     it("expands a hovered collapsed parent after the delay", async () => {
         const { foreignDrop } = recording();
         const { m } = setup({ foreignDrop });
@@ -249,9 +285,10 @@ describe("a foreign drop", () => {
         pointer(content, "pointerdown", 40, m.rowY("readme"));
         pointer(content, "pointermove", 40, m.rowY("readme") + 10);
         expect(m.engine.get("dragging-item-ids")).toEqual(["readme"]);
+        // refused, so the browser opens nothing either
         expect(
             nativeDrag(m.root, "drop", 40, m.rowY("app", 0.1), files()),
-        ).toBe(false);
+        ).toBe(true);
         expect(dropped).toHaveLength(0);
         expect(m.engine.get("dragging-item-ids")).toEqual(["readme"]);
         pointer(content, "pointerup", 40, m.rowY("readme") + 10);

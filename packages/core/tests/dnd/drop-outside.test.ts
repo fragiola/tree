@@ -144,6 +144,46 @@ describe("a drop outside the tree", () => {
         expect(m.model.state.items.src?.childItemIds?.[0]).toBe("readme");
     });
 
+    it("past the view of the scroll container the root is in, the drag is outside", () => {
+        trash();
+        const { dropOutside, dropped } = removing();
+        const { m } = setup({ dropOutside });
+        // the root (100px of rows) in a container that shows its first 50px
+        const container = document.createElement("div");
+        container.style.overflowY = "auto";
+        container.getBoundingClientRect = () =>
+            ({
+                top: 0,
+                left: 0,
+                width: 300,
+                height: 50,
+                right: 300,
+                bottom: 50,
+                x: 0,
+                y: 0,
+                toJSON: () => ({}),
+            }) as DOMRect;
+        document.body.append(container);
+        container.append(m.root);
+        try {
+            // below the view, over the hidden rows of the root: outside
+            const content = drag(m, "app", 40, 90);
+            expect(m.engine.get("drop-outside-element")).toBe(document.body);
+            expect(m.engine.get("drop-target")).toBeNull();
+            pointer(content, "pointerup", 40, 90);
+            expect(dropped).toHaveLength(1);
+            expect(dropped[0]?.element).toBe(document.body);
+            // not the trash: the app refused, nothing moved to a hidden row
+            expect(m.model.state.items.src?.childItemIds).toEqual([
+                "app",
+                "lib",
+                "utils",
+            ]);
+        } finally {
+            container.remove();
+        }
+    });
+
     it("in a drag group, a release over another tree of the group is not outside", () => {
         trash();
         const { dropOutside, dropped } = removing();

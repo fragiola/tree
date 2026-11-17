@@ -459,8 +459,13 @@ protected readonly foreignDrop = createTreeForeignDrop<Types>({
 
 `to` is a `DropTarget`: its `parentItemId` and `index` are an `item.add`'s placement. `announce`
 gets `foreign-drag-over` (the `types` and the `target`, `null` where nothing is taken) when the
-target changes, and `foreign-drop` after `onDrop`. A tree without `foreignDrop` ignores native
-drags, and the browser keeps its own behaviour for them (opening a dropped file).
+target changes (and a `null` target when the drag leaves), and `foreign-drop` after `onDrop`.
+With `foreignDrop` the root is a drop zone: the browser never opens a file dropped on it, and
+shows no drop where nothing is taken. A tree without `foreignDrop` ignores native drags, and the
+browser keeps its own behaviour for them (opening a dropped file).
+
+Text or a link selected in a row and dragged natively comes back as foreign content too: an
+`accept` that takes `text/plain` or `text/uri-list` takes it.
 
 ## Dropping outside
 

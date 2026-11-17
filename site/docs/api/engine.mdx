@@ -225,8 +225,9 @@ case the package listens to native HTML5 drag events: the adapters forward the r
 `dragenter`, `dragover`, `dragleave` and `drop` (`handleDragEvent`), and the engine finds the
 target under the pointer as for its own drags, shows it (`get("drop-target")`,
 `get("drop-indicator")`, `is("dragging")`; `get("dragging-item-ids")` is empty), expands a
-hovered collapsed folder and scrolls near the edges. A drag that leaves the root, drops, or goes
-a second without a `dragover` ends. `TreeForeignDropOptions`:
+hovered collapsed folder and scrolls near the edges. The root is then a drop zone: the browser
+opens nothing dropped on it, and shows no drop where nothing is taken. A drag that leaves the
+root, drops, is cancelled (`run("cancel-drag")`) or goes a second without a `dragover` ends. `TreeForeignDropOptions`:
 
 | option | type | description |
 | --- | --- | --- |

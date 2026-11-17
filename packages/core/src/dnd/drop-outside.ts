@@ -83,8 +83,13 @@ export function createTreeDropOutside<T extends TreeTypes = AnyTypes>(
             changed: () => void,
         ): DropOutsideController => {
             let current: Element | null = null;
+            // the root's document, or its shadow root inside a web component
             const at = (x: number, y: number) =>
-                host.root()?.ownerDocument.elementFromPoint?.(x, y) ?? null;
+                (
+                    host.root()?.getRootNode() as
+                        | Partial<DocumentOrShadowRoot>
+                        | undefined
+                )?.elementFromPoint?.(x, y) ?? null;
             return {
                 element: () => current,
                 over: (x, y) => {
