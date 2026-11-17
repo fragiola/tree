@@ -2,23 +2,27 @@ import { computed, type Signal } from "@angular/core";
 import type {
     AnyTypes,
     TreeEngine,
+    TreeFeatures,
     TreeModel,
     TreeTypes,
 } from "@fragiola/tree";
 import { injectTreeContext, typedEngine, typedModel } from "../context";
 
-export interface InjectTreeResult<T extends TreeTypes = AnyTypes> {
+export interface InjectTreeResult<
+    T extends TreeTypes = AnyTypes,
+    F extends TreeFeatures = readonly [],
+> {
     /**
      * the model of the enclosing `[treeRoot]`: the tree's data and its rules. Change the tree with
      * `model().run("item.expand", { itemId })`, read it with `model().get` / `model().is`
      */
-    model: Signal<TreeModel<T>>;
+    model: Signal<TreeModel<T, F>>;
     /**
      * the engine of the tree on screen: screen actions (`engine.run("focus", { itemId })`) and
      * screen facts (`engine.get("drop-target")`). It is there from the start; before the root
      * created its engine an action is refused and a read is empty
      */
-    engine: TreeEngine<T>;
+    engine: TreeEngine<T, F>;
 }
 
 /**
@@ -28,10 +32,11 @@ export interface InjectTreeResult<T extends TreeTypes = AnyTypes> {
  */
 export function injectTree<
     T extends TreeTypes = AnyTypes,
->(): InjectTreeResult<T> {
+    F extends TreeFeatures = readonly [],
+>(): InjectTreeResult<T, F> {
     const context = injectTreeContext("injectTree");
     return {
-        model: computed(() => typedModel<T>(context.model())),
-        engine: typedEngine<T>(context.publicEngine),
+        model: computed(() => typedModel<T, F>(context.model())),
+        engine: typedEngine<T, F>(context.publicEngine),
     };
 }

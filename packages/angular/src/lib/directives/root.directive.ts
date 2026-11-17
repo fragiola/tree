@@ -91,13 +91,16 @@ export interface RootState {
         "(drop)": "onDrag($event)",
     },
 })
-export class TreeRootDirective<T extends TreeTypes = AnyTypes> {
+export class TreeRootDirective<
+    T extends TreeTypes = AnyTypes,
+    F extends TreeFeatures = readonly [],
+> {
     /**
      * the tree model. Its middleware (`model.use`) sees every command the tree runs, and its
      * listeners (`model.subscribe`) every change. Another model makes another engine. Give
      * either the model or `defaultTree`
      */
-    readonly treeRoot = input<TreeModel<T> | "" | undefined>(undefined);
+    readonly treeRoot = input<TreeModel<T, F> | "" | undefined>(undefined);
     /** the document of a model the root creates and keeps (read once, when first set) */
     readonly defaultTree = input<TreeJson<T> | undefined>(undefined);
     /**
@@ -174,22 +177,22 @@ export class TreeRootDirective<T extends TreeTypes = AnyTypes> {
     private empty: TreeModel | undefined;
 
     /** the root's model: its `treeRoot` input, or the one it made from `defaultTree` */
-    readonly model: Signal<TreeModel<T>> = computed(() => {
+    readonly model: Signal<TreeModel<T, F>> = computed(() => {
         const given = this.treeRoot();
         if (given) return given;
         if (!this.own) {
             const json = this.defaultTree();
             if (json === undefined) {
                 this.empty ??= createTreeModel();
-                return this.empty as unknown as TreeModel<T>;
+                return this.empty as unknown as TreeModel<T, F>;
             }
             this.own = eraseModel(
                 createTreeModel<T, TreeFeatures>(json, {
                     features: untracked(this.features),
-                }) as unknown as TreeModel<T>,
+                }) as unknown as TreeModel<T, F>,
             );
         }
-        return this.own as unknown as TreeModel<T>;
+        return this.own as unknown as TreeModel<T, F>;
     });
     private readonly erased = computed(() => eraseModel(this.model()));
 
@@ -200,7 +203,7 @@ export class TreeRootDirective<T extends TreeTypes = AnyTypes> {
      * there from the start; before the root created its engine an action is refused and a read
      * is empty
      */
-    readonly engine: TreeEngine<T> = typedEngine<T>(this.facade.engine);
+    readonly engine: TreeEngine<T, F> = typedEngine<T, F>(this.facade.engine);
 
     private readonly current = signal<TreeEngine | null>(null);
     private readonly tick = signal(0);
