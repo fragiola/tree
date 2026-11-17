@@ -46,16 +46,24 @@ export const ItemContent: TreeComponent<ItemContentProps, ItemContentSlots> =
                 },
                 () => [engine.value, itemId()],
             );
+            // a press on a control inside the row (a button, an input, the toggle) is the
+            // control's. Read along the dispatch path, not the DOM: a control's own listener may
+            // have removed it already (Vue flushes between listeners, so a `v-if` on the state its
+            // command changed takes it out before the click reaches the row)
             const exempt = (event: Event) => {
-                const target = event.target as Element | null;
-                const row = event.currentTarget as Element | null;
-                const control = target?.closest?.(DRAG_EXEMPT);
-                return (
-                    control !== null &&
-                    control !== undefined &&
-                    control !== row &&
-                    row?.contains(control) === true
-                );
+                const row = event.currentTarget;
+                for (const target of event.composedPath()) {
+                    if (target === row) return false;
+                    // `nodeType`, not `instanceof`: the tree may be in another window (an iframe)
+                    const element = target as Element;
+                    if (
+                        element.nodeType === 1 &&
+                        element.matches(DRAG_EXEMPT)
+                    ) {
+                        return true;
+                    }
+                }
+                return false;
             };
             const onPointerdown = (event: PointerEvent) => {
                 engine.value?.adapter.handlePointerDown(itemId(), event);

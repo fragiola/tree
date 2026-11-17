@@ -1,5 +1,7 @@
 import type { CommandEvent } from "@fragiola/tree";
 import { describe, expect, it } from "vitest";
+import { h } from "vue";
+import type { ItemOf } from "../src";
 import {
     content,
     type FileTypes,
@@ -9,6 +11,7 @@ import {
     focus,
     itemElement,
     render,
+    Tree,
 } from "./tree";
 
 async function setup(selectionMode: "single" | "multiple" = "multiple") {
@@ -81,5 +84,56 @@ describe("selection", () => {
         await fire(content("utils"), "click");
         expect(model.is("item-expanded", { itemId: "utils" })).toBe(true);
         expect(model.state.selectedItemIds).toEqual(["utils"]);
+    });
+
+    it("leaves a press on a control of the row to it, even when its listener removed it", async () => {
+        const model = filesModel();
+        const presses: string[] = [];
+        await render(() =>
+            h(
+                Tree.Root,
+                { model, expandOnClick: true, "aria-label": "Files" },
+                () =>
+                    h(Tree.Items, null, {
+                        default: ({ item }: { item: ItemOf<FileTypes> }) => [
+                            h(Tree.Item, { item }, () =>
+                                h(Tree.ItemContent, null, () => [
+                                    h("span", item.label),
+                                    // a control whose command removes it (a Retry button on a failed load)
+                                    model.is("item-selected", {
+                                        itemId: "src",
+                                    }) || item.id !== "src"
+                                        ? null
+                                        : h(
+                                              "button",
+                                              {
+                                                  type: "button",
+                                                  onClick: () => {
+                                                      presses.push("retry");
+                                                      model.run("tree.select", {
+                                                          itemIds: ["src"],
+                                                      });
+                                                  },
+                                              },
+                                              "Retry",
+                                          ),
+                                ]),
+                            ),
+                        ],
+                    }),
+            ),
+        );
+        const button = document.querySelector("button");
+        if (!button) throw new Error("no button");
+        // as a browser does: Vue flushes between the button's listener and the row's
+        button.addEventListener("click", () => {
+            const content = button.closest('[data-tree-part="content"]');
+            button.remove();
+            expect(content?.contains(button)).toBe(false);
+        });
+        await fire(button, "click");
+        expect(presses).toEqual(["retry"]);
+        // the row neither collapsed src (expand-on-click) nor took the press
+        expect(model.is("item-expanded", { itemId: "src" })).toBe(true);
     });
 });
