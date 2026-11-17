@@ -245,7 +245,8 @@ describe("the React reference", () => {
             const slug = MODULE_PAGES[module] ?? "";
             const mdx = page(slug);
             // the root's own props: `RootProps<T, F>` adds the features' (## Feature props)
-            const propsName = name === "Root" ? "RootBaseProps" : `${name}Props`;
+            const propsName =
+                name === "Root" ? "RootBaseProps" : `${name}Props`;
             const props = interfaceFields(source, propsName);
             expect(props, `${propsName} in ${module}`).toBeDefined();
             const table = section(mdx, "Props");
@@ -360,13 +361,18 @@ describe("the React feature entries", () => {
         }
         const virtual = entry("virtualization");
         expect(virtual.map(({ name }) => name).sort()).toEqual(
-            ["VirtualItems", "VirtualItemsProps", "useTreeVirtualWindow"].sort(),
+            [
+                "VirtualItems",
+                "VirtualItemsProps",
+                "useTreeVirtualWindow",
+            ].sort(),
         );
         const mdx = page("virtual-items");
         for (const { name } of virtual) {
-            expect(mentions(mdx, name), `${name} on api/virtual-items.mdx`).toBe(
-                true,
-            );
+            expect(
+                mentions(mdx, name),
+                `${name} on api/virtual-items.mdx`,
+            ).toBe(true);
         }
         const props = interfaceFields(
             read(join(REACT_SRC, "virtualization/virtual-items.tsx")),
