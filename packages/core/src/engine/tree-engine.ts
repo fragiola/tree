@@ -179,7 +179,17 @@ class Engine<T extends TreeTypes> implements TreeEngine<T>, EngineHost {
             },
             typeAheadTimeout: options.typeAheadTimeout ?? 500,
         };
-        this.keyMap = resolveKeyMap(options.keyMap);
+        // the page keys are a virtualized tree's: elsewhere PageDown and PageUp stay the
+        // browser's, and an app's own binding of them keeps working
+        this.keyMap = resolveKeyMap(
+            options.virtual
+                ? options.keyMap
+                : {
+                      "focus-page-down": [],
+                      "focus-page-up": [],
+                      ...options.keyMap,
+                  },
+        );
         this.pointerDrag = new PointerDrag(this);
         this.keyboardDrag = new KeyboardDrag(this);
         this.loader = new ChildrenLoader(
@@ -622,15 +632,17 @@ class Engine<T extends TreeTypes> implements TreeEngine<T>, EngineHost {
                     if (itemId === this.model.state.focusedItemId) {
                         this.refocus = false;
                         void Promise.resolve().then(() => {
+                            // the item's element then (another may have replaced this one)
+                            const current = this.items.get(itemId);
                             if (
                                 this.destroyed ||
-                                this.items.get(itemId) !== element ||
+                                !current ||
                                 this.model.state.focusedItemId !== itemId
                             )
                                 return;
-                            element.focus({ preventScroll: true });
+                            current.focus({ preventScroll: true });
                             this.virtual?.reveal(itemId);
-                            element.scrollIntoView?.({
+                            current.scrollIntoView?.({
                                 block: "nearest",
                                 inline: "nearest",
                             });

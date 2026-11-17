@@ -1,13 +1,5 @@
 import { expect, test } from "@playwright/test";
-import {
-    dragRow,
-    focusedPath,
-    item,
-    itemAt,
-    openExample,
-    row,
-    tree,
-} from "../helpers";
+import { focusedPath, item, itemAt, openExample, tree } from "../helpers";
 
 // large-tree: 1 000 folders of 100 files (101 000 items, all expanded), virtualized. The DOM holds
 // only a window of the rows; every item still carries its level, position and set size. An item's
@@ -61,7 +53,7 @@ test("End focuses the last item, Home the first, PageDown a page down", async ({
     await expect(item(files, "module 2")).toBeInViewport();
 });
 
-test("collapse all and expand all change the rows, and a drag moves a row", async ({
+test("collapse all and expand all change the rows, and a keyboard drag moves a row", async ({
     page,
 }) => {
     const stage = await openExample(page, "large-tree");
@@ -69,16 +61,14 @@ test("collapse all and expand all change the rows, and a drag moves a row", asyn
     await stage.getByRole("button", { name: "Collapse all" }).click();
     await expect(stage.getByTestId("rendered")).toContainText("of 1,000 rows");
     await expect(itemAt(files, "/0")).toHaveAttribute("aria-expanded", "false");
-    await dragRow(
-        page,
-        row(itemAt(files, "/0")),
-        row(itemAt(files, "/2")),
-        0.9,
-    );
-    await expect(item(files, "module 1")).toHaveAttribute(
-        "data-tree-path",
-        "/2",
-    );
+    // a keyboard drag: module 1 leaves its place (into module 2, or after it), module 2 is first
+    await itemAt(files, "/0").focus();
+    await page.keyboard.press("ControlOrMeta+Shift+D");
+    await page.keyboard.press("ArrowDown");
+    await page.keyboard.press("ArrowDown");
+    await page.keyboard.press("Enter");
+    await expect(itemAt(files, "/0")).toHaveAccessibleName("module 2");
+    await expect(stage.getByRole("status")).toContainText("Moved");
     await stage.getByRole("button", { name: "Expand all" }).click();
     await expect(stage.getByTestId("rendered")).toContainText(
         `of ${ITEMS.toLocaleString("en")} rows`,

@@ -98,7 +98,11 @@ export class PointerDrag {
         listen(content, "lostpointercapture", () => {
             // a row a virtualized tree no longer renders loses the capture: the document's
             // listeners still follow the pointer
-            if (this.session && content.isConnected) this.cancel();
+            if (
+                this.session &&
+                (content.isConnected || this.host.renderedRows() === undefined)
+            )
+                this.cancel();
         });
     }
 

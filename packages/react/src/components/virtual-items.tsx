@@ -44,13 +44,14 @@ export function VirtualItems<T extends TreeTypes = AnyTypes>({
         const item = state.items[row.itemId];
         if (!item) continue;
         rows.push(
-            <React.Fragment key={row.itemId}>
-                {row.spaceBefore > 0 &&
-                    spacer(`before:${row.itemId}`, row.spaceBefore)}
+            <React.Fragment key={`row:${row.itemId}`}>
+                {row.spaceBefore > 0 && spacer("spacer", row.spaceBefore)}
                 {children(item as unknown as ItemOf<T>, row)}
             </React.Fragment>,
         );
     }
-    if (window.spaceAfter > 0) rows.push(spacer("after", window.spaceAfter));
+    if (window.spaceAfter > 0) {
+        rows.push(spacer("spacer:after", window.spaceAfter));
+    }
     return rows;
 }

@@ -168,6 +168,18 @@ describe("the virtualizer", () => {
         plain.destroy();
     });
 
+    it("leaves an app's own binding of PageDown alone in a tree that is not virtualized", () => {
+        const model = flatModel(30);
+        const plain = createTreeEngine(model, {
+            keyMap: { select: ["Enter", "PageDown"] },
+        });
+        plain.run("focus", { itemId: "n3" });
+        const event = new KeyboardEvent("keydown", { key: "PageDown" });
+        expect(plain.adapter.handleKeyDown(event)).toBe(true);
+        expect(model.state.selectedItemIds).toEqual(["n3"]);
+        plain.destroy();
+    });
+
     it("type-ahead focuses a match outside the window", () => {
         mounted = mountVirtual(
             flatModel(3000, (i) => (i === 2500 ? "zeta" : `item ${i}`)),

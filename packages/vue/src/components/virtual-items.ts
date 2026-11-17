@@ -57,19 +57,16 @@ export const VirtualItems: TreeComponent<VirtualItemsProps, VirtualItemsSlots> =
                     const item = tree.items[row.itemId];
                     if (!item) continue;
                     nodes.push(
-                        h(Fragment, { key: row.itemId }, [
+                        h(Fragment, { key: `row:${row.itemId}` }, [
                             row.spaceBefore > 0
-                                ? spacer(
-                                      `before:${row.itemId}`,
-                                      row.spaceBefore,
-                                  )
+                                ? spacer("spacer", row.spaceBefore)
                                 : null,
                             ...(slots.default?.({ item, row }) ?? []),
                         ]),
                     );
                 }
                 if (current.spaceAfter > 0) {
-                    nodes.push(spacer("after", current.spaceAfter));
+                    nodes.push(spacer("spacer:after", current.spaceAfter));
                 }
                 return nodes;
             };
