@@ -79,7 +79,7 @@ export function permissions(): TreeJson<PermissionTypes> {
         ({ kind: "permission", label, data: { scope } }) as const;
     return {
         version: 1,
-        settings: { selectionMode: "none", checkMode: "cascade" },
+        settings: { checkMode: "cascade" },
         rootItemIds: ["content", "members", "billing"],
         items: {
             content: {
