@@ -636,10 +636,11 @@ class Engine<T extends TreeTypes, F extends TreeFeatures>
                 ? active
                 : undefined;
         // a feature's editor this change ended (a rename): it goes away, so focus goes back to the
-        // item (every feature hears the change, so each keeps its own state current)
+        // item. Every feature hears every change, wherever focus is, so each keeps its own state
+        // current (a rename started from outside the tree ends with focus in its editor)
         let returns = false;
         for (const contribution of this.contributions) {
-            if (inside && contribution.modelChanged?.(inside)) returns = true;
+            if (contribution.modelChanged?.(inside)) returns = true;
         }
         const hadFocus =
             inside !== undefined && (this.isItemElement(inside) || returns);

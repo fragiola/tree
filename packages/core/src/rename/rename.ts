@@ -90,11 +90,13 @@ function renameEngine(host: FeatureEngineHost): FeatureEngine {
                 return finish("item.cancel-rename", { itemId }, focus, dryRun);
             },
         },
-        modelChanged(active: Element): boolean {
+        modelChanged(active: Element | undefined): boolean {
             // the item whose rename this change ended (a commit, a cancel, another command): its
-            // editor goes away, so focus goes back to the item; while a rename goes on, focus stays
+            // editor goes away, so focus goes back to the item; while a rename goes on, focus stays.
+            // Tracked on every change, wherever focus is
             const previous = renaming;
             renaming = renamingOf(model.state);
+            if (active === undefined) return false;
             if (previous === renaming || previous === null) return false;
             const item = host.itemElement(previous);
             return (

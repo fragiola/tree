@@ -164,10 +164,11 @@ export interface FeatureEngine {
     /** a bound key did something, or the root went away: what a sequence of keys holds ends */
     keysReset?(): void;
     /**
-     * the model changed, before the adapters re-render: true when DOM focus, inside the tree in
-     * `active`, must go back to the focused item (an editor of the feature's goes away)
+     * the model changed, before the adapters re-render (every change, wherever DOM focus is): true
+     * when DOM focus, inside the tree in `active` (undefined when it is outside), must go back to
+     * the focused item (an editor of the feature's goes away)
      */
-    modelChanged?(active: Element): boolean;
+    modelChanged?(active: Element | undefined): boolean;
     /** the model changed and the adapters re-rendered (and once when the engine is created) */
     settled?(): void;
     /** an item whose row stays rendered wherever the scroll is (the renaming item) */
