@@ -110,7 +110,7 @@ test("selecting a file opens its editor; a tab selects its file again", async ({
         "true",
     );
     await expect(stage.getByRole("navigation", { name: "Path" })).toHaveText(
-        "srcmain.tsx",
+        /^\s*src\s*main\.tsx\s*$/,
     );
     await expect(stage.getByTestId("code")).toContainText("createRoot");
     await tabs.getByRole("tab", { name: "app.tsx" }).click();
