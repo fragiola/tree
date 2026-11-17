@@ -1,5 +1,5 @@
 import { useItemContext, useTreeContext } from "../context";
-import { itemDataAttributes, useTreeItemState } from "../hooks/internal";
+import { itemDataAttributes } from "../hooks/internal";
 import type { TreeItemState } from "../hooks/use-tree-item";
 import { type SpanPrimitiveProps, useRenderElement } from "../utils/use-render";
 
@@ -16,8 +16,7 @@ export interface ToggleProps extends SpanPrimitiveProps<TreeItemState> {
 export function Toggle(props: ToggleProps) {
     const { children, ...rest } = props;
     const { engine } = useTreeContext("Toggle");
-    const { item } = useItemContext("Toggle");
-    const state = useTreeItemState(item);
+    const { item, state } = useItemContext("Toggle");
     const onClick = () => {
         engine?.adapter.handleToggleClick(item.id);
     };

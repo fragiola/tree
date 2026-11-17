@@ -1,5 +1,5 @@
 import { useItemContext, useTreeContext } from "../context";
-import { itemDataAttributes, useTreeItemState } from "../hooks/internal";
+import { itemDataAttributes } from "../hooks/internal";
 import type { TreeItemState } from "../hooks/use-tree-item";
 import { type SpanPrimitiveProps, useRenderElement } from "../utils/use-render";
 
@@ -16,9 +16,16 @@ export interface CheckboxProps extends SpanPrimitiveProps<TreeItemState> {
  */
 export function Checkbox(props: CheckboxProps) {
     const { children, ...rest } = props;
-    const { engine } = useTreeContext("Checkbox");
-    const { item } = useItemContext("Checkbox");
-    const state = useTreeItemState(item);
+    const { engine, model } = useTreeContext("Checkbox");
+    const { item, state: itemState } = useItemContext("Checkbox");
+    // the full check state (mixed included), even when the root has no `checkboxes`
+    const checkState = model.get("check-state-by", { itemId: item.id });
+    const state: TreeItemState = {
+        ...itemState,
+        checkState,
+        checked: checkState === "checked",
+        indeterminate: checkState === "mixed",
+    };
     const onClick = () => {
         engine?.adapter.handleCheckboxClick(item.id);
     };

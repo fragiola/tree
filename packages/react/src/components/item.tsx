@@ -1,5 +1,5 @@
 import type { AnyTypes, ItemOf, TreeTypes } from "@fragiola/tree";
-import * as React from "react";
+import type * as React from "react";
 import { ItemContext } from "../context";
 import { type TreeItemState, useTreeItem } from "../hooks/use-tree-item";
 import { type DivPrimitiveProps, useRenderElement } from "../utils/use-render";
@@ -30,9 +30,6 @@ export function Item<T extends TreeTypes = AnyTypes>(props: ItemProps<T>) {
         props: { ...elementProps, children },
         style,
     });
-    const value = React.useMemo(
-        () => ({ item: item as unknown as ItemOf<AnyTypes> }),
-        [item],
-    );
+    const value = { item: item as unknown as ItemOf<AnyTypes>, state };
     return <ItemContext.Provider value={value}>{element}</ItemContext.Provider>;
 }

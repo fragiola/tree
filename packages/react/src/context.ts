@@ -7,6 +7,7 @@ import type {
     TreeTypes,
 } from "@fragiola/tree";
 import * as React from "react";
+import type { TreeItemState } from "./hooks/use-tree-item";
 
 /**
  * The context of a `Tree.Root`. It holds the model and the engine with the registry erased
@@ -31,9 +32,10 @@ export interface TreeContextValue {
 
 export const TreeContext = React.createContext<TreeContextValue | null>(null);
 
-/** The item a subtree renders (`Tree.Item`): what its parts read. */
+/** The item a subtree renders (`Tree.Item`): what its parts read, computed once per render. */
 export interface ItemContextValue {
     item: ItemOf<AnyTypes>;
+    state: TreeItemState;
 }
 
 export const ItemContext = React.createContext<ItemContextValue | null>(null);

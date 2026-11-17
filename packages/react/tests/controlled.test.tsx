@@ -108,6 +108,34 @@ describe("controlled and uncontrolled state", () => {
         expect(onChecked).not.toHaveBeenCalled();
     });
 
+    it("settles a controlled parent check the model cascades, instead of fighting it", () => {
+        const model = filesModel({ expandedItemIds: ["src", "utils"] });
+        let commits = 0;
+        model.subscribe(() => {
+            commits += 1;
+        });
+        render(
+            <FileTree model={model} checkboxes checkedItemIds={["utils"]} />,
+        );
+        expect([...model.state.checkedItemIds].sort()).toEqual([
+            "a",
+            "b",
+            "utils",
+        ]);
+        expect(commits).toBe(1);
+    });
+
+    it("settles a controlled selection naming an item the tree lacks", () => {
+        const model = filesModel();
+        let commits = 0;
+        model.subscribe(() => {
+            commits += 1;
+        });
+        render(<FileTree model={model} selectedItemIds={["app", "nope"]} />);
+        expect(model.state.selectedItemIds).toEqual(["app"]);
+        expect(commits).toBe(1);
+    });
+
     it("every change is a command its listeners see", () => {
         const model = filesModel();
         const seen: string[] = [];

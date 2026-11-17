@@ -1,11 +1,7 @@
 import type { AnyTypes, ItemOf, TreeTypes } from "@fragiola/tree";
 import * as React from "react";
 import { useItemContext, useTreeContext } from "../context";
-import {
-    depthStyle,
-    itemDataAttributes,
-    useTreeItemState,
-} from "../hooks/internal";
+import { depthStyle, itemDataAttributes } from "../hooks/internal";
 import type { TreeItemState } from "../hooks/use-tree-item";
 import { type DivPrimitiveProps, useRenderElement } from "../utils/use-render";
 
@@ -24,8 +20,7 @@ export interface GroupProps<T extends TreeTypes = AnyTypes>
  */
 export function Group<T extends TreeTypes = AnyTypes>(props: GroupProps<T>) {
     const { keepMounted, ...rest } = props;
-    const { item } = useItemContext("Group");
-    const state = useTreeItemState(item);
+    const { item, state } = useItemContext("Group");
     if (!state.expanded && keepMounted !== true) return null;
     return <GroupElement {...rest} state={state} item={item} />;
 }

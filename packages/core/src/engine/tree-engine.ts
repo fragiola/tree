@@ -128,6 +128,8 @@ class Engine<T extends TreeTypes> implements TreeEngine<T>, EngineHost {
     private readonly items = new Map<string, HTMLElement>();
     private readonly contents = new Map<string, HTMLElement>();
     private dragState: DragState | null = null;
+    /** the tree had DOM focus at the last change: the focused item's new element takes it */
+    private refocus = false;
     private announcement = "";
     private revision = 0;
     private destroyed = false;
@@ -460,7 +462,11 @@ class Engine<T extends TreeTypes> implements TreeEngine<T>, EngineHost {
             active !== null &&
             active !== undefined &&
             root.contains(active) &&
-            this.isItemElement(active);
+            (this.isItemElement(active) ||
+                active.closest(`[${PART_ATTRIBUTE}="rename-input"]`) !== null);
+        // an item moved to another parent is a new element: the adapter registers it after this
+        // re-render, and it takes the focus the old one had (registerItem)
+        this.refocus = hadFocus || (this.refocus && this.focusLost());
         this.revision += 1;
         for (const listener of [...this.adapterListeners]) listener();
         const focused = this.model.state.focusedItemId;
@@ -471,6 +477,19 @@ class Engine<T extends TreeTypes> implements TreeEngine<T>, EngineHost {
             }
         }
         this.loader.scan();
+    }
+
+    /** Whether DOM focus left the tree for nothing (the body, or an element no longer there). */
+    private focusLost(): boolean {
+        const root = this.rootElement;
+        const active = root?.ownerDocument.activeElement;
+        return (
+            root !== undefined &&
+            (active === null ||
+                active === undefined ||
+                active === root.ownerDocument.body ||
+                !active.isConnected)
+        );
     }
 
     private isItemElement(element: Element): boolean {
@@ -506,8 +525,19 @@ class Engine<T extends TreeTypes> implements TreeEngine<T>, EngineHost {
             detachRoot: () => this.detachRoot(),
             registerItem: (itemId, element) => {
                 if (this.destroyed) return;
-                if (element) this.items.set(itemId, element);
-                else this.items.delete(itemId);
+                if (!element) {
+                    this.items.delete(itemId);
+                    return;
+                }
+                this.items.set(itemId, element);
+                if (
+                    this.refocus &&
+                    itemId === this.model.state.focusedItemId &&
+                    this.focusLost()
+                ) {
+                    this.refocus = false;
+                    element.focus({ preventScroll: true });
+                }
             },
             registerContent: (itemId, element) => {
                 if (this.destroyed) return;
@@ -534,16 +564,20 @@ class Engine<T extends TreeTypes> implements TreeEngine<T>, EngineHost {
                     return;
                 this.model.run("item.focus", { itemId });
             },
-            commitRename: (itemId, label) => {
+            commitRename: (itemId, label, options) => {
                 if (this.destroyed)
                     return fail("refused", "the engine was destroyed");
                 const result = this.model.run("item.rename", { itemId, label });
-                if (result.ok) this.focusElement(itemId);
+                if (result.ok && options?.focus !== false)
+                    this.focusElement(itemId);
                 return result;
             },
-            cancelRename: (itemId) => {
+            cancelRename: (itemId, options) => {
                 if (this.destroyed) return;
-                if (this.model.run("item.cancel-rename", { itemId }).ok)
+                if (
+                    this.model.run("item.cancel-rename", { itemId }).ok &&
+                    options?.focus !== false
+                )
                     this.focusElement(itemId);
             },
             subscribe: (listener) => {

@@ -48,6 +48,20 @@ describe("the keyboard (WAI-ARIA APG Tree View)", () => {
         expect(itemElement("src")).toHaveFocus();
     });
 
+    it("keeps DOM focus on an item moved into another parent (a new element)", () => {
+        const model = filesModel();
+        render(<FileTree model={model} />);
+        act(() => itemElement("readme.md").focus());
+        act(() => {
+            model.run("item.move", {
+                itemIds: ["readme"],
+                to: { parentItemId: "src", index: 0 },
+            });
+        });
+        expect(itemElement("readme.md")).toHaveAttribute("aria-level", "2");
+        expect(itemElement("readme.md")).toHaveFocus();
+    });
+
     it("swaps Right and Left in a right-to-left tree", () => {
         const model = filesModel();
         render(

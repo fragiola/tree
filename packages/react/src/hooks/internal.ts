@@ -1,5 +1,11 @@
 // The hooks and helpers only the primitives call.
-import type { AnyTypes, ItemOf, TreeModel, TreeTypes } from "@fragiola/tree";
+import type {
+    AnyTypes,
+    CheckState,
+    ItemOf,
+    TreeModel,
+    TreeTypes,
+} from "@fragiola/tree";
 import * as React from "react";
 import { useTreeContext } from "../context";
 import { dataAttributes } from "../utils/use-render";
@@ -23,7 +29,13 @@ export function useTreeItemState<T extends TreeTypes = AnyTypes>(
         parent === undefined
             ? state.rootItemIds.length
             : (parent.childItemIds?.length ?? 0);
-    const checkState = model.get("check-state-by", { itemId });
+    // the mixed state walks the item's subtree: only a tree with checkboxes pays for it (the
+    // Checkbox part reads it on its own)
+    const checkState: CheckState = context.checkboxes
+        ? model.get("check-state-by", { itemId })
+        : model.is("item-checked", { itemId })
+          ? "checked"
+          : "unchecked";
     const status = item.childrenStatus;
     const dropTarget = engine?.is("item-drop-target", { itemId }) ?? false;
     return {
@@ -136,14 +148,14 @@ function sync(model: TreeModel, props: ControlledProps): void {
                 })),
         ]);
     }
-    if (
-        props.selectedItemIds !== undefined &&
-        !sameSet(props.selectedItemIds, model.state.selectedItemIds)
-    ) {
+    if (props.selectedItemIds !== undefined) {
+        // an id the tree does not have (removed, not loaded yet) cannot be selected
         const itemIds = props.selectedItemIds.filter(
             (id) => model.get("item-by", { id }) !== undefined,
         );
-        model.run("tree.select", { itemIds }, { meta: CONTROLLED_META });
+        if (!sameSet(itemIds, model.state.selectedItemIds)) {
+            model.run("tree.select", { itemIds }, { meta: CONTROLLED_META });
+        }
     }
     if (
         props.checkedItemIds !== undefined &&
@@ -169,11 +181,26 @@ function sync(model: TreeModel, props: ControlledProps): void {
     }
 }
 
+/** The controlled lists, by value: what decides whether the model must be brought to them. */
+function controlledKey(props: ControlledProps): string {
+    const sorted = (ids: readonly string[] | undefined) =>
+        ids === undefined ? null : [...ids].sort();
+    return JSON.stringify([
+        sorted(props.expandedItemIds),
+        sorted(props.selectedItemIds),
+        sorted(props.checkedItemIds),
+    ]);
+}
+
 /**
  * @internal controlled and uncontrolled state, through commands: a controlled prop that differs
  * from the model runs the commands that bring the model to it (before paint, marked
  * `meta.source: "controlled"`); every other commit that changes one of the three lists calls its
  * `on…Change` with the new list. A controlled prop the app does not update reverts the change.
+ *
+ * The model is brought to the props once per change of their value, and once after each commit
+ * of its own: what the model then makes of them (a cascade checks a parent's children, an unknown
+ * id is dropped) is settled, never fought over render after render.
  */
 export function useControlledState(
     model: TreeModel,
@@ -181,10 +208,13 @@ export function useControlledState(
 ): void {
     const latest = React.useRef(props);
     latest.current = props;
+    const synced = React.useRef<{ model: TreeModel; key: string } | null>(null);
+    const dirty = React.useRef(false);
     useIsomorphicLayoutEffect(
         () =>
             model.subscribe((event) => {
                 if (event.meta?.source === CONTROLLED_META.source) return;
+                dirty.current = true;
                 const { before, after } = event;
                 const current = latest.current;
                 if (!sameSet(before.expandedItemIds, after.expandedItemIds)) {
@@ -203,9 +233,13 @@ export function useControlledState(
             }),
         [model],
     );
-    // after every render: the props may have changed, or a commit the app did not accept may
-    // have to be reverted
+    // after a render where the props changed value, or after a commit the app may not accept
+    const key = controlledKey(props);
     useIsomorphicLayoutEffect(() => {
+        const last = synced.current;
+        if (last?.model === model && last.key === key && !dirty.current) return;
+        synced.current = { model, key };
+        dirty.current = false;
         sync(model, latest.current);
     });
 }

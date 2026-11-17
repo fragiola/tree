@@ -32,6 +32,42 @@ describe("inline rename", () => {
         expect(itemElement("main.ts")).toHaveFocus();
     });
 
+    it("runs item.rename once on Enter", () => {
+        const model = filesModel();
+        const commands: string[] = [];
+        model.subscribe((event) => commands.push(event.command));
+        const { input } = start(model);
+        commands.length = 0;
+        fireEvent.change(input, { target: { value: "main.ts" } });
+        fireEvent.keyDown(input, { key: "Enter" });
+        expect(commands).toEqual(["item.rename"]);
+    });
+
+    it("leaves focus where it went when a blur commits", () => {
+        const model = filesModel();
+        render(
+            <>
+                <button type="button">Outside</button>
+                <FileTree model={model} />
+            </>,
+        );
+        act(() => itemElement("app.ts").focus());
+        fireEvent.keyDown(itemElement("app.ts"), { key: "F2" });
+        const input = screen.getByRole("textbox", { name: "Name" });
+        fireEvent.change(input, { target: { value: "moved.ts" } });
+        act(() => screen.getByRole("button", { name: "Outside" }).focus());
+        expect(model.get("item-by", { id: "app" })?.label).toBe("moved.ts");
+        expect(screen.getByRole("button", { name: "Outside" })).toHaveFocus();
+    });
+
+    it("gives focus back to the item when the app ends the rename", () => {
+        const { model } = start();
+        act(() => {
+            model.run("item.cancel-rename", { itemId: "app" });
+        });
+        expect(itemElement("app.ts")).toHaveFocus();
+    });
+
     it("cancels on Escape", () => {
         const { model, input } = start();
         fireEvent.change(input, { target: { value: "x" } });

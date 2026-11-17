@@ -1,11 +1,7 @@
 import { DRAG_EXEMPT } from "@fragiola/tree";
 import * as React from "react";
 import { useItemContext, useTreeContext } from "../context";
-import {
-    depthStyle,
-    itemDataAttributes,
-    useTreeItemState,
-} from "../hooks/internal";
+import { depthStyle, itemDataAttributes } from "../hooks/internal";
 import type { TreeItemState } from "../hooks/use-tree-item";
 import { type DivPrimitiveProps, useRenderElement } from "../utils/use-render";
 
@@ -22,8 +18,7 @@ export interface ItemContentProps extends DivPrimitiveProps<TreeItemState> {
 export function ItemContent(props: ItemContentProps) {
     const { children, ...rest } = props;
     const { engine } = useTreeContext("ItemContent");
-    const { item } = useItemContext("ItemContent");
-    const state = useTreeItemState(item);
+    const { item, state } = useItemContext("ItemContent");
     const itemId = item.id;
     const ref = React.useCallback(
         (element: HTMLElement | null) => {

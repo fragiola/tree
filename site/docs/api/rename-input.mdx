@@ -6,7 +6,8 @@ description: The label editor of the enclosing item, rendered only while it is r
 `Tree.RenameInput` is a text `input`, rendered only while its item is the renaming item
 (`item.start-rename`, or F2 on the focused item). It opens with the label, focused and selected.
 Enter commits (`item.rename`), Escape cancels (`item.cancel-rename`), and leaving it commits, or
-cancels when the name is refused. Focus then goes back to the item. The tree ignores the keys
+cancels when the name is refused. After Enter or Escape focus goes back to the item; after leaving
+it, focus stays where it went. The tree ignores the keys
 pressed in it. Give it an accessible name.
 
 ```tsx

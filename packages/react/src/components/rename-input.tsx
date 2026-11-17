@@ -4,7 +4,6 @@ import { useItemContext, useTreeContext } from "../context";
 import {
     itemDataAttributes,
     useIsomorphicLayoutEffect,
-    useTreeItemState,
 } from "../hooks/internal";
 import type { TreeItemState } from "../hooks/use-tree-item";
 import {
@@ -41,8 +40,7 @@ export function RenameInput(props: RenameInputProps) {
 function RenameInputElement(props: RenameInputProps) {
     const { onRenameError, ...rest } = props;
     const { engine } = useTreeContext("RenameInput");
-    const { item } = useItemContext("RenameInput");
-    const itemState = useTreeItemState(item);
+    const { item, state: itemState } = useItemContext("RenameInput");
     const itemId = item.id;
     const input = React.useRef<HTMLInputElement | null>(null);
     const done = React.useRef(false);
@@ -55,36 +53,39 @@ function RenameInputElement(props: RenameInputProps) {
         input.current?.select();
     }, []);
 
-    const commit = (): boolean => {
+    // `focus: false` on a blur: focus went elsewhere, and stays there
+    const commit = (focus: boolean): boolean => {
         if (done.current || !engine) return true;
+        // done before the command: the item taking focus back blurs the input, and that blur
+        // must not commit a second time
+        done.current = true;
         const result = engine.adapter.commitRename(
             itemId,
             input.current?.value ?? "",
+            { focus },
         );
-        if (result.ok) {
-            done.current = true;
-            return true;
-        }
+        if (result.ok) return true;
+        done.current = false;
         setError(result.error);
         latest.current?.(result.error);
         return false;
     };
-    const cancel = () => {
+    const cancel = (focus: boolean) => {
         if (done.current) return;
         done.current = true;
-        engine?.adapter.cancelRename(itemId);
+        engine?.adapter.cancelRename(itemId, { focus });
     };
     const onKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
         if (event.key === "Enter") {
             event.preventDefault();
-            commit();
+            commit(true);
         } else if (event.key === "Escape") {
             event.preventDefault();
-            cancel();
+            cancel(true);
         }
     };
     const onBlur = () => {
-        if (!done.current && !commit()) cancel();
+        if (!done.current && !commit(false)) cancel(false);
     };
     const onChange = () => {
         if (error) setError(undefined);
