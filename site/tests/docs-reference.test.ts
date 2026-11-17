@@ -512,7 +512,7 @@ describe("the concept pages", () => {
         const examples = readdirSync(
             join(ROOT, "examples/shared/src/meta"),
         ).map((file) => file.replace(/\.ts$/, ""));
-        expect(examples).toHaveLength(15);
+        expect(examples).toHaveLength(16);
         for (const id of examples) {
             expect(
                 pages.includes(`<Example id="${id}"`) ||
