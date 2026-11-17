@@ -94,6 +94,11 @@ export interface EngineIsMap {
     dragging: NoPayload;
     /** a keyboard drag is under way */
     "keyboard-dragging": NoPayload;
+    /**
+     * a drag that started in another tree of the drag group (`dragGroup`) is under way: this tree
+     * shows its target when it is here
+     */
+    "dragging-from-other-tree": NoPayload;
     /** an item is being dragged */
     "item-dragging": { itemId: string };
     /** an item is the one the drop target is relative to */

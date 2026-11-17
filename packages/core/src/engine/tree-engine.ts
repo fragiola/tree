@@ -4,9 +4,11 @@
 // running the model's commands, so every middleware sees what a key, a click or a drop does.
 import { fail, ok } from "../commands/define";
 import type { CommandResult, NoPayload } from "../commands/types";
+import { type DragGroup, joinDragGroup } from "../dnd/drag-group";
 import { indicatorOf } from "../dnd/drop-target";
 import { KeyboardDrag } from "../dnd/keyboard-drag";
 import { PointerDrag } from "../dnd/pointer-drag";
+import { modifiersOf, type TransferHandler } from "../dnd/transfer";
 import {
     asElement,
     directionOf,
@@ -96,6 +98,20 @@ export interface TreeEngineOptions<T extends TreeTypes = AnyTypes> {
      * the rows on screen. Without it, every visible item is rendered
      */
     virtual?: TreeVirtualizer | undefined;
+    /**
+     * joins the trees of the same document with the same group name: items drag between them, by
+     * pointer and keyboard. Over one model a drop is one `item.move`; over two it is a transfer
+     * (`transfer`). Without it, a drag stays in its tree
+     */
+    dragGroup?: string | undefined;
+    /**
+     * what a drop from a tree of another model does here (the receiving tree's, else the source
+     * tree's): run the app's commands (copy, convert kinds, …) and return false to refuse; asked
+     * first with `dryRun` for each target, which it hides by returning false. Without it, the
+     * target model adds the dragged subtrees (`item.add` in a `batch`) and the source model removes
+     * them (`item.remove`)
+     */
+    transfer?: TransferHandler | undefined;
 }
 
 /**
@@ -164,6 +180,8 @@ class Engine<T extends TreeTypes> implements TreeEngine<T>, EngineHost {
     private readonly virtual: VirtualController | undefined;
     /** a virtualized tree focuses this item once its row is rendered */
     private pendingFocus: string | undefined;
+    /** the drag group joined with the root (`dragGroup`) */
+    private group: { group: DragGroup; leave: () => void } | undefined;
 
     constructor(model: TreeModel<T>, options: TreeEngineOptions<T>) {
         this.model = model as unknown as TreeModel;
@@ -178,6 +196,7 @@ class Engine<T extends TreeTypes> implements TreeEngine<T>, EngineHost {
                 speed: options.autoScroll?.speed ?? 12,
             },
             typeAheadTimeout: options.typeAheadTimeout ?? 500,
+            transfer: options.transfer,
         };
         // the page keys are a virtualized tree's: elsewhere PageDown and PageUp stay the
         // browser's, and an app's own binding of them keeps working
@@ -307,6 +326,8 @@ class Engine<T extends TreeTypes> implements TreeEngine<T>, EngineHost {
                 return this.dragState !== null;
             case "keyboard-dragging":
                 return this.dragState?.mode === "keyboard";
+            case "dragging-from-other-tree":
+                return this.dragState?.origin !== undefined;
             case "item-dragging":
                 return (
                     itemId !== undefined &&
@@ -334,6 +355,7 @@ class Engine<T extends TreeTypes> implements TreeEngine<T>, EngineHost {
         if (this.destroyed) return;
         this.pointerDrag.cancel();
         this.keyboardDrag.cancel();
+        this.leaveGroup();
         this.destroyed = true;
         this.loader.destroy(this.settings.resetLoadsOnDestroy === true);
         this.virtual?.destroy();
@@ -465,6 +487,8 @@ class Engine<T extends TreeTypes> implements TreeEngine<T>, EngineHost {
     private cancelDrag(dryRun: boolean): CommandResult<NoPayload> {
         if (!this.dragState) return fail("refused", "no drag is under way");
         if (!dryRun) {
+            // a drag from another tree of the group is that tree's to cancel
+            this.dragState.origin?.cancel();
             this.pointerDrag.cancel();
             this.keyboardDrag.cancel();
         }
@@ -519,6 +543,17 @@ class Engine<T extends TreeTypes> implements TreeEngine<T>, EngineHost {
 
     reveal(itemId: string): void {
         this.virtual?.reveal(itemId);
+    }
+
+    dragGroup(): DragGroup | undefined {
+        return this.group?.group;
+    }
+
+    private leaveGroup(): void {
+        const group = this.group;
+        this.group = undefined;
+        group?.leave();
+        if (this.dragState?.origin) this.setDrag(null);
     }
 
     announce(event: AnnounceEvent): void {
@@ -596,6 +631,9 @@ class Engine<T extends TreeTypes> implements TreeEngine<T>, EngineHost {
         this.detachRoot();
         this.rootElement = element;
         this.virtual?.attach(element);
+        const name = this.settings.dragGroup;
+        if (name !== undefined)
+            this.group = joinDragGroup(this, name, element.ownerDocument);
     }
 
     private detachRoot(): void {
@@ -603,6 +641,7 @@ class Engine<T extends TreeTypes> implements TreeEngine<T>, EngineHost {
         this.pointerDrag.cancel();
         this.keyboardDrag.cancel();
         this.typeAhead.reset();
+        this.leaveGroup();
         this.virtual?.detach();
         this.rootElement = undefined;
     }
@@ -755,7 +794,7 @@ class Engine<T extends TreeTypes> implements TreeEngine<T>, EngineHost {
         const item = target?.closest(`[${PART_ATTRIBUTE}="item"]`);
         if (target && item && isDragExempt(target, item)) return false;
         if (this.keyboardDrag.active) {
-            const handled = this.keyboardDragKey(event.key);
+            const handled = this.keyboardDragKey(event);
             if (handled) event.preventDefault();
             return handled;
         }
@@ -778,8 +817,8 @@ class Engine<T extends TreeTypes> implements TreeEngine<T>, EngineHost {
         return false;
     }
 
-    private keyboardDragKey(key: string): boolean {
-        switch (key) {
+    private keyboardDragKey(event: KeyEventInput): boolean {
+        switch (event.key) {
             case "ArrowDown":
                 this.keyboardDrag.step(1);
                 return true;
@@ -787,7 +826,7 @@ class Engine<T extends TreeTypes> implements TreeEngine<T>, EngineHost {
                 this.keyboardDrag.step(-1);
                 return true;
             case "Enter":
-                this.keyboardDrag.drop();
+                this.keyboardDrag.drop(modifiersOf(event));
                 return true;
             case "Escape":
                 this.keyboardDrag.cancel();

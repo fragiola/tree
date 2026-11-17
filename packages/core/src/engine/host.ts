@@ -1,8 +1,20 @@
 // What the engine's parts (the drags, the loader) share of the engine: the model, the DOM it
 // registered, the options, and the way back to its state and its announcements.
+
+import type { DragGroup } from "../dnd/drag-group";
 import type { DropTarget } from "../dnd/drop-evaluation";
+import type { TransferHandler } from "../dnd/transfer";
 import type { Scheduler } from "../dom/owner";
 import type { TreeModel } from "../state/model";
+
+/**
+ * Another tree of the drag group (the `dragGroup` option), as an announcement names it: its root
+ * (its `aria-label` names it for the app's text) and its model.
+ */
+export interface DragTree {
+    readonly root: HTMLElement;
+    readonly model: TreeModel;
+}
 
 /**
  * What the app's `announce` is called with: a drag's steps and a failed load. It returns the text
@@ -19,17 +31,23 @@ export type AnnounceEvent =
            * targets come with the pointer's moves
            */
           readonly target: DropTarget | null;
+          /** the tree of `target` when it is another tree of the drag group (absent: this one) */
+          readonly targetTree?: DragTree;
       }
     | {
           readonly type: "drag-over";
           readonly itemIds: readonly string[];
           /** null: no valid target under the pointer */
           readonly target: DropTarget | null;
+          /** the tree of `target` when it is another tree of the drag group (absent: this one) */
+          readonly targetTree?: DragTree;
       }
     | {
           readonly type: "drop";
           readonly itemIds: readonly string[];
           readonly target: DropTarget;
+          /** the tree of `target` when it is another tree of the drag group (absent: this one) */
+          readonly targetTree?: DragTree;
       }
     | { readonly type: "drag-cancel"; readonly itemIds: readonly string[] }
     | {
@@ -52,13 +70,18 @@ export interface ResolvedEngineOptions {
     readonly autoScroll: { readonly threshold: number; readonly speed: number };
     /** how long (ms) between two typed characters keeps one type-ahead search */
     readonly typeAheadTimeout: number;
+    /** the app's transfer of items dropped here from a tree of another model (`transfer`) */
+    readonly transfer: TransferHandler | undefined;
 }
 
 /** A drag under way. */
 export interface DragState {
     readonly mode: "pointer" | "keyboard";
+    /** the dragged items (empty in another tree of the group whose model is not the source's) */
     readonly itemIds: readonly string[];
     readonly target: DropTarget | null;
+    /** set in the other trees of a drag group: the drag started in another tree, which this cancels */
+    readonly origin?: { cancel(): void };
 }
 
 export interface EngineHost {
@@ -93,4 +116,6 @@ export interface EngineHost {
     scrollContainer(): HTMLElement | undefined;
     /** a virtualized tree scrolls an item's row into view (a keyboard drag's target); else nothing */
     reveal(itemId: string): void;
+    /** the drag group the tree is in (the `dragGroup` option, once its root is attached) */
+    dragGroup(): DragGroup | undefined;
 }

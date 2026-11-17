@@ -34,6 +34,11 @@ export type {
     DropTarget,
     HoverPosition,
 } from "./dnd/drop-evaluation";
+export type {
+    DragModifiers,
+    TransferHandler,
+    TreeTransfer,
+} from "./dnd/transfer";
 export {
     DRAG_EXEMPT,
     NO_DRAG_ATTRIBUTE,
@@ -46,7 +51,7 @@ export type {
     TreeEngineAdapter,
 } from "./engine/adapter";
 export type { LoadChildren } from "./engine/children-loader";
-export type { AnnounceEvent } from "./engine/host";
+export type { AnnounceEvent, DragTree } from "./engine/host";
 export {
     createTreeEngine,
     type TreeEngine,

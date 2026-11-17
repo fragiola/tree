@@ -1,6 +1,7 @@
 // From the screen to a drop target and back: the row under the pointer (hit-testing the registered
-// rows' rects), the target it gives (drop-evaluation.ts) once `model.can("item.move", …)` accepts
-// it, and where the indicator of a target goes.
+// rows' rects), the target it gives (drop-evaluation.ts) once the tree's model accepts it
+// (`model.can("item.move", …)`, or a transfer's: transfer.ts), and where the indicator of a target
+// goes.
 import type { EngineHost } from "../engine/host";
 import type { DropIndicator } from "../engine/verbs";
 import {
@@ -19,6 +20,7 @@ import {
     evaluateDrop,
     hoverOffset,
 } from "./drop-evaluation";
+import { type DragModifiers, type Landing, NO_MODIFIERS } from "./transfer";
 
 /** What the drop evaluation reads of the model, for a drag of `itemIds`. */
 export function dropContext(
@@ -39,18 +41,6 @@ export function dropContext(
         },
         draggingItemIds: itemIds,
     };
-}
-
-/** Whether the model accepts moving `itemIds` to `target`. */
-export function accepts(
-    host: EngineHost,
-    itemIds: readonly string[],
-    target: DropTarget,
-): boolean {
-    return host.model.can("item.move", {
-        itemIds: [...itemIds],
-        to: { parentItemId: target.parentItemId, index: target.index },
-    });
 }
 
 /** The visible row under a point: its index and how far down it the point is (0 to 1). */
@@ -79,21 +69,30 @@ export function rowAt(
     return last && { index: last.index, fraction: 1 };
 }
 
+/** Whether a point is over a tree's root. */
+export function overRoot(host: EngineHost, x: number, y: number): boolean {
+    const root = host.root();
+    return root !== undefined && containsPoint(rectOf(root), x, y);
+}
+
 /**
- * The drop target at a point, for a drag of `itemIds`: null outside the root, over the dragged
- * items, or where the model refuses the move (a middleware veto, a non-droppable parent, …).
+ * The drop target at a point of a tree, for a drag landing there as `landing` says: null outside
+ * the root, over the dragged items, or where the model refuses the drop (a middleware veto, a
+ * non-droppable parent, …).
  */
 export function targetAt(
     host: EngineHost,
-    itemIds: readonly string[],
+    landing: Landing,
     x: number,
     y: number,
+    modifiers: DragModifiers = NO_MODIFIERS,
 ): DropTarget | null {
     const root = host.root();
     if (!root) return null;
     const rootRect = rectOf(root);
     if (!containsPoint(rootRect, x, y)) return null;
-    const context = dropContext(host, itemIds);
+    const accepts = (target: DropTarget) => landing.accepts(target, modifiers);
+    const context = dropContext(host, landing.excludedItemIds);
     const { visible } = context;
     let evaluated: ReturnType<typeof evaluateDrop>;
     if (visible.length === 0) {
@@ -108,7 +107,7 @@ export function targetAt(
         const hovered = visible[row.index] as VisibleItem;
         const takesInside =
             context.holdsChildren(hovered.itemId) &&
-            accepts(host, itemIds, {
+            accepts({
                 parentItemId: hovered.itemId,
                 index: context.childIdsOf(hovered.itemId).length,
                 position: "inside",
@@ -131,7 +130,7 @@ export function targetAt(
         });
     }
     if (evaluated === undefined || evaluated === "invalid") return null;
-    return accepts(host, itemIds, evaluated) ? evaluated : null;
+    return accepts(evaluated) ? evaluated : null;
 }
 
 /** The last visible row of an item's subtree (itself when it shows no children). */

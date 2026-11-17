@@ -4,12 +4,16 @@
 // only a target `model.can` accepts shows; a collapsed parent hovered long enough expands (a
 // transient `item.expand`); the nearest scroll container scrolls near its edges. Escape, a
 // cancelled pointer or a lost capture end it with nothing committed; a release over a target runs
-// one `item.move`.
+// one `item.move`. In a drag group the pointer also reaches the other trees: the capture stays on
+// the source, the tree under the pointer is found by its root's rect, and that tree evaluates,
+// shows, expands and scrolls its target; a drop there lands as transfer.ts says.
 import { isDragExempt } from "../dom/owner";
 import type { EngineHost } from "../engine/host";
 import { rectOf } from "../geometry/rect";
+import { GroupDrag, treeOf } from "./drag-group";
 import type { DropTarget } from "./drop-evaluation";
-import { rowAt, targetAt } from "./drop-target";
+import { overRoot, rowAt, targetAt } from "./drop-target";
+import { type DragModifiers, modifiersOf, NO_MODIFIERS } from "./transfer";
 
 interface Press {
     readonly itemId: string;
@@ -21,12 +25,19 @@ interface Press {
 
 interface Session {
     readonly itemIds: readonly string[];
+    readonly drag: GroupDrag;
     x: number;
     y: number;
+    modifiers: DragModifiers;
+    /** the tree under the pointer (the source when none of the group is) */
+    over: EngineHost;
+    target: DropTarget | null;
     hoveredItemId: string | undefined;
     cancelExpand: (() => void) | undefined;
     cancelScroll: (() => void) | undefined;
     scrollSpeed: number;
+    /** the scroll container the drag scrolls (the hovered tree's) */
+    container: HTMLElement | undefined;
 }
 
 const sameTarget = (a: DropTarget | null, b: DropTarget | null) =>
@@ -126,6 +137,7 @@ export class PointerDrag {
         event.preventDefault();
         session.x = event.clientX;
         session.y = event.clientY;
+        session.modifiers = modifiersOf(event);
         this.hover();
         this.updateScroll();
     }
@@ -145,16 +157,38 @@ export class PointerDrag {
         } catch {
             // a pointer that is gone already: the document listeners still follow it
         }
+        const drag = new GroupDrag(
+            this.host,
+            itemIds,
+            "pointer",
+            () => {
+                // the tree under the pointer left: the pointer finds what is there now
+                const session = this.session;
+                if (session?.drag !== drag) return;
+                session.over = this.host;
+                session.target = null;
+                session.hoveredItemId = undefined;
+                session.cancelExpand?.();
+                session.cancelExpand = undefined;
+                this.hover();
+            },
+            () => this.cancel(),
+        );
         this.session = {
             itemIds,
+            drag,
             x: press.x,
             y: press.y,
+            modifiers: NO_MODIFIERS,
+            over: this.host,
+            target: null,
             hoveredItemId: undefined,
             cancelExpand: undefined,
             cancelScroll: undefined,
             scrollSpeed: 0,
+            container: undefined,
         };
-        this.host.setDrag({ mode: "pointer", itemIds, target: null });
+        drag.begin(null);
         this.host.announce({
             type: "drag-start",
             itemIds,
@@ -164,33 +198,58 @@ export class PointerDrag {
         return true;
     }
 
+    /** The tree of the drag under a point: the source's, another of its group's, or none. */
+    private treeAt(session: Session): EngineHost | undefined {
+        const { x, y } = session;
+        if (overRoot(this.host, x, y)) return this.host;
+        return session.drag
+            .trees()
+            .find((host) => host !== this.host && overRoot(host, x, y));
+    }
+
     /** Hit-tests the pointer: the drop target, and the auto-expand timer of a hovered parent. */
     private hover(): void {
         const session = this.session;
         if (!session) return;
-        const { model, options } = this.host;
-        const target = targetAt(
-            this.host,
-            session.itemIds,
-            session.x,
-            session.y,
-        );
-        const previous = this.host.drag()?.target ?? null;
-        if (!sameTarget(previous, target)) {
-            this.host.setDrag({
-                mode: "pointer",
-                itemIds: session.itemIds,
-                target,
-            });
+        const over = this.treeAt(session);
+        const host = over ?? this.host;
+        const target = over
+            ? targetAt(
+                  over,
+                  session.drag.landing(over),
+                  session.x,
+                  session.y,
+                  session.modifiers,
+              )
+            : null;
+        const previous = session.target;
+        const moved = host !== session.over;
+        if (moved) {
+            session.cancelExpand?.();
+            session.cancelExpand = undefined;
+            session.hoveredItemId = undefined;
+        }
+        session.over = host;
+        session.target = target;
+        if (moved || !sameTarget(previous, target)) {
+            session.drag.show(host, target);
             this.host.announce({
                 type: "drag-over",
                 itemIds: session.itemIds,
                 target,
+                ...treeOf(this.host, host, target),
             });
         }
+        if (!over) {
+            session.hoveredItemId = undefined;
+            session.cancelExpand?.();
+            session.cancelExpand = undefined;
+            return;
+        }
+        const { model } = over;
         // a collapsed parent under the pointer expands after a delay
         const visible = model.get("visible-items");
-        const row = rowAt(this.host, visible, session.y);
+        const row = rowAt(over, visible, session.y);
         const hovered = row && visible[row.index]?.itemId;
         if (hovered === session.hoveredItemId) return;
         session.hoveredItemId = hovered;
@@ -200,12 +259,17 @@ export class PointerDrag {
             hovered === undefined ||
             model.is("item-leaf", { itemId: hovered }) ||
             model.is("item-expanded", { itemId: hovered }) ||
-            session.itemIds.includes(hovered)
+            (model === this.host.model && session.itemIds.includes(hovered))
         ) {
             return;
         }
         session.cancelExpand = this.host.scheduler().setTimeout(() => {
-            if (this.session !== session || session.hoveredItemId !== hovered)
+            if (
+                this.session !== session ||
+                session.over !== over ||
+                session.hoveredItemId !== hovered ||
+                over.isDestroyed()
+            )
                 return;
             session.cancelExpand = undefined;
             const expanded = model.run(
@@ -220,14 +284,19 @@ export class PointerDrag {
                 session.hoveredItemId = undefined;
                 this.hover();
             }
-        }, options.autoExpandDelay);
+        }, over.options.autoExpandDelay);
     }
 
     /** Scrolls the nearest scroll container while the pointer is near its top or bottom edge. */
     private updateScroll(): void {
         const session = this.session;
         if (!session || !this.host.root()) return;
-        const container = this.host.scrollContainer();
+        const container = session.over.scrollContainer();
+        if (session.container !== container) {
+            session.cancelScroll?.();
+            session.cancelScroll = undefined;
+            session.container = container;
+        }
         if (!container) return;
         const rect = rectOf(container);
         const { threshold, speed } = this.host.options.autoScroll;
@@ -249,7 +318,11 @@ export class PointerDrag {
         }
         if (session.cancelScroll) return;
         const step = () => {
-            if (this.session !== session || session.scrollSpeed === 0) {
+            if (
+                this.session !== session ||
+                session.scrollSpeed === 0 ||
+                session.container !== container
+            ) {
                 session.cancelScroll = undefined;
                 return;
             }
@@ -270,34 +343,31 @@ export class PointerDrag {
         }
         session.x = event.clientX;
         session.y = event.clientY;
+        session.modifiers = modifiersOf(event);
         this.hover();
-        const target = this.host.drag()?.target ?? null;
+        const { target, over } = session;
         this.suppressClick = true;
         // the click a release fires comes in this task; a later one is a click again
         this.host.scheduler().setTimeout(() => {
             this.suppressClick = false;
         }, 0);
         this.end();
-        if (target === null) {
+        if (target === null || over.isDestroyed()) {
             this.host.announce({
                 type: "drag-cancel",
                 itemIds: session.itemIds,
             });
             return;
         }
-        const moved = this.host.model.run(
-            "item.move",
-            {
-                itemIds: [...session.itemIds],
-                to: { parentItemId: target.parentItemId, index: target.index },
-            },
-            { meta: { source: "drag" } },
-        );
-        if (moved.ok) {
+        const dropped = session.drag
+            .landing(over)
+            .drop(target, session.modifiers, "drag");
+        if (dropped) {
             this.host.announce({
                 type: "drop",
                 itemIds: session.itemIds,
                 target,
+                ...treeOf(this.host, over, target),
             });
         } else {
             this.host.announce({
@@ -337,6 +407,7 @@ export class PointerDrag {
         const press = this.press;
         for (const release of this.release.splice(0)) release();
         if (session) {
+            session.drag.end();
             session.cancelExpand?.();
             session.cancelScroll?.();
             if (press?.content.hasPointerCapture?.(press.pointerId)) {
