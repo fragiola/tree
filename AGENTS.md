@@ -185,15 +185,16 @@ The words never swap meaning, in code, docs and examples.
 | `pnpm dev` | the playground (`apps/playground`) on http://localhost:5173 (`PLAYGROUND_PORT` moves it): every example, the scenarios, the fixtures, the Inspector |
 | `pnpm e2e` | Playwright: the playground's suite (fixtures, shell, scenarios), then each examples app's run of the shared specs (`examples/shared/e2e`) against its production embed; build the packages first (`pnpm build`) |
 | `pnpm site:export --base /tree --out <dir>` | the site export (contract v1.2, `../www/CONTRACT.md`): pages, `examples.json`, `project.json` and the React, Vue and Angular embeds, validated by `site/contract.ts` |
-| `pnpm site:dev --base /tree --port 5183` | every framework's embed with hot reload under `/tree/embed/<framework>/`, for `www`'s dev server |
+| `pnpm site:dev --base /tree --port 5190` | every framework's embed with hot reload under `/tree/embed/<framework>/`, for `www`'s dev server |
 
 **Dev ports.** The playground is 5173. The React embed alone (`pnpm --filter examples-react dev`)
-and `pnpm site:dev` default to **5183**, the port `www` registers for `tree` (the next free one
-after ui 5174, dockable 5180, data-grid 5181, grid-layout 5182); fragiola/www#32 adds
-`{ "slug": "tree", "devUrl": "http://localhost:5183" }` to `../www/projects.json`. The Vue embed
-alone (`pnpm --filter examples-vue dev`) defaults to 5184; `site:dev` runs each framework's embed
+and `pnpm site:dev` default to **5190**, the port `www` registers for `tree` (ui 5174, dockable
+5180, data-grid 5181, grid-layout 5182, dnd 5183 and splitter 5184 are taken; 5190 leaves room
+for the projects in between); fragiola/www#32 adds
+`{ "slug": "tree", "devUrl": "http://localhost:5190" }` to `../www/projects.json`. The Vue embed
+alone (`pnpm --filter examples-vue dev`) defaults to 5191; `site:dev` runs each framework's embed
 on a free port behind its one port. The Angular embed alone (`pnpm --filter examples-angular dev`)
-defaults to 5185.
+defaults to 5192.
 
 **Releasing is a merge, and it is disabled today.** `.github/workflows/release.yml` is Dockable's
 (Version Packages PR, then npm trusted publishing with pnpm), gated on the repository variable

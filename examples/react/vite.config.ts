@@ -39,5 +39,5 @@ export default defineConfig(({ command }) => ({
     plugins: [react(), tailwindcss(), prePaintTheme(), devManifest()],
     resolve: examplesResolve(command),
     build: outDir ? { outDir, emptyOutDir: true } : {},
-    server: { port: Number(process.env.PORT ?? 5183), strictPort: true },
+    server: { port: Number(process.env.PORT ?? 5190), strictPort: true },
 }));

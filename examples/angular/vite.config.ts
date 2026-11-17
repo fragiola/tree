@@ -45,5 +45,5 @@ export default defineConfig(({ command }) => ({
     ],
     resolve: examplesResolve(command),
     build: outDir ? { outDir, emptyOutDir: true } : {},
-    server: { port: Number(process.env.PORT ?? 5185), strictPort: true },
+    server: { port: Number(process.env.PORT ?? 5192), strictPort: true },
 }));
