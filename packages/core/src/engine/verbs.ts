@@ -56,6 +56,23 @@ export interface EngineActionMap {
     };
     /** cancels the drag under way (pointer or keyboard): nothing is committed */
     "cancel-drag": { payload: NoPayload; result: NoPayload };
+    /**
+     * commits an item's rename with this label (`item.rename`), then focuses the item, unless
+     * `focus` is false (a blur: focus went elsewhere and stays there); refused as `item.rename`
+     * is (an empty label, a middleware's veto), and the item keeps renaming
+     */
+    "commit-rename": {
+        payload: { itemId: string; label: string; focus?: boolean | undefined };
+        result: { itemId: string };
+    };
+    /**
+     * cancels an item's rename (`item.cancel-rename`): the label stays, then the item is focused,
+     * unless `focus` is false
+     */
+    "cancel-rename": {
+        payload: { itemId: string; focus?: boolean | undefined };
+        result: { itemId: string };
+    };
 }
 
 export type EngineActionKey = keyof EngineActionMap;
