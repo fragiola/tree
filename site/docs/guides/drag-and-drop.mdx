@@ -187,7 +187,8 @@ export class MoveButton {
 ## Announcing the drag
 
 `announce` returns the live region's text for each event: `drag-start`, `drag-over` (with the
-`target`, or `null` when there is no valid one), `drop` and `drag-cancel`. Render
+`target`, or `null` when there is no valid one), `drop` and `drag-cancel` (and `drop-outside`,
+`foreign-drag-over` and `foreign-drop`, below). Render
 `Tree.LiveRegion`, visually hidden:
 
 ```ts
@@ -355,7 +356,151 @@ const announce = (event: AnnounceEvent) => {
 };
 ```
 
+## Foreign content
+
+Files from the desktop, links and text dragged from another window come with native HTML5 drag
+events, the one case the package listens to them. Give the root a `foreignDrop`, made once by
+`createTreeForeignDrop`: the tree then evaluates the target under the pointer as for its own
+drags (the same thirds and inline offset), draws `Tree.DropIndicator` and `data-drop-target`,
+expands a hovered folder and scrolls near its edges, virtualized or not. The root carries
+`data-dragging` meanwhile, and `engine.get("dragging-item-ids")` is empty.
+
+Before the drop a browser shows only the drag's types (`"Files"`, `"text/uri-list"`,
+`"text/plain"`), so `accept` decides from `types` and the target `to`; it is asked once per
+target. A disabled or non-droppable folder never takes a drop. At the drop, `onDrop` gets the
+`dataTransfer` and reads it: the package reads no file and makes no network call, so adding items,
+uploading or rejecting is your commands.
+
+<Framework name="react">
+
+```tsx
+import { createTreeForeignDrop, Tree } from "@fragiola/tree-react";
+
+// once, at module level (another object creates another engine)
+const foreignDrop = createTreeForeignDrop<Types>({
+    accept: ({ types }) => types.includes("Files"),
+    onDrop: ({ dataTransfer, to: { parentItemId, index }, model }) => {
+        [...dataTransfer.files].forEach((file, i) => {
+            model.run("item.add", {
+                item: { kind: "file", label: file.name, data: { size: file.size } },
+                to: { parentItemId, index: index + i },
+            });
+        });
+    },
+});
+
+<Tree.Root model={model} foreignDrop={foreignDrop} aria-label="Project files">
+    <Tree.Items>{(item) => <Item item={item} />}</Tree.Items>
+    <Tree.DropIndicator />
+</Tree.Root>;
+```
+
+</Framework>
+
+<Framework name="vue">
+
+```vue
+<script setup lang="ts">
+import { createTreeForeignDrop } from "@fragiola/tree-vue";
+
+// once (in setup, or at module level): another object creates another engine
+const foreignDrop = createTreeForeignDrop<Types>({
+    accept: ({ types }) => types.includes("Files"),
+    onDrop: ({ dataTransfer, to: { parentItemId, index }, model }) => {
+        [...dataTransfer.files].forEach((file, i) => {
+            model.run("item.add", {
+                item: { kind: "file", label: file.name, data: { size: file.size } },
+                to: { parentItemId, index: index + i },
+            });
+        });
+    },
+});
+</script>
+
+<template>
+    <Tree.Root :model="model" :foreign-drop="foreignDrop" aria-label="Project files">
+        <Tree.Items v-slot="{ item }"><Item :item="item" /></Tree.Items>
+        <Tree.DropIndicator />
+    </Tree.Root>
+</template>
+```
+
+</Framework>
+
+<Framework name="angular">
+
+```ts
+import { createTreeForeignDrop } from "@fragiola/tree-angular";
+
+// a field (another object creates another engine)
+protected readonly foreignDrop = createTreeForeignDrop<Types>({
+    accept: ({ types }) => types.includes("Files"),
+    onDrop: ({ dataTransfer, to: { parentItemId, index }, model }) => {
+        [...dataTransfer.files].forEach((file, i) => {
+            model.run("item.add", {
+                item: { kind: "file", label: file.name, data: { size: file.size } },
+                to: { parentItemId, index: index + i },
+            });
+        });
+    },
+});
+```
+
+```html
+<div [treeRoot]="model" [foreignDrop]="foreignDrop" aria-label="Project files" #tree="treeRoot">
+    <ng-template [treeItems]="model" let-item><!-- the item --></ng-template>
+    @if (tree.state().dragging) { <div treeDropIndicator></div> }
+</div>
+```
+
+</Framework>
+
+<Example id="file-drop" />
+
+`to` is a `DropTarget`: its `parentItemId` and `index` are an `item.add`'s placement. `announce`
+gets `foreign-drag-over` (the `types` and the `target`, `null` where nothing is taken) when the
+target changes, and `foreign-drop` after `onDrop`. A tree without `foreignDrop` ignores native
+drags, and the browser keeps its own behaviour for them (opening a dropped file).
+
+## Dropping outside
+
+A pointer drag of the tree's rows released outside every tree (outside every tree of its
+`dragGroup`, or outside its own tree without one) is cancelled, unless the root has a
+`dropOutside`, made once by `createTreeDropOutside`. Its `onDrop` gets the dragged `itemIds`, the
+`model`, the client point, the modifier keys and the `element` under the pointer, and returns
+`true` when it took the items (announced as `drop-outside`) or `false` (a `drag-cancel`). Your own
+targets are what it looks for: a trash zone, a panel, a `@fragiola/dnd` droppable.
+
+```ts
+import { createTreeDropOutside } from "@fragiola/tree-react";
+
+const dropOutside = createTreeDropOutside<Types>({
+    onDrop: ({ itemIds, element, model }) =>
+        element?.closest("[data-trash]") != null &&
+        model.run("item.remove", { itemIds: [...itemIds] }).ok,
+});
+// <Tree.Root dropOutside={dropOutside} …> (Vue :drop-outside, Angular [dropOutside])
+```
+
+The drag keeps the pointer capture on its row, so your targets get no pointer events of their
+own while it is under way. `engine.get("drop-outside-element")` is the element under the pointer
+while the drag is outside every tree (`null` otherwise), and `engine.subscribe` tells when it
+changes: a target highlights when it contains it.
+
+```tsx
+const tree = useTreeRef<Types>();
+const engine = tree.current?.engine;
+const overTrash = useSyncExternalStore(
+    useCallback((onChange: () => void) => engine?.subscribe(onChange) ?? (() => {}), [engine]),
+    () => engine?.get("drop-outside-element")?.closest("[data-trash]") != null,
+    () => false,
+);
+```
+
+A keyboard drag stays in the trees of its group: it has no place outside them.
+
 ## What it does not do
 
-No drop of files or foreign elements, no drag between documents (an iframe, a popup), and native
-HTML5 drag and drop is not used. See [Known limitations](/docs/limitations).
+No native outbound drag: a row cannot be dragged to the desktop or into another window (the drag
+uses Pointer Events), and trees in two documents (an iframe, a popup) never share a drag. See
+[Known limitations](/docs/limitations).

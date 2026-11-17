@@ -61,6 +61,8 @@ in an iframe or a popup window.
 | `virtual` | `TreeVirtualizer` | none | renders only the visible items in view: `createTreeVirtualizer(options)` (below); without it every visible item is rendered |
 | `dragGroup` | `string` | none | joins the trees of the same document with the same group name: items drag between them by pointer and keyboard (below); without it a drag stays in its tree |
 | `transfer` | `TransferHandler` | the default transfer | what a drop from a tree of another model does here (the receiving tree's, else the source tree's): `(transfer: TreeTransfer) => boolean \| void` (below) |
+| `foreignDrop` | `TreeForeignDrop<T>` | none | takes files, links and text dragged on the tree from the desktop or another window: `createTreeForeignDrop(options)` (below); without it native drags are ignored |
+| `dropOutside` | `TreeDropOutside<T>` | none | hands your `onDrop` a pointer drag released outside every tree of its group: `createTreeDropOutside(options)` (below); without it such a release cancels |
 
 ## Members
 
@@ -100,6 +102,7 @@ An engine key never has a dot, so it never reads as a command (`EngineActionKey`
 | `"announcement"` | `string`: the latest text your `announce` returned (`""` before any) |
 | `"direction"` | `"ltr" \| "rtl"`: the root's writing direction; Right and Left swap in `rtl` |
 | `"virtual-window"` | `VirtualWindow \| null`: the rows a virtualized tree renders; `null` without the `virtual` option |
+| `"drop-outside-element"` | `Element \| null`: the element under the pointer while this tree's pointer drag is outside every tree (the `dropOutside` option), for your own targets to show it; `null` otherwise |
 
 A `DropTarget` is the `item.move` a drop would run and how it reads on screen; a `DropIndicator`
 is where `Tree.DropIndicator` goes, relative to the root's border box, in pixels and logical
@@ -175,7 +178,7 @@ is not virtualized leaves those keys to the browser.
 
 | key | payload | true when |
 | --- | --- | --- |
-| `"dragging"` | none | a drag is under way (pointer or keyboard) |
+| `"dragging"` | none | a drag is under way (pointer, keyboard, or foreign content over the tree) |
 | `"keyboard-dragging"` | none | a keyboard drag is under way |
 | `"dragging-from-other-tree"` | none | a drag that started in another tree of the drag group is under way: this tree shows its target when it is here |
 | `"item-dragging"` | `{ itemId }` | the item is being dragged |
@@ -214,6 +217,44 @@ Announcements name the tree of a target in another tree of the group: `drag-star
 the target is in the source tree. The guide is
 [Drag and drop: between trees](/docs/guides/drag-and-drop).
 
+## Foreign drops
+
+`createTreeForeignDrop(options)` (a `TreeForeignDrop`, the `foreignDrop` option) makes the tree
+take foreign content: files from the desktop, links and text from another window. It is the one
+case the package listens to native HTML5 drag events: the adapters forward the root's
+`dragenter`, `dragover`, `dragleave` and `drop` (`handleDragEvent`), and the engine finds the
+target under the pointer as for its own drags, shows it (`get("drop-target")`,
+`get("drop-indicator")`, `is("dragging")`; `get("dragging-item-ids")` is empty), expands a
+hovered collapsed folder and scrolls near the edges. A drag that leaves the root, drops, or goes
+a second without a `dragover` ends. `TreeForeignDropOptions`:
+
+| option | type | description |
+| --- | --- | --- |
+| `accept` | `(drag: ForeignDrag<T>) => boolean` | whether the tree takes the drag at a target (default: every type), asked once per target and drag; a refused target does not show. A disabled or non-droppable parent never takes a drop |
+| `onDrop` | `(drop: ForeignDrop<T>) => void` | the drop: read the data and run your commands (`item.add`, an upload of yours) |
+| `dropEffect` | `"copy" \| "move" \| "link"` | the cursor the browser shows over a target (default `"copy"`) |
+
+A `ForeignDrag` has the drag's `types` (its `DataTransfer.types`: the data is readable only at
+the drop), the target `to` (a `DropTarget`) and the `model`; a `ForeignDrop` has the
+`dataTransfer`, `to` and the `model`. The package reads no file and makes no network call.
+
+## Drops outside
+
+`createTreeDropOutside(options)` (a `TreeDropOutside`, the `dropOutside` option) hands a pointer
+drag of the tree's items released outside every tree of its group (outside its own tree without
+a group) to `TreeDropOutsideOptions.onDrop`, a `(drop: DropOutside<T>) => boolean` that returns
+`true` when it took the items. A `DropOutside` has the dragged `itemIds`, the `model`, the
+`element` under the pointer (from the root's document), the client point `x`, `y` and the
+`modifiers` of the release. While the drag is outside every tree, `get("drop-outside-element")`
+is that element. The keyboard drag has no place outside the trees.
+
+`ForeignDropController` and `DropOutsideController` are what each one's `connect` returns to the
+engine: an app never calls them.
+
+Both are opt-in factories, as the virtualizer is: the engine reaches their code only through the
+option, so an app that never imports `createTreeForeignDrop` or `createTreeDropOutside` does not
+ship it. The guide is [Drag and drop: foreign content](/docs/guides/drag-and-drop#foreign-content).
+
 ## Keys
 
 `DEFAULT_KEY_MAP` (a `KeyMap`: each `KeyAction` and its keys) is the WAI-ARIA tree view's,
@@ -223,7 +264,9 @@ listed on [Keyboard and type-ahead](/docs/guides/keyboard). A key handler reads 
 ## Announcements
 
 `AnnounceEvent` is what your `announce` receives: `drag-start` (with the keyboard drag's first
-`target`), `drag-over`, `drop`, `drag-cancel` or `load-error`
+`target`), `drag-over`, `drop`, `drag-cancel`, `drop-outside` (the `itemIds` and the `element`
+your `dropOutside` took them on), `foreign-drag-over` (the `types` and the `target`, `null` where
+nothing is taken), `foreign-drop` (the `types` and the `target`) or `load-error`
 ([Tree.LiveRegion](/docs/api/live-region)). `LoadChildren<T>` is
 the loader's type.
 
@@ -254,6 +297,7 @@ an app never needs it. The adapter forwards events; the core decides.
 | `handleToggleClick(itemId)` | a press on an item's toggle: expand or collapse |
 | `handleCheckboxClick(itemId)` | a press on an item's checkbox: toggle its check |
 | `handleFocus(itemId)` | DOM focus entered an item's element: it becomes the focused item |
+| `handleDragEvent(event)` | a native drag event on the root (`dragenter`, `dragover`, `dragleave`, `drop`): foreign content with `foreignDrop`, ignored without it |
 | `commitRename(itemId, label, options?)` | the rename input committed: `item.rename`, then focus goes back to the item, unless `{ focus: false }` (a blur: focus stays where it went) |
 | `cancelRename(itemId, options?)` | the rename input was cancelled: `item.cancel-rename`, then focus goes back, unless `{ focus: false }` |
 | `subscribe(listener)` | calls `listener` when adapters should re-render; returns its remover |
