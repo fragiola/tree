@@ -201,7 +201,10 @@ function announcer(model: TreeModel<Types>) {
     return (event: AnnounceEvent): string | undefined => {
         switch (event.type) {
             case "drag-start":
-                return `Picked up ${event.itemIds.map(label).join(", ")}.`;
+                // a keyboard drag's start comes with its first target, in one message
+                return event.target
+                    ? `Picked up ${event.itemIds.map(label).join(", ")}. Drop ${where(event.target)}.`
+                    : `Picked up ${event.itemIds.map(label).join(", ")}.`;
             case "drag-over":
                 return event.target ? `Drop ${where(event.target)}.` : "No place to drop here.";
             case "drop":
@@ -215,9 +218,9 @@ function announcer(model: TreeModel<Types>) {
 }
 ```
 
-A keyboard drag announces its start and its first target in the same tick, so the second message
-replaces the first before a screen reader reads it. The examples keep the start as the first
-target's prefix ([Known limitations](/docs/limitations)).
+A keyboard drag starts next to the dragged item and announces its start and its first target in
+one `drag-start` event (`target`), so a screen reader reads both; the next `drag-over` comes with
+the first arrow key.
 
 ## Reacting to a drop
 
