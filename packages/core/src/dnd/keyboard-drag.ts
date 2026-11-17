@@ -7,7 +7,7 @@ import {
     type DropTarget,
     viablePositions,
 } from "./drop-evaluation";
-import { accepts, dropContext } from "./drop-target";
+import { accepts, dropContext, lastVisibleOf } from "./drop-target";
 
 export class KeyboardDrag {
     private targets: DropTarget[] = [];
@@ -47,6 +47,7 @@ export class KeyboardDrag {
             itemIds: this.itemIds,
             target: this.current(),
         });
+        this.reveal();
         // one message for the start and its first target: a second one in the same tick would
         // replace it in the live region before it is read
         this.host.announce({
@@ -56,6 +57,17 @@ export class KeyboardDrag {
             target: this.current(),
         });
         return true;
+    }
+
+    /** A virtualized tree scrolls the target's row (where its line or box is) into view. */
+    private reveal(): void {
+        const target = this.current();
+        if (!target?.itemId) return;
+        this.host.reveal(
+            target.position === "after"
+                ? lastVisibleOf(this.host, target.itemId)
+                : target.itemId,
+        );
     }
 
     private current(): DropTarget | null {
@@ -76,6 +88,7 @@ export class KeyboardDrag {
             itemIds: this.itemIds,
             target: this.current(),
         });
+        this.reveal();
         this.host.announce({
             type: "drag-over",
             itemIds: this.itemIds,

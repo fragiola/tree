@@ -75,4 +75,17 @@ export interface EngineHost {
     setDrag(drag: DragState | null): void;
     announce(event: AnnounceEvent): void;
     isDestroyed(): boolean;
+    /**
+     * the visible rows rendered (a virtualized tree renders a window of them, plus pinned rows);
+     * undefined when every visible row is
+     */
+    renderedRows():
+        | { readonly start: number; readonly end: number }
+        | undefined;
+    /** a visible row's offset from the top of the rows and its size, in a virtualized tree */
+    rowBox(index: number): { offset: number; size: number } | undefined;
+    /** the element a drag scrolls near its edges: the virtualizer's, else the nearest scrolling one */
+    scrollContainer(): HTMLElement | undefined;
+    /** a virtualized tree scrolls an item's row into view (a keyboard drag's target); else nothing */
+    reveal(itemId: string): void;
 }

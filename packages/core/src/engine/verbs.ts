@@ -5,6 +5,8 @@
 // so middleware sees them.
 import type { NoPayload } from "../commands/types";
 import type { DropPosition, DropTarget } from "../dnd/drop-evaluation";
+import type { ScrollAlign } from "../virtual/scroll-target";
+import type { VirtualWindow } from "../virtual/virtualizer";
 
 /** Where the drop indicator goes, relative to the root's border box, in pixels and logical sides. */
 export interface DropIndicator {
@@ -28,8 +30,14 @@ export interface DropIndicator {
 export interface EngineActionMap {
     /** focuses an item's element (DOM focus) and makes it the focused item (`item.focus`) */
     focus: { payload: { itemId: string }; result: { itemId: string } };
-    /** scrolls an item's element into view (the nearest edge) */
-    "scroll-to": { payload: { itemId: string }; result: { itemId: string } };
+    /**
+     * scrolls an item's element into view (the nearest edge, or `align`); a virtualized tree
+     * scrolls to a visible item that is not rendered, which renders it
+     */
+    "scroll-to": {
+        payload: { itemId: string; align?: ScrollAlign | undefined };
+        result: { itemId: string };
+    };
     /**
      * calls the app's `loadChildren` for an item whose children come from the loader (a retry after
      * an error, or a first load); refused while it is loading
@@ -68,6 +76,11 @@ export interface EngineGetMap {
     announcement: { payload: NoPayload; result: string };
     /** the root's writing direction: Right and Left swap in `rtl` */
     direction: { payload: NoPayload; result: "ltr" | "rtl" };
+    /**
+     * the rows a virtualized tree renders (the `virtual` option): each with its offset, size and
+     * the spacer before it; null when the tree is not virtualized
+     */
+    "virtual-window": { payload: NoPayload; result: VirtualWindow | null };
 }
 
 export type EngineGetKey = keyof EngineGetMap;

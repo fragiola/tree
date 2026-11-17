@@ -122,3 +122,12 @@ export {
     type TreeTypes,
     type VisibleItem,
 } from "./state/types";
+export type { ScrollAlign } from "./virtual/scroll-target";
+export {
+    createTreeVirtualizer,
+    type RowSize,
+    type TreeVirtualizer,
+    type TreeVirtualizerOptions,
+    type VirtualRow,
+    type VirtualWindow,
+} from "./virtual/virtualizer";

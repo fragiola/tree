@@ -13,6 +13,7 @@ import {
     isDragExempt,
     PART_ATTRIBUTE,
     schedulerOf,
+    windowOf,
 } from "../dom/owner";
 import {
     actionOf,
@@ -26,6 +27,12 @@ import { TypeAhead } from "../keyboard/type-ahead";
 import type { TreeModel } from "../state/model";
 import type { QueryArgs } from "../state/queries";
 import type { AnyTypes, TreeTypes } from "../state/types";
+import { visibleIndex } from "../state/visible-items";
+import type { ScrollAlign } from "../virtual/scroll-target";
+import type {
+    TreeVirtualizer,
+    VirtualController,
+} from "../virtual/virtualizer";
 import type { KeyEventInput, PressInput, TreeEngineAdapter } from "./adapter";
 import { ChildrenLoader, type LoadChildren } from "./children-loader";
 import type {
@@ -83,6 +90,12 @@ export interface TreeEngineOptions<T extends TreeTypes = AnyTypes> {
      * change) must not leave an item loading forever
      */
     resetLoadsOnDestroy?: boolean | undefined;
+    /**
+     * renders only the visible items in view (`createTreeVirtualizer(options)`): the engine keeps
+     * their window (`get("virtual-window")`), scrolls to an item before focusing it, and drags over
+     * the rows on screen. Without it, every visible item is rendered
+     */
+    virtual?: TreeVirtualizer | undefined;
 }
 
 /**
@@ -148,6 +161,9 @@ class Engine<T extends TreeTypes> implements TreeEngine<T>, EngineHost {
     private readonly typeAhead: TypeAhead;
     private readonly unsubscribeModel: () => void;
     private readonly actions: Record<EngineActionKey, ActionHandler>;
+    private readonly virtual: VirtualController | undefined;
+    /** a virtualized tree focuses this item once its row is rendered */
+    private pendingFocus: string | undefined;
 
     constructor(model: TreeModel<T>, options: TreeEngineOptions<T>) {
         this.model = model as unknown as TreeModel;
@@ -189,6 +205,18 @@ class Engine<T extends TreeTypes> implements TreeEngine<T>, EngineHost {
             "cancel-drag": (_payload, dryRun) => this.cancelDrag(dryRun),
         };
         this.adapter = this.createAdapter(model);
+        this.virtual = options.virtual?.connect({
+            root: () => this.rootElement,
+            visible: () => this.model.get("visible-items"),
+            visibleIndex: () => visibleIndex(this.model.state),
+            pinnedItemIds: () => [
+                this.current(),
+                this.model.state.renamingItemId,
+                this.pendingFocus,
+                this.pointerDrag.pressedItemId,
+            ],
+            changed: () => this.changed(),
+        });
         this.unsubscribeModel = model.subscribe(() => this.modelChanged());
         if (options.root) this.attachRoot(options.root);
         this.loader.scan();
@@ -251,6 +279,7 @@ class Engine<T extends TreeTypes> implements TreeEngine<T>, EngineHost {
             },
             announcement: () => this.announcement,
             direction: () => this.direction(),
+            "virtual-window": () => this.virtual?.currentWindow() ?? null,
         };
         return (
             Object.hasOwn(values, key) ? values[key]() : undefined
@@ -296,6 +325,8 @@ class Engine<T extends TreeTypes> implements TreeEngine<T>, EngineHost {
         this.keyboardDrag.cancel();
         this.destroyed = true;
         this.loader.destroy(this.settings.resetLoadsOnDestroy === true);
+        this.virtual?.destroy();
+        this.pendingFocus = undefined;
         this.typeAhead.reset();
         this.unsubscribeModel();
         this.listeners.clear();
@@ -324,25 +355,43 @@ class Engine<T extends TreeTypes> implements TreeEngine<T>, EngineHost {
 
     private focusElement(itemId: string): void {
         const element = this.items.get(itemId);
-        if (!element) return;
+        if (!element) {
+            // a virtualized tree scrolls to the row first: its element takes focus once rendered
+            if (this.virtual?.reveal(itemId)) this.pendingFocus = itemId;
+            return;
+        }
+        this.pendingFocus = undefined;
         if (element.ownerDocument.activeElement !== element) {
             element.focus({ preventScroll: true });
         }
+        // a virtualized tree's pinned row (the tab stop) is rendered wherever the scroll is: the
+        // scroll follows the rows' offsets, then the element's own box
+        this.virtual?.reveal(itemId);
         element.scrollIntoView?.({ block: "nearest", inline: "nearest" });
     }
 
     private scrollTo(
-        { itemId }: { itemId: string },
+        { itemId, align }: { itemId: string; align?: ScrollAlign | undefined },
         dryRun: boolean,
     ): CommandResult<unknown> {
         if (!this.model.get("item-by", { id: itemId })) {
             return fail("not_found", `"${itemId}" is not an item`, "/itemId");
         }
         const element = this.items.get(itemId);
-        if (!element)
+        if (element && !this.virtual) {
+            if (!dryRun)
+                element.scrollIntoView?.({
+                    block: align ?? "nearest",
+                    inline: "nearest",
+                });
+            return ok({ itemId });
+        }
+        if (!this.virtual)
             return fail("refused", `"${itemId}" is not rendered`, "/itemId");
-        if (!dryRun)
-            element.scrollIntoView?.({ block: "nearest", inline: "nearest" });
+        // a virtualized tree scrolls by the rows' offsets, rendered or not
+        if (!this.model.is("item-visible", { itemId }))
+            return fail("refused", `"${itemId}" is not visible`, "/itemId");
+        if (!dryRun) this.virtual.reveal(itemId, align);
         return ok({ itemId });
     }
 
@@ -440,6 +489,25 @@ class Engine<T extends TreeTypes> implements TreeEngine<T>, EngineHost {
         this.changed();
     }
 
+    renderedRows():
+        | { readonly start: number; readonly end: number }
+        | undefined {
+        return this.virtual?.rendered();
+    }
+
+    rowBox(index: number): { offset: number; size: number } | undefined {
+        return this.virtual?.rowBox(index);
+    }
+
+    scrollContainer(): HTMLElement | undefined {
+        if (this.virtual) return this.virtual.scrollElement();
+        return this.rootElement && scrollParent(this.rootElement);
+    }
+
+    reveal(itemId: string): void {
+        this.virtual?.reveal(itemId);
+    }
+
     announce(event: AnnounceEvent): void {
         if (this.destroyed) return;
         const message = this.settings.announce?.(event);
@@ -514,6 +582,7 @@ class Engine<T extends TreeTypes> implements TreeEngine<T>, EngineHost {
         if (this.rootElement === element) return;
         this.detachRoot();
         this.rootElement = element;
+        this.virtual?.attach(element);
     }
 
     private detachRoot(): void {
@@ -521,6 +590,7 @@ class Engine<T extends TreeTypes> implements TreeEngine<T>, EngineHost {
         this.pointerDrag.cancel();
         this.keyboardDrag.cancel();
         this.typeAhead.reset();
+        this.virtual?.detach();
         this.rootElement = undefined;
     }
 
@@ -535,10 +605,25 @@ class Engine<T extends TreeTypes> implements TreeEngine<T>, EngineHost {
                 if (this.destroyed) return;
                 if (!element) {
                     this.items.delete(itemId);
+                    this.virtual?.observe(itemId, null);
                     return;
                 }
                 const previous = this.items.get(itemId);
                 this.items.set(itemId, element);
+                this.virtual?.observe(itemId, element);
+                // a virtualized tree's row came into the window for the focus it was scrolled for
+                if (this.pendingFocus === itemId) {
+                    this.pendingFocus = undefined;
+                    if (itemId === this.model.state.focusedItemId) {
+                        this.refocus = false;
+                        element.focus({ preventScroll: true });
+                        element.scrollIntoView?.({
+                            block: "nearest",
+                            inline: "nearest",
+                        });
+                        return;
+                    }
+                }
                 // the focused item's new element takes the focus the tree lost, or the focus its
                 // previous element still holds: an adapter (Vue) may attach the new element of a
                 // moved item before it removes the old one
@@ -694,7 +779,7 @@ class Engine<T extends TreeTypes> implements TreeEngine<T>, EngineHost {
         if (!cycle && current !== undefined) {
             // a longer search may stay on the current item: start just before it
             const visible = model.get("visible-items");
-            const at = visible.findIndex((entry) => entry.itemId === current);
+            const at = visibleIndex(model.state).get(current) ?? -1;
             fromItemId = at > 0 ? (visible[at - 1]?.itemId ?? null) : null;
         }
         const match = model.get("type-ahead-match", { text, fromItemId });
@@ -708,7 +793,7 @@ class Engine<T extends TreeTypes> implements TreeEngine<T>, EngineHost {
         const current = this.current();
         if (current === undefined) return false;
         const visible = model.get("visible-items");
-        const at = visible.findIndex((entry) => entry.itemId === current);
+        const at = visibleIndex(model.state).get(current) ?? -1;
         const multiple = model.state.settings.selectionMode === "multiple";
         const select = (
             itemId: string,
@@ -732,6 +817,17 @@ class Engine<T extends TreeTypes> implements TreeEngine<T>, EngineHost {
                 return this.focusAt(visible[0]?.itemId);
             case "focus-last":
                 return this.focusAt(visible.at(-1)?.itemId);
+            case "focus-page-down":
+            case "focus-page-up": {
+                // a page is the rows in view; a tree that is not virtualized leaves the key alone
+                const page = this.virtual?.pageRows();
+                if (page === undefined || at < 0) return false;
+                const to =
+                    action === "focus-page-down"
+                        ? Math.min(visible.length - 1, at + page)
+                        : Math.max(0, at - page);
+                return to !== at && this.focusAt(visible[to]?.itemId);
+            }
             case "expand-or-focus-child": {
                 if (model.is("item-leaf", { itemId: current })) return false;
                 if (!model.is("item-expanded", { itemId: current })) {
@@ -793,6 +889,17 @@ class Engine<T extends TreeTypes> implements TreeEngine<T>, EngineHost {
     private focusAt(itemId: string | undefined): boolean {
         return itemId !== undefined && this.focus({ itemId }, false).ok;
     }
+}
+
+/** The nearest scroll container of the root (the root itself when it scrolls). */
+function scrollParent(root: HTMLElement): HTMLElement | undefined {
+    const view = windowOf(root);
+    if (!view) return undefined;
+    for (let node: HTMLElement | null = root; node; node = node.parentElement) {
+        const { overflowY } = view.getComputedStyle(node);
+        if (overflowY === "auto" || overflowY === "scroll") return node;
+    }
+    return undefined;
 }
 
 function pick(event: KeyEventInput) {

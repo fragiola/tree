@@ -14,6 +14,10 @@ export type KeyAction =
     | "focus-first"
     /** the last visible item */
     | "focus-last"
+    /** a view's worth of rows down (PageDown): a virtualized tree only, else the key scrolls as usual */
+    | "focus-page-down"
+    /** a view's worth of rows up (PageUp): a virtualized tree only, else the key scrolls as usual */
+    | "focus-page-up"
     /** expand a collapsed parent, else focus its first child (Right in ltr) */
     | "expand-or-focus-child"
     /** collapse an expanded parent, else focus the parent (Left in ltr) */
@@ -55,6 +59,8 @@ export const DEFAULT_KEY_MAP: KeyMap = Object.freeze({
     "focus-previous": ["ArrowUp"],
     "focus-first": ["Home"],
     "focus-last": ["End"],
+    "focus-page-down": ["PageDown"],
+    "focus-page-up": ["PageUp"],
     "expand-or-focus-child": ["ArrowRight"],
     "collapse-or-focus-parent": ["ArrowLeft"],
     "expand-siblings": ["*"],
