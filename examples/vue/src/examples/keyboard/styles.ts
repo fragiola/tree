@@ -16,14 +16,21 @@ export const item = "outline-none";
 export const row = cn(
     "flex h-(--tr-row-height) cursor-default select-none items-center gap-(--tr-gap) rounded-(--tr-radius) pe-1",
     "ps-[calc(var(--tree-depth)*var(--tr-indent)+0.25rem)] hover:bg-(--tr-hover-bg)",
-    "[:focus-visible>&]:ring-2 [:focus-visible>&]:ring-palette-ring [:focus-visible>&]:ring-inset",
+    // the theme's indentation guides: one line per level, under each ancestor's toggle
+    "bg-(image:--tr-guide) bg-size-[calc(var(--tree-depth)*var(--tr-indent))_100%] bg-no-repeat",
+    "bg-position-[calc(0.75rem-var(--tr-indent)/2)_0] rtl:bg-position-[right_calc(0.75rem-var(--tr-indent)/2)_top]",
+    "[:focus-visible>&]:ring-(length:--tr-focus-width) [:focus-visible>&]:ring-palette-ring [:focus-visible>&]:ring-inset",
     "data-selected:bg-(--tr-selected-bg) data-selected:text-(--tr-selected-fg)",
+    // the theme's marker: a line at the inline start of a selected row (0px: none)
+    "border-s-(length:--tr-marker) border-transparent data-selected:border-(--tr-marker-color)",
     "data-dragging:opacity-45",
 );
 
 export const toggle = cn(
     "flex size-4 shrink-0 items-center justify-center text-palette-accent/85 transition-[rotate] duration-(--tr-motion) data-leaf:invisible [&_svg]:size-3.5",
-    "data-expanded:rotate-90 rtl:-scale-x-100 rtl:data-expanded:-rotate-90",
+    // the theme's toggle: the chevron (or none), or a text drawn instead ("+" and "-")
+    "[&_svg]:[display:var(--tr-toggle-icon)] before:content-(--tr-toggle-closed) data-expanded:before:content-(--tr-toggle-open)",
+    "data-expanded:rotate-(--tr-toggle-turn) rtl:-scale-x-100 rtl:data-expanded:-rotate-(--tr-toggle-turn)",
 );
 
 export const folderIcon = "palette-blue size-4 shrink-0 text-palette-accent";
@@ -39,9 +46,9 @@ export const input =
 /** The line starts at the icon, past the toggle (the package places it at the level's start). */
 export const dropIndicator = cn(
     "pointer-events-none z-10 ms-7 data-[drop-position=inside]:ms-0",
-    "data-[drop-position=before]:-mt-px data-[drop-position=before]:border-t-2 data-[drop-position=before]:border-(--tr-indicator)",
-    "data-[drop-position=after]:-mt-px data-[drop-position=after]:border-t-2 data-[drop-position=after]:border-(--tr-indicator)",
-    "data-[drop-position=inside]:rounded-(--tr-radius) data-[drop-position=inside]:border-2 data-[drop-position=inside]:border-(--tr-indicator)",
+    "data-[drop-position=before]:-mt-px data-[drop-position=before]:border-t-(length:--tr-indicator-width) data-[drop-position=before]:[border-top-style:var(--tr-indicator-style)] data-[drop-position=before]:border-(--tr-indicator)",
+    "data-[drop-position=after]:-mt-px data-[drop-position=after]:border-t-(length:--tr-indicator-width) data-[drop-position=after]:[border-top-style:var(--tr-indicator-style)] data-[drop-position=after]:border-(--tr-indicator)",
+    "data-[drop-position=inside]:rounded-(--tr-radius) data-[drop-position=inside]:border-(length:--tr-indicator-width) data-[drop-position=inside]:[border-style:var(--tr-indicator-style)] data-[drop-position=inside]:border-(--tr-indicator)",
 );
 
 /** The live region, shown at the bottom of the tree while it has something to say. */

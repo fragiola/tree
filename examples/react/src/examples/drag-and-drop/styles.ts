@@ -19,8 +19,13 @@ export const item = "outline-none";
 export const row = cn(
     "group/row flex h-(--tr-row-height) cursor-grab select-none items-center gap-(--tr-gap) rounded-(--tr-radius) pe-2",
     "ps-[calc(var(--tree-depth)*var(--tr-indent)+0.25rem)] hover:bg-(--tr-hover-bg)",
-    "[:focus-visible>&]:ring-2 [:focus-visible>&]:ring-palette-ring [:focus-visible>&]:ring-inset",
+    // the theme's indentation guides: one line per level, under each ancestor's toggle
+    "bg-(image:--tr-guide) bg-size-[calc(var(--tree-depth)*var(--tr-indent))_100%] bg-no-repeat",
+    "bg-position-[calc(1.5rem+var(--tr-gap)-var(--tr-indent)/2)_0] rtl:bg-position-[right_calc(1.5rem+var(--tr-gap)-var(--tr-indent)/2)_top]",
+    "[:focus-visible>&]:ring-(length:--tr-focus-width) [:focus-visible>&]:ring-palette-ring [:focus-visible>&]:ring-inset",
     "data-selected:bg-(--tr-selected-bg) data-selected:text-(--tr-selected-fg)",
+    // the theme's marker: a line at the inline start of a selected row (0px: none)
+    "border-s-(length:--tr-marker) border-transparent data-selected:border-(--tr-marker-color)",
     "data-dragging:opacity-45",
     "data-[drop-position=inside]:bg-(--tr-hover-bg)",
 );
@@ -31,7 +36,9 @@ export const grip =
 
 export const toggle = cn(
     "flex size-4 shrink-0 items-center justify-center text-palette-accent/85 transition-[rotate] duration-(--tr-motion) data-leaf:invisible [&_svg]:size-3.5",
-    "data-expanded:rotate-90 rtl:-scale-x-100 rtl:data-expanded:-rotate-90",
+    // the theme's toggle: the chevron (or none), or a text drawn instead ("+" and "-")
+    "[&_svg]:[display:var(--tr-toggle-icon)] before:content-(--tr-toggle-closed) data-expanded:before:content-(--tr-toggle-open)",
+    "data-expanded:rotate-(--tr-toggle-turn) rtl:-scale-x-100 rtl:data-expanded:-rotate-(--tr-toggle-turn)",
 );
 
 export const folderIcon = "palette-blue size-4 shrink-0 text-palette-accent";
@@ -49,10 +56,10 @@ export const lock = "size-3.5 shrink-0 text-palette-accent/85";
  */
 export const dropIndicator = cn(
     "pointer-events-none z-10 ms-11 data-[drop-position=inside]:ms-0",
-    "data-[drop-position=before]:-mt-px data-[drop-position=before]:border-t-2 data-[drop-position=before]:border-(--tr-indicator)",
-    "data-[drop-position=after]:-mt-px data-[drop-position=after]:border-t-2 data-[drop-position=after]:border-(--tr-indicator)",
+    "data-[drop-position=before]:-mt-px data-[drop-position=before]:border-t-(length:--tr-indicator-width) data-[drop-position=before]:[border-top-style:var(--tr-indicator-style)] data-[drop-position=before]:border-(--tr-indicator)",
+    "data-[drop-position=after]:-mt-px data-[drop-position=after]:border-t-(length:--tr-indicator-width) data-[drop-position=after]:[border-top-style:var(--tr-indicator-style)] data-[drop-position=after]:border-(--tr-indicator)",
     "before:absolute before:-start-1 before:-top-[4px] before:size-1.5 before:rounded-full before:border-2 before:border-(--tr-indicator) before:bg-palette-base",
-    "data-[drop-position=inside]:rounded-(--tr-radius) data-[drop-position=inside]:border-2 data-[drop-position=inside]:border-(--tr-indicator) data-[drop-position=inside]:before:hidden",
+    "data-[drop-position=inside]:rounded-(--tr-radius) data-[drop-position=inside]:border-(length:--tr-indicator-width) data-[drop-position=inside]:[border-style:var(--tr-indicator-style)] data-[drop-position=inside]:border-(--tr-indicator) data-[drop-position=inside]:before:hidden",
 );
 
 export const liveRegion = "sr-only";
