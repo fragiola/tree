@@ -1,0 +1,174 @@
+// The IDE's app logic, framework-free: the project's rules as middleware, and the open editors.
+// The tree's state stays in the model; the editors are app state that follows it.
+import { type TreeModel, veto } from "@fragiola/tree-react";
+import { asyncChildren } from "@fragiola/tree-react/async-children";
+import { dragAndDrop } from "@fragiola/tree-react/drag-and-drop";
+import { rename } from "@fragiola/tree-react/rename";
+import { selection } from "@fragiola/tree-react/selection";
+import { typeAhead } from "@fragiola/tree-react/type-ahead";
+import { ancestorIds, isManaged, type ProjectTypes } from "./project";
+import { indicatorInset } from "./styles";
+
+/**
+ * The opt-in features of the model: the selection (several files at once), the rename (F2), the
+ * lazy node_modules, type-to-find and the drags (a drop line starts at the icon).
+ */
+export const features = [
+    selection(),
+    rename(),
+    asyncChildren(),
+    typeAhead(),
+    dragAndDrop({ indicatorInset }),
+] as const;
+
+/** The project's model, with its features. */
+export type ProjectModel = TreeModel<ProjectTypes, typeof features>;
+
+/**
+ * The project's rules, as one middleware: every rename, move and removal (from a key, a drag, a
+ * button or a script) passes here first. A refused move never shows as a drop target, since a drag
+ * asks `model.can("item.move", …)` for each one.
+ */
+export function projectRules(model: ProjectModel) {
+    const labelTaken = (
+        parentItemId: string | null,
+        label: string,
+        exceptItemId: string,
+    ) =>
+        (parentItemId === null
+            ? model.get("root-items")
+            : model.get("child-items-by", { itemId: parentItemId })
+        ).some(
+            (sibling) =>
+                sibling.id !== exceptItemId &&
+                sibling.label.toLowerCase() === label.toLowerCase(),
+        );
+    return model.use((ctx, next) => {
+        if (ctx.command === "item.rename") {
+            const label = ctx.payload.label.trim();
+            if (label === "") return veto("A name cannot be empty.");
+            if (label.includes("/")) return veto("A name cannot contain “/”.");
+            const parentItemId =
+                ctx.get("item-parent-by", { itemId: ctx.payload.itemId })?.id ??
+                null;
+            if (labelTaken(parentItemId, label, ctx.payload.itemId))
+                return veto(`“${label}” already exists here.`);
+            // a rewrite: the trimmed label is what gets saved
+            ctx.payload = { ...ctx.payload, label };
+        }
+        if (ctx.command === "item.move") {
+            const { parentItemId } = ctx.payload.to;
+            for (const itemId of ctx.payload.itemIds) {
+                const label = ctx.get("item-by", { id: itemId })?.label ?? "";
+                const from = ctx.get("item-parent-by", { itemId })?.id ?? null;
+                if (
+                    from !== parentItemId &&
+                    labelTaken(parentItemId, label, itemId)
+                )
+                    return veto(`“${label}” already exists there.`);
+            }
+        }
+        if (
+            ctx.command === "item.remove" &&
+            ctx.payload.itemIds.some((itemId) => isManaged(model, itemId))
+        )
+            return veto("node_modules belongs to the package manager.");
+        return next();
+    });
+}
+
+/** The open editors: the files open as tabs, and the one shown. */
+export interface Editors {
+    readonly openFileIds: readonly string[];
+    readonly activeFileId: string | null;
+}
+
+/**
+ * The open editors over the model: selecting one file in the tree opens it (or shows its tab), and
+ * a file removed from the tree closes. Activating a tab selects its file and reveals it in the tree
+ * (its folders expanded), through commands.
+ */
+export function createEditors(model: ProjectModel) {
+    let editors: Editors = {
+        openFileIds: ["app"],
+        activeFileId: "app",
+    };
+    const listeners = new Set<() => void>();
+    const set = (next: Editors) => {
+        editors = next;
+        for (const listener of listeners) listener();
+    };
+
+    const isFile = (itemId: string) =>
+        model.get("item-by", { id: itemId })?.kind === "file";
+
+    const sync = () => {
+        // a removed file closes its editor
+        const openFileIds = editors.openFileIds.filter(isFile);
+        let { activeFileId } = editors;
+        if (activeFileId !== null && !isFile(activeFileId))
+            activeFileId = openFileIds.at(-1) ?? null;
+        // one file selected in the tree: it is the file shown
+        const selected = model.state.selectedItemIds;
+        const only = selected.length === 1 ? selected[0] : undefined;
+        if (only !== undefined && isFile(only) && only !== activeFileId) {
+            activeFileId = only;
+            if (!openFileIds.includes(only)) openFileIds.push(only);
+        }
+        if (
+            activeFileId !== editors.activeFileId ||
+            openFileIds.join("/") !== editors.openFileIds.join("/")
+        )
+            set({ openFileIds, activeFileId });
+    };
+    const unsubscribe = model.subscribe(sync);
+
+    return {
+        get: () => editors,
+        subscribe(listener: () => void) {
+            listeners.add(listener);
+            return () => listeners.delete(listener);
+        },
+        /** Shows a file's tab, selects the file and expands the folders around it. */
+        activate(fileId: string) {
+            reveal(model, fileId);
+            set({ ...editors, activeFileId: fileId });
+        },
+        close(fileId: string) {
+            const openFileIds = editors.openFileIds.filter(
+                (id) => id !== fileId,
+            );
+            const index = editors.openFileIds.indexOf(fileId);
+            const activeFileId =
+                editors.activeFileId === fileId
+                    ? (openFileIds[Math.min(index, openFileIds.length - 1)] ??
+                      null)
+                    : editors.activeFileId;
+            set({ openFileIds, activeFileId });
+            if (activeFileId !== null) reveal(model, activeFileId);
+        },
+        destroy: unsubscribe,
+    };
+}
+
+export type EditorsStore = ReturnType<typeof createEditors>;
+
+/**
+ * Selects an item, makes it the tree's tab stop and expands the folders around it, in one step.
+ * Scrolling it into view and moving DOM focus are the engine's (`scroll-to`, `focus`).
+ */
+export function reveal(model: ProjectModel, itemId: string) {
+    const collapsed = ancestorIds(model, itemId).filter(
+        (id) => !model.is("item-expanded", { itemId: id }),
+    );
+    return model.run("batch", {
+        commands: [
+            ...collapsed.map((id) => ({
+                command: "item.expand" as const,
+                payload: { itemId: id },
+            })),
+            { command: "item.select", payload: { itemId } },
+            { command: "item.focus", payload: { itemId } },
+        ],
+    });
+}

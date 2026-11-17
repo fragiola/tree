@@ -14,6 +14,7 @@ export const CATEGORIES = [
     "data",
     "model-api",
     "accessibility",
+    "apps",
 ] as const;
 
 export type Category = (typeof CATEGORIES)[number];
@@ -25,6 +26,7 @@ export const CATEGORY_TITLES: Record<Category, string> = {
     data: "Data and state",
     "model-api": "Model API",
     accessibility: "Keyboard and accessibility",
+    apps: "Apps",
 };
 
 export interface ExampleMeta {
@@ -62,4 +64,5 @@ export const DEFAULT_HEIGHT: Record<Category, number> = {
     data: 480,
     "model-api": 520,
     accessibility: 460,
+    apps: 600,
 };
