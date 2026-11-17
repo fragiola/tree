@@ -42,6 +42,23 @@ defineProps<{ item: ItemOf<Types> }>();
 
 </Framework>
 
+<Framework name="angular">
+
+```html
+<ng-template [treeItems]="model" let-item>
+    <div [treeItem]="item">
+        <div treeItemContent>{{ item.label }}</div>
+        <div treeGroup class="group"></div>
+    </div>
+</ng-template>
+```
+
+In Angular, a `treeGroup` with no template of its own renders each child with the enclosing
+`treeItems` template. While its item is collapsed, its element stays, empty and hidden
+(`display: none`); `keepMounted` keeps the children rendered.
+
+</Framework>
+
 Pass the registry as the type argument (`<Tree.Group<Types>>`): a function cannot infer it
 through context.
 

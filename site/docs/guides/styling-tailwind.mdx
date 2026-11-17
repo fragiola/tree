@@ -81,6 +81,42 @@ defineProps<{ item: ItemOf<Types> }>();
 
 </Framework>
 
+<Framework name="angular">
+
+```ts title="file-tree.ts"
+import { Component } from "@angular/core";
+import { TREE } from "@fragiola/tree-angular";
+import { LucideChevronRight } from "@lucide/angular";
+import { styles } from "./styles";
+import { json } from "./tree";
+
+@Component({
+    selector: "app-file-tree",
+    imports: [TREE, LucideChevronRight],
+    template: `
+        <div treeRoot [defaultTree]="json" aria-label="Files" [class]="styles.root">
+            <ng-template [treeItems]="json" let-item>
+                <div [treeItem]="item" [class]="styles.item">
+                    <div treeItemContent [class]="styles.row">
+                        <span treeToggle [class]="styles.toggle">
+                            <svg lucideChevronRight aria-hidden="true" class="size-3.5"></svg>
+                        </span>
+                        <span [class]="styles.label">{{ item.label }}</span>
+                    </div>
+                    <div treeGroup></div>
+                </div>
+            </ng-template>
+        </div>
+    `,
+})
+export class FileTree {
+    protected readonly json = json;
+    protected readonly styles = styles;
+}
+```
+
+</Framework>
+
 - `[:focus-visible>&]:` draws the ring on the row when its item (the element with DOM focus)
   shows focus.
 - `ps-[calc(var(--tree-depth)*1rem+0.25rem)]` indents by depth, mirrored in right-to-left.
@@ -122,6 +158,21 @@ defineProps<{ item: ItemOf<Types> }>();
 
 </Framework>
 
+<Framework name="angular">
+
+```html
+<div
+    treeDropIndicator
+    class="pointer-events-none z-10
+        data-[drop-position=before]:-mt-px data-[drop-position=before]:border-t-2 data-[drop-position=before]:border-blue-600
+        data-[drop-position=after]:-mt-px data-[drop-position=after]:border-t-2 data-[drop-position=after]:border-blue-600
+        data-[drop-position=inside]:rounded-md data-[drop-position=inside]:border-2 data-[drop-position=inside]:border-blue-600"
+></div>
+<div treeLiveRegion class="sr-only"></div>
+```
+
+</Framework>
+
 ## State as a function
 
 <Framework name="react">
@@ -150,6 +201,20 @@ for the root level); for the rest, the `render` slot's `state`:
     </template>
     {{ item.label }}
 </Tree.ItemContent>
+```
+
+</Framework>
+
+<Framework name="angular">
+
+In Angular, `class` has no function form. Most states are a variant away
+(`data-[depth=0]:font-semibold` for the root level); for the rest, bind on the directive's
+`state()`:
+
+```html
+<div treeItemContent #row="treeItemContent" [class]="styles.row" [class.font-semibold]="row.state().level === 1">
+    {{ item.label }}
+</div>
 ```
 
 </Framework>

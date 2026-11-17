@@ -67,7 +67,7 @@ model.run("tree.clear-selection", {});
 
 `model.get("selected-items")` returns the selected items themselves. In a component,
 `useTreeState` re-renders only when the selection changes (in Vue, a read-only ref that changes
-only then):
+only then; in Angular, `injectTreeState`, a signal):
 
 <Framework name="react">
 
@@ -114,6 +114,39 @@ const selected = useTreeState<Types, readonly string[]>((state) => state.selecte
         <button type="button" @click="model.run('tree.clear-selection', {})">Clear</button>
     </div>
 </template>
+```
+
+</Framework>
+
+<Framework name="angular">
+
+```ts title="selection-bar.ts"
+import { Component } from "@angular/core";
+import { injectTree, injectTreeState } from "@fragiola/tree-angular";
+import type { Types } from "./tree";
+
+@Component({
+    selector: "app-selection-bar",
+    template: `
+        @if (selected().length > 0) {
+            <div role="toolbar" aria-label="Selection">
+                <span>{{ selected().length }} selected</span>
+                <button type="button" (click)="remove()">Delete</button>
+                <button type="button" (click)="model().run('tree.clear-selection', {})">Clear</button>
+            </div>
+        }
+    `,
+})
+export class SelectionBar {
+    protected readonly model = injectTree<Types>().model;
+    protected readonly selected = injectTreeState<Types, readonly string[]>(
+        (state) => state.selectedItemIds,
+    );
+
+    protected remove(): void {
+        this.model().run("item.remove", { itemIds: [...this.selected()] });
+    }
+}
 ```
 
 </Framework>

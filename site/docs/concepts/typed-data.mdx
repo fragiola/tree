@@ -59,6 +59,28 @@ const host = (url: string) => new URL(url).host;
 
 </Framework>
 
+<Framework name="angular">
+
+In the item template, `@if` narrows `item.data` on `item.kind`:
+
+```html
+<ng-template [treeItems]="model" let-item>
+    <div [treeItem]="item">
+        <div treeItemContent>
+            {{ item.label }}
+            @if (item.kind === "file") {
+                <small>{{ item.data.size }} B</small>
+            } @else if (item.kind === "link") {
+                <small>{{ host(item.data.url) }}</small>
+            }
+        </div>
+        <div treeGroup></div>
+    </div>
+</ng-template>
+```
+
+</Framework>
+
 `KindOf<Types>` is the union of kinds and `DataOf<Types, "file">` one kind's data type. With no
 registry, `AnyTypes` accepts any kind with `unknown` data.
 
@@ -122,6 +144,29 @@ export const Tree = typedTree<Types>();
 // in a component's setup
 const { model } = useTree<Types>();
 const tree = useTreeRef<Types>();
+```
+
+</Framework>
+
+<Framework name="angular">
+
+`createTreeModel<Types>(json)` types the model. A template cannot pass a type argument: give the
+model (or the document) to the directives instead. `[treeRoot]="model"` types the root, and
+`[treeItems]="model"` its template's `item`. The injection functions take the registry as their
+type argument:
+
+```html
+<div [treeRoot]="model" aria-label="Files">
+    <ng-template [treeItems]="model" let-item>
+        <!-- item is an ItemOf<Types> -->
+    </ng-template>
+</div>
+```
+
+```ts
+// in a component inside the root
+readonly tree = injectTree<Types>();
+readonly count = injectTreeState<Types, number>((state) => state.selectedItemIds.length);
 ```
 
 </Framework>

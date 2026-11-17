@@ -31,6 +31,24 @@ is hidden from assistive technology: the live region announces the drag.
 
 </Framework>
 
+<Framework name="angular">
+
+```html
+<div treeRoot [defaultTree]="json" aria-label="Files">
+    <ng-template [treeItems]="json" let-item>
+        <div [treeItem]="item">
+            <div treeItemContent>{{ item.label }}</div>
+            <div treeGroup></div>
+        </div>
+    </ng-template>
+    <div treeDropIndicator class="drop-indicator"></div>
+</div>
+```
+
+In Angular, the element stays while there is no drop target, hidden (`display: none`).
+
+</Framework>
+
 ```css
 .drop-indicator[data-drop-position="before"],
 .drop-indicator[data-drop-position="after"] {

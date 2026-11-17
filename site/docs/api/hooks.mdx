@@ -48,6 +48,30 @@ const { model } = useTree<Types>();
 
 </Framework>
 
+<Framework name="angular">
+
+```ts title="collapse-all.ts"
+import { Component } from "@angular/core";
+import { injectTree } from "@fragiola/tree-angular";
+import type { Types } from "./tree";
+
+@Component({
+    selector: "app-collapse-all",
+    template: `<button type="button" (click)="collapseAll()">Collapse all</button>`,
+})
+export class CollapseAll {
+    private readonly model = injectTree<Types>().model;
+
+    protected collapseAll(): void {
+        this.model().run("tree.collapse-all", {});
+    }
+}
+```
+
+In Angular, `injectTree<Types>()` gives `model` as a signal (`model()`) and the `engine`.
+
+</Framework>
+
 `UseTreeResult<T>`:
 
 | field | type | description |
@@ -93,6 +117,24 @@ const visible = useTreeState((_state, model) => model.get("visible-items").lengt
 
 In Vue, `useTreeState` returns a read-only ref, and selects again when a reactive value the
 selector reads (`props.item`) changes.
+
+</Framework>
+
+<Framework name="angular">
+
+```ts
+// fields of a component: signals, count(), status(), visible()
+readonly count = injectTreeState<Types, number>((state) => state.selectedItemIds.length);
+readonly status = injectTreeState<Types, string | undefined>((_state, model) =>
+    model.get("children-status-by", { itemId: this.itemId() }),
+);
+readonly visible = injectTreeState((_state, model) => model.get("visible-items").length, {
+    model: this.model,
+});
+```
+
+In Angular, `injectTreeState` returns a signal, and selects again when a signal the selector
+reads (`this.itemId()`) changes.
 
 </Framework>
 
@@ -149,6 +191,20 @@ const { state, props: itemProps } = useTreeItem(() => props.item);
 
 </Framework>
 
+<Framework name="angular">
+
+In Angular, the directive on your own element is this hook: `[treeItem]` puts the ARIA, the
+`data-*`, the focus listener and `--tree-depth` on it, and gives its state through `exportAs`. A
+component inside an item reads it with `injectTreeItem<Types>()` (`{ item, state }`, signals).
+
+```html
+<ng-template [treeItems]="model" let-item>
+    <li [treeItem]="item" #node="treeItem">{{ node.state().expanded ? "▾" : "▸" }} {{ item.label }}</li>
+</ng-template>
+```
+
+</Framework>
+
 `UseTreeItemResult`:
 
 | field | type | description |
@@ -190,7 +246,7 @@ function useTreeRef<T extends TreeTypes = AnyTypes>(): TreeRef<T>;
 
 A tree ref kept by the component, which re-renders when the `Tree.Root` it is given to mounts or
 unmounts: read `tree.current` in render (a toolbar next to the tree) or in handlers (in Vue,
-`tree.value`).
+`tree.value`; in Angular, a template reference, below).
 
 <Framework name="react">
 
@@ -236,6 +292,25 @@ const root = { treeRef: tree };
 In Vue, the ref's handle is `tree.value`. A template unwraps a top-level ref, so it reads the
 handle as `tree`, and a `:tree-ref="tree"` would pass the handle, not the ref: bind the ref
 through an object, as above.
+
+</Framework>
+
+<Framework name="angular">
+
+In Angular, a template reference is the tree ref: `#tree="treeRoot"` gives the root's `model()` and
+`engine` to the whole template (`viewChild(TreeRootDirective)` gives them to the class).
+
+```html
+<button type="button" (click)="tree.model().run('tree.expand-all', {})">Expand all</button>
+<div #tree="treeRoot" treeRoot [defaultTree]="json" aria-label="Files">
+    <ng-template [treeItems]="json" let-item>
+        <div [treeItem]="item">
+            <div treeItemContent>{{ item.label }}</div>
+            <div treeGroup></div>
+        </div>
+    </ng-template>
+</div>
+```
 
 </Framework>
 

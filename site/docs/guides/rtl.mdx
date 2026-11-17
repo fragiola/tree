@@ -47,6 +47,23 @@ Put `dir` on the page (`<html dir="rtl" lang="ar">`) or on any ancestor of the t
 
 </Framework>
 
+<Framework name="angular">
+
+```html
+<div dir="rtl" lang="ar">
+    <div treeRoot [defaultTree]="json" aria-label="المستندات">
+        <ng-template [treeItems]="json" let-item>
+            <div [treeItem]="item">
+                <div treeItemContent>{{ item.label }}</div>
+                <div treeGroup></div>
+            </div>
+        </ng-template>
+    </div>
+</div>
+```
+
+</Framework>
+
 ## Styles that mirror
 
 Write the indentation and the alignment with logical properties: `padding-inline-start`,

@@ -30,6 +30,22 @@ Hide it visually with your own class.
 
 </Framework>
 
+<Framework name="angular">
+
+```html
+<div treeRoot [defaultTree]="json" [announce]="announce" aria-label="Files">
+    <ng-template [treeItems]="json" let-item>
+        <div [treeItem]="item">
+            <div treeItemContent>{{ item.label }}</div>
+            <div treeGroup></div>
+        </div>
+    </ng-template>
+    <div treeLiveRegion class="visually-hidden"></div>
+</div>
+```
+
+</Framework>
+
 `announce` receives an `AnnounceEvent` and returns a string, or `undefined` to say nothing:
 
 | event | fields | when |

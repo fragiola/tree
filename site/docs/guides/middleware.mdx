@@ -48,7 +48,8 @@ const stop = model.use((ctx, next) => {
 
 `ctx.command` narrows `ctx.payload` to that command's payload. `model.use` returns the remover;
 in React, call it from an effect: `useEffect(() => model.use(rule), [model])`; in Vue, in
-`setup`: `onScopeDispose(model.use(rule))`.
+`setup`: `onScopeDispose(model.use(rule))`; in Angular, in a constructor:
+`inject(DestroyRef).onDestroy(model.use(rule))`.
 
 ## Rewriting
 

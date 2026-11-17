@@ -130,7 +130,7 @@
             ]
         },
         {
-            "label": "API: primitives (@fragiola/tree-react, @fragiola/tree-vue)",
+            "label": "API: primitives (@fragiola/tree-react, @fragiola/tree-vue, @fragiola/tree-angular)",
             "collapsible": true,
             "pages": [
                 {
@@ -180,6 +180,10 @@
                 {
                     "label": "Vue primitives",
                     "path": "api/vue"
+                },
+                {
+                    "label": "Angular primitives",
+                    "path": "api/angular"
                 }
             ]
         },

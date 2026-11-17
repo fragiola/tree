@@ -57,6 +57,25 @@ defineProps<{ item: ItemOf<Types> }>();
 
 </Framework>
 
+<Framework name="angular">
+
+```html
+<ng-template [treeItems]="model" let-item>
+    <div [treeItem]="item">
+        <div treeItemContent class="row">
+            <span treeToggle>▸</span>
+            <span class="label">{{ item.label }}</span>
+            <input treeRenameInput [attr.aria-label]="'Rename ' + item.label" class="rename" />
+        </div>
+        <div treeGroup></div>
+    </div>
+</ng-template>
+```
+
+The input element stays in the row, hidden (`display: none`) while its item is not renaming.
+
+</Framework>
+
 ```css
 .row[data-renaming] .label {
     display: none;
@@ -100,6 +119,16 @@ const { model } = useTree<Types>();
 
 </Framework>
 
+<Framework name="angular">
+
+```html
+<div treeItemContent (dblclick)="model.run('item.start-rename', { itemId: item.id })">
+    {{ item.label }}
+</div>
+```
+
+</Framework>
+
 It is refused for a disabled item and for one that is not `renamable` (on the item, or
 `settings.renamable` for all of them).
 
@@ -129,7 +158,7 @@ model.use((ctx, next) => {
 ## Showing why
 
 A refused commit keeps the input open with `aria-invalid` and `data-invalid`, and calls
-`onRenameError` (`@rename-error` in Vue) with the error. Its state (for `className` and
+`onRenameError` (`@rename-error` in Vue, `(renameError)` in Angular) with the error. Its state (for `className` and
 `render`) has `invalid` and `error`:
 
 <Framework name="react">
@@ -172,6 +201,29 @@ const error = ref<string>();
 
 A class has no function form in Vue: style the refused state with `.rename[data-invalid]`, or
 read `invalid` and `error` from the `render` slot's `state`.
+
+</Framework>
+
+<Framework name="angular">
+
+```html
+<input
+    treeRenameInput
+    #rename="treeRenameInput"
+    [attr.aria-label]="'Rename ' + item.label"
+    [attr.aria-describedby]="error() ? errorId : null"
+    class="rename"
+    [class.rename-invalid]="rename.state().invalid"
+    (renameError)="error.set($event.message)"
+    (input)="error.set(undefined)"
+/>
+@if (error()) {
+    <span [id]="errorId" role="alert">{{ error() }}</span>
+}
+```
+
+`error` is a signal of the component (`signal<string | undefined>(undefined)`); the input's own
+`state()` has `invalid` and `error` too.
 
 </Framework>
 

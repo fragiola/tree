@@ -1,6 +1,6 @@
 ---
 title: Installation
-description: Add the tree view to a React 19 or Vue 3.5 app with one package, the primitives for your framework, which bring the whole core.
+description: Add the tree view to a React 19, Vue 3.5 or Angular 22 app with one package, the primitives for your framework, which bring the whole core.
 ---
 
 <Callout type="info" title="Not on npm yet">
@@ -59,19 +59,46 @@ the whole framework-free core (`@fragiola/tree`), re-exported.
 
 </Framework>
 
+<Framework name="angular">
+
+An Angular app installs one package, `@fragiola/tree-angular`: the standalone directives (the
+`TREE` array, for a component's `imports`), the injection functions and the whole framework-free
+core (`@fragiola/tree`), re-exported.
+
+<Tabs items={["pnpm", "npm", "yarn"]}>
+    <Tab value="pnpm">
+        ```sh
+        pnpm add @fragiola/tree-angular
+        ```
+    </Tab>
+    <Tab value="npm">
+        ```sh
+        npm install @fragiola/tree-angular
+        ```
+    </Tab>
+    <Tab value="yarn">
+        ```sh
+        yarn add @fragiola/tree-angular
+        ```
+    </Tab>
+</Tabs>
+
+</Framework>
+
 ## Requirements
 
 | requirement | why |
 | --- | --- |
 | `react` and `react-dom` **^19** (React) | peer dependencies of `@fragiola/tree-react`. The primitives use React 19 features: `ref` as a plain prop and ref cleanup functions. |
 | `vue` **^3.5** (Vue) | the peer dependency of `@fragiola/tree-vue`. The primitives are render functions: no compiler plugin is needed beyond your app's own. |
+| `@angular/core` **^22** (Angular) | the peer dependency of `@fragiola/tree-angular`. Standalone directives built on signals: no NgModule, and no zone.js (zoneless is Angular's default). |
 | A browser DOM | the engine focuses elements, listens to Pointer Events and measures rows during a drag. The **model** runs in plain Node (tests, server-side JSON handling), but a tree is interactive only on the client. |
-| ES modules | both packages are ESM only (`"type": "module"`). |
+| ES modules | every package is ESM only (`"type": "module"`; the Angular package in the Angular Package Format). |
 
 `@fragiola/tree` has **zero runtime dependencies**, and each adapter (`@fragiola/tree-react`,
-`@fragiola/tree-vue`) depends only on the core, at the exact same version, and on its framework.
+`@fragiola/tree-vue`, `@fragiola/tree-angular`) depends only on the core, at the exact same version, and on its framework.
 
-Both packages ship their types and are best used with TypeScript in `strict` mode: the document,
+Every package ships its types and is best used with TypeScript in `strict` mode: the document,
 the command payloads and each item's data are typed by your registry
 ([Typed data](/docs/concepts/typed-data)). Plain JavaScript works too: the model validates every
 command's payload at run time either way.
@@ -124,6 +151,31 @@ The Vue package re-exports the whole core (`createTreeModel`, `TreeModel`, `Tree
 [the core API](/docs/api/model) apply as they are: in a Vue app, import those names from
 `@fragiola/tree-vue` too. [Vue primitives](/docs/api/vue) maps each React prop of the API pages
 onto Vue.
+
+</Framework>
+
+<Framework name="angular">
+
+Everything comes from `@fragiola/tree-angular`:
+
+```ts
+import {
+    // the directives (for a component's imports) and the injection functions
+    TREE,
+    injectTree,
+    injectTreeState,
+    // the core: the model, its types and helpers
+    createTreeModel,
+    type ItemOf,
+    type TreeJson,
+} from "@fragiola/tree-angular";
+```
+
+The Angular package re-exports the whole core (`createTreeModel`, `TreeModel`, `TreeJson`, `ItemOf`,
+`Middleware`, `veto`, `createTreeEngine`, `DEFAULT_KEY_MAP`, …), so the pages on
+[the core API](/docs/api/model) apply as they are: in an Angular app, import those names from
+`@fragiola/tree-angular` too. [Angular primitives](/docs/api/angular) maps each React prop of the
+API pages onto the directives.
 
 </Framework>
 
@@ -180,6 +232,14 @@ export function FileTree({ json }: { json: TreeJson<Types> }) {
 
 In Nuxt, the tree renders on the server as it is, and takes over in the browser: no directive is
 needed. A model shared by every request (created in a module) is never changed by a server render.
+
+</Framework>
+
+<Framework name="angular">
+
+With Angular's server rendering, the tree renders on the server as it is, and takes over in the
+browser: the root creates its engine after its first render there (`afterNextRender`). A model
+shared by every request (created in a module) is never changed by a server render.
 
 </Framework>
 

@@ -92,6 +92,35 @@ const keyMap: Partial<KeyMap> = {
 
 </Framework>
 
+<Framework name="angular">
+
+```ts
+@Component({
+    selector: "app-files",
+    imports: [TREE],
+    template: `
+        <div treeRoot [defaultTree]="json" [keyMap]="keyMap" aria-label="Files">
+            <ng-template [treeItems]="json" let-item>
+                <div [treeItem]="item">
+                    <div treeItemContent>{{ item.label }}</div>
+                    <div treeGroup></div>
+                </div>
+            </ng-template>
+        </div>
+    `,
+})
+export class Files {
+    protected readonly json = json;
+    protected readonly keyMap: Partial<KeyMap> = {
+        rename: ["F2", "Enter"], // Enter renames, as in Finder
+        select: [],
+        "start-drag": ["Alt+m"],
+    };
+}
+```
+
+</Framework>
+
 ## The keyboard drag
 
 `"start-drag"` picks up the selection (or the focused item). Then ArrowDown and ArrowUp step
@@ -101,7 +130,7 @@ live region tells a screen reader where the drop would go, in your words:
 
 ## Keys of your own
 
-The root's `onKeyDown` (`@keydown` in Vue) runs after the engine's handler; a key the engine used has its default
+The root's `onKeyDown` (`@keydown` in Vue, `(keydown)` in Angular) runs after the engine's handler; a key the engine used has its default
 prevented (`event.defaultPrevented`). Add a shortcut the tree does not use:
 
 <Framework name="react">
@@ -144,6 +173,36 @@ const onKeydown = (event: KeyboardEvent) => {
         <Tree.Items v-slot="{ item }"><FileItem :item="item" /></Tree.Items>
     </Tree.Root>
 </template>
+```
+
+</Framework>
+
+<Framework name="angular">
+
+```ts
+@Component({
+    selector: "app-files",
+    imports: [TREE],
+    template: `
+        <div [treeRoot]="model" aria-label="Files" (keydown)="onKeyDown($event)">
+            <ng-template [treeItems]="model" let-item>
+                <div [treeItem]="item">
+                    <div treeItemContent>{{ item.label }}</div>
+                    <div treeGroup></div>
+                </div>
+            </ng-template>
+        </div>
+    `,
+})
+export class Files {
+    protected readonly model = createTreeModel<Types>(json);
+
+    protected onKeyDown(event: KeyboardEvent): void {
+        if (event.key === "Delete" && !event.defaultPrevented) {
+            this.model.run("item.remove", { itemIds: [...this.model.state.selectedItemIds] });
+        }
+    }
+}
 ```
 
 </Framework>

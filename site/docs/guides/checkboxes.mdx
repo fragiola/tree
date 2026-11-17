@@ -83,6 +83,42 @@ import { json, Tree } from "./tree";
 
 </Framework>
 
+<Framework name="angular">
+
+```ts title="permissions.ts"
+import { Component } from "@angular/core";
+import { TREE } from "@fragiola/tree-angular";
+import { LucideCheck, LucideMinus } from "@lucide/angular";
+import { json } from "./tree";
+
+@Component({
+    selector: "app-permissions",
+    imports: [TREE, LucideCheck, LucideMinus],
+    template: `
+        <div treeRoot [defaultTree]="json" checkboxes aria-label="Permissions">
+            <ng-template [treeItems]="json" let-item>
+                <div [treeItem]="item">
+                    <div treeItemContent class="row">
+                        <span treeToggle>▸</span>
+                        <span treeCheckbox class="box">
+                            <svg lucideCheck class="check" aria-hidden="true"></svg>
+                            <svg lucideMinus class="dash" aria-hidden="true"></svg>
+                        </span>
+                        <span>{{ item.label }}</span>
+                    </div>
+                    <div treeGroup></div>
+                </div>
+            </ng-template>
+        </div>
+    `,
+})
+export class Permissions {
+    protected readonly json = json;
+}
+```
+
+</Framework>
+
 ```css
 .box .check,
 .box .dash {
@@ -166,7 +202,25 @@ const scopes = useTreeState<Types, string>(
 
 </Framework>
 
+<Framework name="angular">
+
+```ts
+// a field of the component that owns the model: a signal
+readonly scopes = injectTreeState<Types, string>(
+    (state) =>
+        state.checkedItemIds
+            .flatMap((itemId) => {
+                const item = state.items[itemId];
+                return item?.kind === "permission" ? [item.data.scope] : [];
+            })
+            .join(" "),
+    { model: this.model },
+);
+```
+
+</Framework>
+
 The selector returns a string so that `Object.is` sees an unchanged selection as equal; pass
 `isEqual` to compare arrays instead. To keep the checks in your app's state, control
 `checkedItemIds` on the root (with `onCheckedItemIdsChange` in React, `v-model:checked-item-ids`
-in Vue: [Controlled state](/docs/guides/controlled-state)).
+in Vue, `[(checkedItemIds)]` in Angular: [Controlled state](/docs/guides/controlled-state)).

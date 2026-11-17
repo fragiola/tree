@@ -58,6 +58,27 @@ carry the roles, the state and the listeners. `children` is the primitive's cont
 
 </Framework>
 
+<Framework name="angular">
+
+A directive goes on an element you write, so the element is yours: it replaces `render`, never
+`asChild`. The directive adds its role, its ARIA, its `data-*` state and its listeners to it, and
+gives its state as a signal through `exportAs`:
+
+```html
+<li [treeItem]="item">
+    <a
+        treeItemContent
+        #row="treeItemContent"
+        [href]="'/files/' + item.id"
+        [attr.aria-current]="row.state().selected ? 'page' : null"
+    >
+        {{ item.label }}
+    </a>
+</li>
+```
+
+</Framework>
+
 ## className and style as functions
 
 <Framework name="react">
@@ -98,6 +119,25 @@ it in the `render` slot:
 
 </Framework>
 
+<Framework name="angular">
+
+`class` and `style` are yours, untouched, with no function form. Select the state with its
+`data-*` attributes (`.row[data-selected]`), or bind on the directive's `state()`:
+
+```html
+<div
+    treeItemContent
+    #row="treeItemContent"
+    class="row"
+    [class.row-selected]="row.state().selected"
+    [style.opacity]="row.state().dragging ? 0.5 : 1"
+>
+    {{ item.label }}
+</div>
+```
+
+</Framework>
+
 A structural style the primitive sets always wins: `--tree-depth` on an item's parts,
 `position: relative` on the root, the drop indicator's geometry, a hidden group's `display`.
 
@@ -116,6 +156,14 @@ Handlers are composed: the primitive's runs first, then yours. `ref` is a plain 
 Every other attribute goes to the element: `id`, `aria-describedby`, `data-testid`, `@keydown`,
 … Listeners are composed: the primitive's runs first, then yours. A template ref on a part is its
 component instance, and the element is its `$el`.
+
+</Framework>
+
+<Framework name="angular">
+
+Every other attribute stays on your element: `id`, `aria-describedby`, `data-testid`, … Your
+listeners (`(keydown)`) are composed with the directive's: its own runs first, then yours. The
+element is yours, so a template reference or `viewChild` reaches it directly.
 
 </Framework>
 

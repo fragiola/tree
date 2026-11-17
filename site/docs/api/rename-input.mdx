@@ -42,6 +42,27 @@ A Vue `class` has no function form: select the refused state with `.rename[data-
 
 </Framework>
 
+<Framework name="angular">
+
+```html
+<div treeItemContent class="row">
+    <span class="label">{{ item.label }}</span>
+    <input
+        treeRenameInput
+        #rename="treeRenameInput"
+        [attr.aria-label]="'Rename ' + item.label"
+        class="rename"
+        [class.rename-invalid]="rename.state().invalid"
+        (renameError)="message = $event.message"
+    />
+</div>
+```
+
+In Angular, the directive goes on an `input` you write, which stays in the row, hidden
+(`display: none`), while its item is not renaming.
+
+</Framework>
+
 A refused commit (a middleware's veto, an empty label) keeps it open with `aria-invalid`; the
 next change clears it. See [Inline rename](/docs/guides/rename).
 

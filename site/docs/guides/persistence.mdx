@@ -28,7 +28,7 @@ export function persistTree<T extends TreeTypes>(model: TreeModel<T>, key: strin
 ```
 
 It returns the listener's remover, ready for an effect: `useEffect(() => persistTree(model,
-"files"), [model])` in React, or `onMounted` and `onUnmounted` in Vue (below). To save less often, debounce the write, or save only some commands (a
+"files"), [model])` in React, or `onMounted` and `onUnmounted` in Vue, `DestroyRef.onDestroy` in Angular (below). To save less often, debounce the write, or save only some commands (a
 selection change may not be worth a write).
 
 ## Restoring at load
@@ -84,6 +84,39 @@ onUnmounted(() => stop?.());
         <Tree.Items v-slot="{ item }"><FileItem :item="item" /></Tree.Items>
     </Tree.Root>
 </template>
+```
+
+</Framework>
+
+<Framework name="angular">
+
+```ts title="files.ts"
+import { Component, DestroyRef, inject } from "@angular/core";
+import { createTreeModel, TREE } from "@fragiola/tree-angular";
+import { persistTree, restoreTree } from "./persist";
+import { json, type Types } from "./tree";
+
+@Component({
+    selector: "app-files",
+    imports: [TREE],
+    template: `
+        <div [treeRoot]="model" aria-label="Files">
+            <ng-template [treeItems]="model" let-item>
+                <div [treeItem]="item">
+                    <div treeItemContent>{{ item.label }}</div>
+                    <div treeGroup></div>
+                </div>
+            </ng-template>
+        </div>
+    `,
+})
+export class Files {
+    protected readonly model = createTreeModel<Types>(restoreTree<Types>("files") ?? json);
+
+    constructor() {
+        inject(DestroyRef).onDestroy(persistTree(this.model, "files"));
+    }
+}
 ```
 
 </Framework>

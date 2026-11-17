@@ -35,6 +35,19 @@ renders a `span` with what you give it (a chevron) and no icon of its own, on a 
 
 </Framework>
 
+<Framework name="angular">
+
+```html
+<div treeItemContent class="row">
+    <span treeToggle class="toggle">
+        <svg lucideChevronRight aria-hidden="true"></svg>
+    </span>
+    <span>{{ item.label }}</span>
+</div>
+```
+
+</Framework>
+
 ```css
 .toggle[data-leaf] {
     visibility: hidden; /* keeps the room, so labels line up */

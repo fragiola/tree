@@ -86,6 +86,37 @@ const removable = useTreeState<Types, boolean>((_state, model) =>
 
 </Framework>
 
+<Framework name="angular">
+
+```ts title="delete-button.ts"
+import { Component, input } from "@angular/core";
+import { injectTree, injectTreeState } from "@fragiola/tree-angular";
+import type { Types } from "./tree";
+
+@Component({
+    selector: "app-delete-button",
+    template: `
+        @if (removable()) {
+            <button type="button" (click)="remove()">Delete</button>
+        }
+    `,
+})
+export class DeleteButton {
+    readonly itemId = input.required<string>();
+    private readonly model = injectTree<Types>().model;
+    // asked again after every change of the tree
+    protected readonly removable = injectTreeState<Types, boolean>((_state, model) =>
+        model.can("item.remove", { itemIds: [this.itemId()] }),
+    );
+
+    protected remove(): void {
+        this.model().run("item.remove", { itemIds: [this.itemId()] });
+    }
+}
+```
+
+</Framework>
+
 A drag asks the same question: the engine runs `model.can("item.move", …)` for every drop target,
 and a refused one never shows.
 
@@ -103,7 +134,8 @@ model.is("item-expanded", { itemId: "src" });
 model.is("item-movable", { itemId: "license" });
 ```
 
-In a component, `useTreeState` selects a value and re-renders only when it changes
+In a component, `useTreeState` (`injectTreeState` in Angular) selects a value and re-renders only
+when it changes
 ([Hooks](/docs/api/hooks)). Every key is on [Model](/docs/api/model).
 
 ## Middleware and listeners

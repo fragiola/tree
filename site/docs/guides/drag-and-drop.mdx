@@ -36,6 +36,25 @@ absolutely positioned in the root: a zero-height line for `before` and `after`, 
 
 </Framework>
 
+<Framework name="angular">
+
+```html
+<div treeRoot [defaultTree]="json" aria-label="Project files">
+    <ng-template [treeItems]="json" let-item>
+        <div [treeItem]="item">
+            <div treeItemContent>{{ item.label }}</div>
+            <div treeGroup></div>
+        </div>
+    </ng-template>
+    <div treeDropIndicator class="drop-indicator"></div>
+</div>
+```
+
+The indicator's element stays while there is no target, hidden (`display: none`). To take it out
+of the DOM, wrap it in `@if (tree.state().dragging)`, with `#tree="treeRoot"` on the root.
+
+</Framework>
+
 ```css
 .drop-indicator[data-drop-position="before"],
 .drop-indicator[data-drop-position="after"] {
@@ -138,6 +157,29 @@ const { engine } = useTree<Types>();
         Move
     </button>
 </template>
+```
+
+</Framework>
+
+<Framework name="angular">
+
+```ts title="move-button.ts"
+import { Component, input } from "@angular/core";
+import { injectTree } from "@fragiola/tree-angular";
+import type { Types } from "./tree";
+
+@Component({
+    selector: "app-move-button",
+    template: `<button type="button" (click)="move()">Move</button>`,
+})
+export class MoveButton {
+    readonly itemId = input.required<string>();
+    private readonly engine = injectTree<Types>().engine;
+
+    protected move(): void {
+        this.engine.run("start-keyboard-drag", { itemIds: [this.itemId()] });
+    }
+}
 ```
 
 </Framework>

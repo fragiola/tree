@@ -39,6 +39,14 @@ a [right-to-left tree](/docs/guides/rtl). With Tailwind:
 
 </Framework>
 
+<Framework name="angular">
+
+```html
+<div treeItemContent class="ps-[calc(var(--tree-depth)*1.25rem+0.5rem)]">{{ item.label }}</div>
+```
+
+</Framework>
+
 ## Guide lines
 
 A vertical line per level is a background on the row, sized by the same property:
@@ -89,6 +97,22 @@ inline start. Tell the root your indentation in pixels with `indentation` (defau
     <Tree.Items v-slot="{ item }"><FileItem :item="item" /></Tree.Items>
     <Tree.DropIndicator class="drop-indicator" />
 </Tree.Root>
+```
+
+</Framework>
+
+<Framework name="angular">
+
+```html
+<div treeRoot [defaultTree]="json" [indentation]="20" aria-label="Files">
+    <ng-template [treeItems]="json" let-item>
+        <div [treeItem]="item">
+            <div treeItemContent>{{ item.label }}</div>
+            <div treeGroup></div>
+        </div>
+    </ng-template>
+    <div treeDropIndicator class="drop-indicator"></div>
+</div>
 ```
 
 </Framework>

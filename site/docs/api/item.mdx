@@ -44,6 +44,19 @@ defineProps<{ item: ItemOf<Types> }>();
 
 </Framework>
 
+<Framework name="angular">
+
+```html
+<ng-template [treeItems]="model" let-item>
+    <div [treeItem]="item" [attr.aria-label]="item.label" class="item">
+        <div treeItemContent class="row">{{ item.label }}</div>
+        <div treeGroup></div>
+    </div>
+</ng-template>
+```
+
+</Framework>
+
 Its element holds the row and the group of children: style the row (`Tree.ItemContent`), and
 draw the focus ring through the item (`.item:focus-visible > .row`). It is `useTreeItem` on a
 `div` ([Hooks](/docs/api/hooks)).

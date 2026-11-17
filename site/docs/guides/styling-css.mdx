@@ -57,6 +57,24 @@ defineProps<{ item: ItemOf<Types> }>();
 
 </Framework>
 
+<Framework name="angular">
+
+```html
+<ng-template [treeItems]="model" let-item>
+    <div [treeItem]="item" class="tree-item">
+        <div treeItemContent class="tree-row">
+            <span treeToggle class="tree-toggle">
+                <svg lucideChevronRight aria-hidden="true"></svg>
+            </span>
+            <span class="tree-label">{{ item.label }}</span>
+        </div>
+        <div treeGroup></div>
+    </div>
+</ng-template>
+```
+
+</Framework>
+
 ```css title="tree.css"
 .tree {
     --tree-indent: 1rem;
@@ -143,7 +161,8 @@ The full list is on [State attributes](/docs/concepts/state-attributes).
 
 ## Motion
 
-A group is unmounted while its item is collapsed. To animate the opening, keep it mounted with
+A group is unmounted while its item is collapsed (in Angular, its element stays, empty and
+hidden with `display: none`). To animate the opening, keep it mounted with
 `keepMounted` (it is then hidden with `display: none` when collapsed), or animate its entry with
 `@starting-style`:
 

@@ -96,6 +96,49 @@ resolves once Vue has updated the DOM.
 
 </Framework>
 
+<Framework name="angular">
+
+```ts title="file-tree.spec.ts"
+import { Component, viewChild } from "@angular/core";
+import { TREE, TreeRootDirective } from "@fragiola/tree-angular";
+import { fireEvent, render, screen } from "@testing-library/angular";
+import { expect, it } from "vitest";
+import { json } from "./files";
+
+@Component({
+    imports: [TREE],
+    template: `
+        <div treeRoot [defaultTree]="json" aria-label="Files">
+            <ng-template [treeItems]="json" let-item>
+                <div [treeItem]="item" [attr.aria-label]="item.label">
+                    <div treeItemContent>{{ item.label }}</div>
+                    <div treeGroup></div>
+                </div>
+            </ng-template>
+        </div>
+    `,
+})
+class FileTree {
+    protected readonly json = json;
+    readonly tree = viewChild.required(TreeRootDirective);
+}
+
+it("expands a folder with ArrowRight", async () => {
+    const { fixture } = await render(FileTree);
+    const src = screen.getByRole("treeitem", { name: "src" });
+    src.focus();
+    fireEvent.keyDown(src, { key: "ArrowRight" });
+    await fixture.whenStable();
+    expect(src).toHaveAttribute("aria-expanded", "true");
+    const { model } = fixture.componentInstance.tree();
+    expect(model().is("item-expanded", { itemId: "src" })).toBe(true);
+});
+```
+
+The root's handle, `viewChild(TreeRootDirective)`, gives the test the model and the engine.
+
+</Framework>
+
 Give each item an `aria-label` of its own label when it has children, so its name is not its
 children's text too ([Accessible names](/docs/getting-started/accessible-names)).
 

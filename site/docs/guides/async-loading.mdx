@@ -78,6 +78,40 @@ const loadChildren: LoadChildren<Types> = async (item, { signal }) => {
 
 </Framework>
 
+<Framework name="angular">
+
+```ts title="drive.ts"
+import { Component } from "@angular/core";
+import { createTreeModel, type LoadChildren, TREE, type TreeItemJson } from "@fragiola/tree-angular";
+import { json, type Types } from "./tree";
+
+@Component({
+    selector: "app-drive",
+    imports: [TREE],
+    template: `
+        <div [treeRoot]="model" [loadChildren]="loadChildren" aria-label="Cloud drive">
+            <ng-template [treeItems]="model" let-item>
+                <div [treeItem]="item">
+                    <div treeItemContent>{{ item.label }}</div>
+                    <div treeGroup></div>
+                </div>
+            </ng-template>
+            <div treeLiveRegion class="visually-hidden"></div>
+        </div>
+    `,
+})
+export class Drive {
+    protected readonly model = createTreeModel<Types>(json);
+    protected readonly loadChildren: LoadChildren<Types> = async (item, { signal }) => {
+        const response = await fetch(`/api/folders/${item.id}/children`, { signal });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return (await response.json()) as TreeItemJson<Types>[];
+    };
+}
+```
+
+</Framework>
+
 The engine runs the commands around it (`item.set-children-status` to `loading`, then
 `item.set-children`, or `item.set-children-status` to `error`), so your middleware and listeners
 see a load like any other change.
@@ -156,6 +190,39 @@ const status = useTreeState<Types, string | undefined>((_state, model) =>
         </Tree.Group>
     </Tree.Item>
 </template>
+```
+
+</Framework>
+
+<Framework name="angular">
+
+The item's `state()`, through `#node="treeItem"`, has `loading` and `loadError`, and the root's
+`engine`, through `#tree="treeRoot"`, loads again:
+
+```html
+<div [treeRoot]="model" #tree="treeRoot" [loadChildren]="loadChildren" aria-label="Cloud drive">
+    <ng-template [treeItems]="model" let-item>
+        <div [treeItem]="item" #node="treeItem">
+            <div treeItemContent class="row">
+                <span treeToggle>▸</span>
+                <span>{{ item.label }}</span>
+                @if (node.state().loading) {
+                    <svg lucideLoaderCircle aria-hidden="true"></svg>
+                }
+                @if (node.state().loadError) {
+                    <button
+                        type="button"
+                        [attr.aria-label]="'Retry loading ' + item.label"
+                        (click)="tree.engine.run('load-children', { itemId: item.id })"
+                    >
+                        Retry
+                    </button>
+                }
+            </div>
+            <div treeGroup></div>
+        </div>
+    </ng-template>
+</div>
 ```
 
 </Framework>

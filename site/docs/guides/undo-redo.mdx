@@ -74,10 +74,10 @@ export class History<T extends TreeTypes> {
 }
 ```
 
-An item that keeps its id and did not change keeps its identity across `tree.load`, so React
-and Vue re-render only what the undo changed. The undo-redo example's `_kit/undo.ts` is the same
-class with a snapshot to enable the buttons, read with `useSyncExternalStore` in React and through
-a `shallowRef` kept in step with its `subscribe` in Vue.
+An item that keeps its id and did not change keeps its identity across `tree.load`, so React,
+Vue and Angular re-render only what the undo changed. The undo-redo example's `_kit/undo.ts` is
+the same class with a snapshot to enable the buttons, read with `useSyncExternalStore` in React,
+and through a `shallowRef` (Vue) or a `signal` (Angular) kept in step with its `subscribe`.
 
 <Example id="undo-redo" />
 

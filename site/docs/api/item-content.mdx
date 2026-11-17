@@ -42,6 +42,22 @@ rectangle to find the drop position. It has no role of its own: the item is the 
 
 </Framework>
 
+<Framework name="angular">
+
+```html
+<div [treeItem]="item">
+    <div treeItemContent class="row">
+        <span treeToggle class="toggle">▸</span>
+        <svg lucideFile aria-hidden="true"></svg>
+        <span>{{ item.label }}</span>
+        <button type="button" [attr.aria-label]="'Delete ' + item.label" (click)="remove(item.id)">×</button>
+    </div>
+    <div treeGroup></div>
+</div>
+```
+
+</Framework>
+
 A press on a control inside it (a button, a link, an input, `Tree.Toggle`, `Tree.Checkbox`,
 `Tree.RenameInput`, an element with `data-tree-no-drag`) is the control's: it neither selects nor
 starts a drag.

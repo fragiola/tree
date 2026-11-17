@@ -27,6 +27,24 @@ each item is your component.
 
 </Framework>
 
+<Framework name="angular">
+
+```html
+<div treeRoot [defaultTree]="json" aria-label="Files">
+    <ng-template [treeItems]="json" let-item>
+        <div [treeItem]="item">
+            <div treeItemContent>{{ item.label }}</div>
+            <div treeGroup></div>
+        </div>
+    </ng-template>
+</div>
+```
+
+In Angular, `<ng-template treeItems let-item>` renders its template for each root item (inside a
+`treeGroup`, for each of its children); `[treeItems]="json"` (or the model) types `item`.
+
+</Framework>
+
 The item it passes is the model's, plain and immutable (`ItemOf<T>`): `item.id`, `item.kind`,
 `item.label`, `item.data`, `item.childItemIds`, `item.childrenStatus` and the flags. Pass the
 registry as the type argument (`<Tree.Items<Types>>`): a function cannot infer it through

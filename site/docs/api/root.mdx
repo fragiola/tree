@@ -52,10 +52,41 @@ const model = createTreeModel<Types>(json);
 
 </Framework>
 
+<Framework name="angular">
+
+```ts title="files.ts"
+import { Component } from "@angular/core";
+import { createTreeModel, TREE } from "@fragiola/tree-angular";
+import { json, type Types } from "./tree";
+
+@Component({
+    selector: "app-files",
+    imports: [TREE],
+    template: `
+        <div [treeRoot]="model" aria-label="Project files" class="tree">
+            <ng-template [treeItems]="model" let-item>
+                <div [treeItem]="item">
+                    <div treeItemContent>{{ item.label }}</div>
+                    <div treeGroup></div>
+                </div>
+            </ng-template>
+            <div treeDropIndicator class="drop-indicator"></div>
+            <div treeLiveRegion class="visually-hidden"></div>
+        </div>
+    `,
+})
+export class Files {
+    protected readonly model = createTreeModel<Types>(json);
+}
+```
+
+</Framework>
+
 `Root` is generic over the model's registry (`RootProps<T>`): `model: TreeModel<Types>` types
 `loadChildren` and `treeRef`. The parts that hand you items through a function (`Tree.Items`,
 `Tree.Group`) cannot infer it through context: pass it as their type argument (in Vue, take the
-parts from `typedTree<Types>()`: [Vue primitives](/docs/api/vue)).
+parts from `typedTree<Types>()`: [Vue primitives](/docs/api/vue); in Angular, give the model to
+`[treeItems]`: [Angular primitives](/docs/api/angular)).
 
 The tree's policies live on the model, not on the root: a middleware (`model.use`) sees, rewrites
 or vetoes every command the tree runs, and a listener (`model.subscribe`) every change. See
@@ -162,6 +193,18 @@ the element it returns; they fit any element's `ref` with no cast:
     </template>
     <Tree.ItemContent>{{ item.label }}</Tree.ItemContent>
 </Tree.Item>
+```
+
+</Framework>
+
+<Framework name="angular">
+
+The element is yours: put the directive on it, with the attributes you want.
+
+```html
+<li [treeItem]="item" [attr.data-kind]="item.kind">
+    <div treeItemContent>{{ item.label }}</div>
+</li>
 ```
 
 </Framework>

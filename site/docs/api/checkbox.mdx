@@ -51,6 +51,26 @@ and Space toggles the focused item's check.
 
 </Framework>
 
+<Framework name="angular">
+
+```html
+<div treeRoot [defaultTree]="json" checkboxes aria-label="Permissions">
+    <ng-template [treeItems]="json" let-item>
+        <div [treeItem]="item">
+            <div treeItemContent class="row">
+                <span treeCheckbox class="box">
+                    <svg lucideCheck class="check" aria-hidden="true"></svg>
+                    <svg lucideMinus class="dash" aria-hidden="true"></svg>
+                </span>
+                <span>{{ item.label }}</span>
+            </div>
+        </div>
+    </ng-template>
+</div>
+```
+
+</Framework>
+
 Show the check mark on `[data-checked]` and the dash on `[data-indeterminate]`
 ([Checkboxes](/docs/guides/checkboxes)).
 
