@@ -72,6 +72,30 @@ describe("focus and scrolling", () => {
         expect(mounted.model.state.focusedItemId).toBe("readme");
     });
 
+    it("gives focus to the focused item's new element, registered before its old one goes", () => {
+        mounted = mount(filesModel());
+        const m = mounted;
+        const old = m.item("readme");
+        old.focus();
+        // what Vue does when an item moves to another parent: the new element is attached
+        // before the old one is removed
+        const next = document.createElement("div");
+        next.tabIndex = -1;
+        m.root.append(next);
+        m.model.run("item.move", {
+            itemIds: ["readme"],
+            to: { parentItemId: "src", index: 0 },
+        });
+        m.engine.adapter.registerItem("readme", next);
+        expect(document.activeElement).toBe(next);
+        // a new element of an item that is not focused takes nothing
+        const other = document.createElement("div");
+        other.tabIndex = -1;
+        m.root.append(other);
+        m.engine.adapter.registerItem("app", other);
+        expect(document.activeElement).toBe(next);
+    });
+
     it("scroll-to scrolls a rendered item into view", () => {
         mounted = mount(filesModel());
         const calls: unknown[] = [];

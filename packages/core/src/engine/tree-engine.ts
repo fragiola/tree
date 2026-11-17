@@ -529,11 +529,18 @@ class Engine<T extends TreeTypes> implements TreeEngine<T>, EngineHost {
                     this.items.delete(itemId);
                     return;
                 }
+                const previous = this.items.get(itemId);
                 this.items.set(itemId, element);
+                // the focused item's new element takes the focus the tree lost, or the focus its
+                // previous element still holds: an adapter (Vue) may attach the new element of a
+                // moved item before it removes the old one
                 if (
                     this.refocus &&
                     itemId === this.model.state.focusedItemId &&
-                    this.focusLost()
+                    (this.focusLost() ||
+                        (previous !== undefined &&
+                            previous !== element &&
+                            previous.ownerDocument.activeElement === previous))
                 ) {
                     this.refocus = false;
                     element.focus({ preventScroll: true });
