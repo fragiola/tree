@@ -56,6 +56,8 @@ export function mount(
     model: TreeModel<FileTypes>,
     options: TreeEngineOptions<FileTypes> = {},
     host: Document = document,
+    /** where the root's inline start is (a second tree beside the first) */
+    left = 0,
 ): Mounted {
     const root = host.createElement("div");
     root.setAttribute("role", "tree");
@@ -66,7 +68,7 @@ export function mount(
     const contents = new Map<string, HTMLElement>();
     const render = () => {
         const visible = model.get("visible-items");
-        setRect(root, 0, 0, WIDTH, Math.max(visible.length * ROW, 100));
+        setRect(root, 0, left, WIDTH, Math.max(visible.length * ROW, 100));
         for (const id of [...items.keys()]) {
             if (!visible.some((entry) => entry.itemId === id)) {
                 engine.adapter.registerItem(id, null);
@@ -108,7 +110,7 @@ export function mount(
                 ? 0
                 : -1;
             root.append(item);
-            setRect(content, index * ROW, 0, WIDTH, ROW);
+            setRect(content, index * ROW, left, WIDTH, ROW);
         });
     };
     render();

@@ -101,8 +101,7 @@ function hasDraggedAncestor(
 
 /**
  * The drop target of a hover: a target, `"invalid"` (the hover is over the dragged items or
- * inside them, or inside an item that takes no children), or undefined (no drag, or outside the
- * rows).
+ * inside them, or inside an item that takes no children), or undefined (outside the rows).
  */
 export function evaluateDrop(
     context: DropContext,
@@ -118,11 +117,9 @@ export function evaluateDrop(
             level: 1,
         };
     }
-    if (
-        context.draggingItemIds.length === 0 ||
-        hover.index < 0 ||
-        hover.index >= visible.length
-    ) {
+    // (deviation: a drag from another tree of a drag group, over another model, has no dragged
+    // item here, and still has targets)
+    if (hover.index < 0 || hover.index >= visible.length) {
         return undefined;
     }
     const dragging = new Set(context.draggingItemIds);

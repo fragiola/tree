@@ -117,6 +117,8 @@ or vetoes every command the tree runs, and a listener (`model.subscribe`) every 
 | `indicatorInset` | `number` | `0` | how far (px) a drop line (`before`, `after`) starts past its level's inline start: the toggle, a grip or padding before the label ([Keeping drops in line](/docs/getting-started/depth#keeping-drops-in-line)) |
 | `typeAheadTimeout` | `number` | `500` | how long (ms) between two typed characters keeps one type-ahead search |
 | `virtual` | `TreeVirtualizer` | none | renders only the visible items in view: `createTreeVirtualizer(options)`, rendered by [`Tree.VirtualItems`](/docs/api/virtual-items). Create it once (at module level, or memoized): another virtualizer creates another engine |
+| `dragGroup` | `string` | none | joins the trees of the document with the same group name: items drag between them by pointer and keyboard ([Between trees](/docs/guides/drag-and-drop#between-trees)). Another group creates another engine |
+| `transfer` | `TransferHandler` | the default transfer | what a drop from a tree of another model does here: run your commands (copy, convert kinds) and return `false` to refuse; asked first with `dryRun` for each target. Default: the target model adds the dragged subtrees, the source model removes them |
 | `treeRef` | `TreeRef<T>` | none | access to the model and the engine from outside the root (`useTreeRef`, `createTreeRef`) |
 | `children` | `ReactNode` | none | the tree: `Tree.Items`, `Tree.DropIndicator`, `Tree.LiveRegion`, and anything else |
 
@@ -132,6 +134,7 @@ The root names nothing: give it `aria-label` or `aria-labelledby`
 | `multiselectable` | `boolean` | the selection mode is `multiple` (`aria-multiselectable`) |
 | `dragging` | `boolean` | a drag is under way (pointer or keyboard) |
 | `keyboardDragging` | `boolean` | a keyboard drag is under way |
+| `draggingFromOtherTree` | `boolean` | a drag from another tree of the drag group is under way (`dragGroup`) |
 | `empty` | `boolean` | the tree has no item |
 
 ## Attributes
@@ -143,6 +146,7 @@ The root names nothing: give it `aria-label` or `aria-labelledby`
 | `data-tree-part="root"` | always |
 | `data-dragging` | a drag is under way |
 | `data-keyboard-dragging` | a keyboard drag is under way |
+| `data-dragging-from-other-tree` | a drag from another tree of the drag group is under way |
 | `data-empty` | the tree has no item |
 
 Structural style: `position: relative`, the containing block `Tree.DropIndicator` is positioned

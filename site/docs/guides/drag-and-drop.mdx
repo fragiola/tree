@@ -238,7 +238,124 @@ model.subscribe((event) => {
 A drag's auto-expansion runs `item.expand` as a `transient` step; undo can merge it into the
 drop ([Undo and redo](/docs/guides/undo-redo)).
 
+## Between trees
+
+Trees in the same document with the same `dragGroup` share their drags: a row dragged out of one
+tree drops into another, with the pointer or the keyboard. The tree under the pointer finds its
+own target (the same thirds and inline offset), draws its own `Tree.DropIndicator`, expands a
+hovered folder and scrolls near its edges, virtualized or not; the source keeps the pointer
+capture, the keys and the announcements. The receiving tree carries `data-dragging` and
+`data-dragging-from-other-tree` while the drag is under way. A tree without a group behaves as
+before.
+
+<Framework name="react">
+
+```tsx
+<Tree.Root model={available} dragGroup="lists" aria-label="Available">
+    <Tree.Items>{(item) => <Item item={item} />}</Tree.Items>
+    <Tree.DropIndicator />
+</Tree.Root>
+<Tree.Root model={selected} dragGroup="lists" aria-label="Selected">
+    <Tree.Items>{(item) => <Item item={item} />}</Tree.Items>
+    <Tree.DropIndicator />
+</Tree.Root>
+```
+
+</Framework>
+
+<Framework name="vue">
+
+```vue
+<template>
+    <Tree.Root :model="available" drag-group="lists" aria-label="Available">
+        <Tree.Items v-slot="{ item }"><Item :item="item" /></Tree.Items>
+        <Tree.DropIndicator />
+    </Tree.Root>
+    <Tree.Root :model="selected" drag-group="lists" aria-label="Selected">
+        <Tree.Items v-slot="{ item }"><Item :item="item" /></Tree.Items>
+        <Tree.DropIndicator />
+    </Tree.Root>
+</template>
+```
+
+</Framework>
+
+<Framework name="angular">
+
+```html
+<div [treeRoot]="available" dragGroup="lists" aria-label="Available" #a="treeRoot">
+    <ng-template [treeItems]="available" let-item><!-- the item --></ng-template>
+    @if (a.state().dragging) { <div treeDropIndicator></div> }
+</div>
+<div [treeRoot]="selected" dragGroup="lists" aria-label="Selected" #s="treeRoot">
+    <ng-template [treeItems]="selected" let-item><!-- the item --></ng-template>
+    @if (s.state().dragging) { <div treeDropIndicator></div> }
+</div>
+```
+
+</Framework>
+
+<Example id="two-trees" />
+
+**Over one model** (two views of the same tree), a drop is one `item.move`, as inside a tree.
+**Over two models** it is a transfer: the target model runs one `batch` of `item.add` (each
+dragged item and its descendants, ids kept, expanded as they were) and the source model runs
+`item.remove`, each through its own middleware. A target shows only when the target model accepts
+the batch (`model.can`): a veto, a non-droppable parent, data its schema refuses or an id it
+already has hides it. Atomicity across the two models is yours: an undo stack that spans them
+records both commands ([Undo and redo](/docs/guides/undo-redo)).
+
+The `transfer` option (on the receiving root, else the source's) replaces the default: copy
+instead of move, convert kinds, refuse. It is asked first with `dryRun: true` for each target
+(return `false` to hide it, `true` to show it, nothing for the default answer), then at the drop (return `true` once your commands ran, `false` when nothing happened, nothing for the default transfer). `commands` holds
+the default transfer's commands, to map:
+
+```ts
+// a copy, kept in the source: each added id gets a suffix, and so does a parent an item names
+const transfer: TransferHandler = ({ commands, to, dryRun }) => {
+    const added = new Set(
+        commands.flatMap((entry) =>
+            entry.command === "item.add" && entry.payload.item.id ? [entry.payload.item.id] : [],
+        ),
+    );
+    const copy = (id: string) => (added.has(id) ? `${id}-copy` : id);
+    const copied = commands.map((entry) => {
+        if (entry.command === "item.expand")
+            return { ...entry, payload: { itemId: copy(entry.payload.itemId) } };
+        if (entry.command !== "item.add") return entry;
+        const { item, to: place } = entry.payload;
+        return {
+            ...entry,
+            payload: {
+                item: { ...item, id: item.id && copy(item.id) },
+                to: { ...place, parentItemId: place.parentItemId && copy(place.parentItemId) },
+            },
+        };
+    });
+    // the same commands answer the dry run and run at the drop
+    return dryRun
+        ? to.model.can("batch", { commands: copied })
+        : to.model.run("batch", { commands: copied }).ok;
+};
+```
+
+`modifiers` carries the drop's Alt, Ctrl, Meta and Shift keys: copy on Alt (Option) and return
+nothing otherwise, for example, which keeps the default move.
+
+The keyboard drag steps through the group's trees in document order: Down past the last place of
+one tree reaches the first of the next, and the focus stays in the source tree. `drag-over` and
+`drop` carry `targetTree` (the other tree's `root` and `model`) when the target is in another
+tree, so the announcement can name it:
+
+```ts
+const announce = (event: AnnounceEvent) => {
+    if (event.type !== "drag-over" || !event.target) return undefined;
+    const list = event.targetTree?.root.getAttribute("aria-label") ?? "this list";
+    return `Drop in ${list}.`;
+};
+```
+
 ## What it does not do
 
-The drag stays inside one tree: no drag between two trees, no drop of files or foreign elements,
-and native HTML5 drag and drop is not used. See [Known limitations](/docs/limitations).
+No drop of files or foreign elements, no drag between documents (an iframe, a popup), and native
+HTML5 drag and drop is not used. See [Known limitations](/docs/limitations).

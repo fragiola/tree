@@ -2,7 +2,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createTreeEngine } from "../../src/engine/tree-engine";
 import { createTreeVirtualizer } from "../../src/virtual/virtualizer";
-import { pointer, wait } from "../engine/dom";
+import { mount, pointer, wait } from "../engine/dom";
 import { filesModel } from "../fixture";
 import { flatModel, mountVirtual, type VirtualMounted } from "./dom";
 
@@ -301,5 +301,52 @@ describe("the virtualizer", () => {
         expect(mounted.model.state.rootItemIds.indexOf("n0")).toBeGreaterThan(
             20,
         );
+    });
+
+    it("drags between a virtualized tree and another tree of its group, by pointer and keyboard", () => {
+        mounted = mountVirtual(flatModel(1000), fixed, { dragGroup: "g" });
+        const other = mount(filesModel(), { dragGroup: "g" }, document, 400);
+        try {
+            // a pointer drag from the virtualized tree into the other one
+            const content = mounted.content("n0") as HTMLElement;
+            pointer(content, "pointerdown", 50, 10);
+            pointer(content, "pointermove", 50, 30);
+            pointer(content, "pointermove", 440, other.rowY("readme", 0.9));
+            expect(other.engine.get("drop-target")).toMatchObject({
+                position: "after",
+                itemId: "readme",
+            });
+            pointer(content, "pointerup", 440, other.rowY("readme", 0.9));
+            expect(other.model.state.rootItemIds).toEqual([
+                "src",
+                "readme",
+                "n0",
+            ]);
+            expect(mounted.model.state.rootItemIds[0]).toBe("n1");
+            // a keyboard drag from the other tree, up into the virtualized one: its last
+            // position, scrolled into view
+            other.engine.run("focus", { itemId: "src" });
+            expect(
+                other.engine.run("start-keyboard-drag", { itemIds: ["readme"] })
+                    .ok,
+            ).toBe(true);
+            for (
+                let i = 0;
+                i < 20 && mounted.engine.get("drop-target") === null;
+                i++
+            )
+                other.key("ArrowUp");
+            expect(mounted.engine.get("drop-target")).toMatchObject({
+                position: "after",
+                itemId: "n999",
+            });
+            expect(mounted.root.scrollTop).toBeGreaterThan(19_000);
+            expect(mounted.engine.get("drop-indicator")).not.toBeNull();
+            other.key("Enter");
+            expect(mounted.model.state.rootItemIds.at(-1)).toBe("readme");
+            expect(other.model.state.items.readme).toBeUndefined();
+        } finally {
+            other.unmount();
+        }
     });
 });

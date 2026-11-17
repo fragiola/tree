@@ -5,6 +5,7 @@ import {
     createTreeModel,
     type KeyMap,
     type LoadChildren,
+    type TransferHandler,
     type TreeEngine,
     type TreeJson,
     type TreeModel,
@@ -33,6 +34,8 @@ export interface RootState {
     dragging: boolean;
     /** a keyboard drag is under way */
     keyboardDragging: boolean;
+    /** a drag from another tree of the drag group is under way (`dragGroup`) */
+    draggingFromOtherTree: boolean;
     /** the tree has no item */
     empty: boolean;
 }
@@ -85,6 +88,17 @@ export interface RootProps<T extends TreeTypes = AnyTypes>
      * creates another engine
      */
     virtual?: TreeVirtualizer | undefined;
+    /**
+     * joins the trees of the document with the same group name: items drag between them, by pointer
+     * and keyboard (over one model a drop is one `item.move`, over two a transfer)
+     */
+    dragGroup?: string | undefined;
+    /**
+     * what a drop from a tree of another model does here: run your commands (copy, convert kinds)
+     * and return false to refuse; asked first with `dryRun` for each target. Default: the target
+     * model adds the dragged subtrees and the source model removes them
+     */
+    transfer?: TransferHandler | undefined;
     /** access to the model and the engine from outside the root (`useTreeRef`, `createTreeRef`) */
     treeRef?: TreeRef<T> | undefined;
     children?: React.ReactNode;
@@ -119,6 +133,8 @@ export function Root<T extends TreeTypes = AnyTypes>(props: RootProps<T>) {
         indicatorInset,
         typeAheadTimeout,
         virtual,
+        dragGroup,
+        transfer,
         treeRef,
         children,
         ...rest
@@ -131,9 +147,10 @@ export function Root<T extends TreeTypes = AnyTypes>(props: RootProps<T>) {
     const model = eraseModel(typed);
 
     // the callbacks are read when called: a new function each render recreates nothing
-    const latest = React.useRef({ loadChildren, announce });
-    latest.current = { loadChildren, announce };
+    const latest = React.useRef({ loadChildren, announce, transfer });
+    latest.current = { loadChildren, announce, transfer };
     const hasLoader = loadChildren !== undefined;
+    const hasTransfer = transfer !== undefined;
     const keyMapKey = JSON.stringify(keyMap ?? null);
 
     const [facade] = React.useState(createEngineFacade);
@@ -162,6 +179,10 @@ export function Root<T extends TreeTypes = AnyTypes>(props: RootProps<T>) {
             indicatorInset,
             typeAheadTimeout,
             virtual,
+            dragGroup,
+            transfer: hasTransfer
+                ? (event) => latest.current.transfer?.(event)
+                : undefined,
             // a remount (StrictMode, a route change) loads what this engine was loading
             resetLoadsOnDestroy: true,
         });
@@ -184,6 +205,8 @@ export function Root<T extends TreeTypes = AnyTypes>(props: RootProps<T>) {
         indicatorInset,
         typeAheadTimeout,
         virtual,
+        dragGroup,
+        hasTransfer,
     ]);
     // a destroyed engine (StrictMode's first mount, a replaced model) is never used again
     const live = engine && engine.adapter.model === model ? engine : null;
@@ -258,6 +281,7 @@ export function Root<T extends TreeTypes = AnyTypes>(props: RootProps<T>) {
         multiselectable: state.settings.selectionMode === "multiple",
         dragging: live?.is("dragging") ?? false,
         keyboardDragging: live?.is("keyboard-dragging") ?? false,
+        draggingFromOtherTree: live?.is("dragging-from-other-tree") ?? false,
         empty: state.rootItemIds.length === 0,
     };
     const element = useRenderElement("div", rest, {
@@ -270,6 +294,7 @@ export function Root<T extends TreeTypes = AnyTypes>(props: RootProps<T>) {
             ...dataAttributes({
                 dragging: rootState.dragging,
                 "keyboard-dragging": rootState.keyboardDragging,
+                "dragging-from-other-tree": rootState.draggingFromOtherTree,
                 empty: rootState.empty,
             }),
             onKeyDown,

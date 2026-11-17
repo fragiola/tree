@@ -5,6 +5,7 @@ import {
     createTreeModel,
     type KeyMap,
     type LoadChildren,
+    type TransferHandler,
     type TreeEngine,
     type TreeJson,
     type TreeModel,
@@ -55,6 +56,8 @@ export interface RootState {
     dragging: boolean;
     /** a keyboard drag is under way */
     keyboardDragging: boolean;
+    /** a drag from another tree of the drag group is under way (`dragGroup`) */
+    draggingFromOtherTree: boolean;
     /** the tree has no item */
     empty: boolean;
 }
@@ -101,6 +104,17 @@ export interface RootProps<T extends TreeTypes = AnyTypes>
      * creates another engine
      */
     virtual?: TreeVirtualizer | undefined;
+    /**
+     * joins the trees of the document with the same group name: items drag between them, by pointer
+     * and keyboard (over one model a drop is one `item.move`, over two a transfer)
+     */
+    dragGroup?: string | undefined;
+    /**
+     * what a drop from a tree of another model does here: run your commands (copy, convert kinds)
+     * and return false to refuse; asked first with `dryRun` for each target. Default: the target
+     * model adds the dragged subtrees and the source model removes them
+     */
+    transfer?: TransferHandler | undefined;
     /** access to the model and the engine from outside the root (`useTreeRef`, `createTreeRef`) */
     treeRef?: TreeRef<T> | undefined;
 }
@@ -137,6 +151,8 @@ const ROOT_PROPS = [
     "indicatorInset",
     "typeAheadTimeout",
     "virtual",
+    "dragGroup",
+    "transfer",
     "treeRef",
     "as",
 ] as const satisfies readonly (keyof RootProps)[];
@@ -212,6 +228,8 @@ const RootTree = definePrimitive<RootProps, RootSlots, RootEmits>(
             typeAheadTimeout: props.typeAheadTimeout,
             // a virtualizer by identity (it holds functions JSON leaves out)
             virtual: keyOfModel(props.virtual),
+            dragGroup: props.dragGroup,
+            hasTransfer: props.transfer !== undefined,
         });
         const create = () => {
             const hasLoader = props.loadChildren !== undefined;
@@ -237,6 +255,11 @@ const RootTree = definePrimitive<RootProps, RootSlots, RootEmits>(
                 indicatorInset: props.indicatorInset,
                 typeAheadTimeout: props.typeAheadTimeout,
                 virtual: props.virtual,
+                dragGroup: props.dragGroup,
+                transfer:
+                    props.transfer !== undefined
+                        ? (event) => props.transfer?.(event)
+                        : undefined,
                 // a remount (a route change, a `v-if`) loads what this engine was loading
                 resetLoadsOnDestroy: true,
             });
@@ -323,6 +346,8 @@ const RootTree = definePrimitive<RootProps, RootSlots, RootEmits>(
                 multiselectable: tree.settings.selectionMode === "multiple",
                 dragging: live?.is("dragging") ?? false,
                 keyboardDragging: live?.is("keyboard-dragging") ?? false,
+                draggingFromOtherTree:
+                    live?.is("dragging-from-other-tree") ?? false,
                 empty: tree.rootItemIds.length === 0,
             };
             return renderElement({
@@ -340,6 +365,8 @@ const RootTree = definePrimitive<RootProps, RootSlots, RootEmits>(
                     ...dataAttributes({
                         dragging: rootState.dragging,
                         "keyboard-dragging": rootState.keyboardDragging,
+                        "dragging-from-other-tree":
+                            rootState.draggingFromOtherTree,
                         empty: rootState.empty,
                     }),
                     onKeydown,
