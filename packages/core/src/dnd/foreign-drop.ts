@@ -151,8 +151,14 @@ class ForeignDragSession implements ForeignDropController {
         if (this.types === undefined) {
             this.types = Array.from(transfer.types);
             this.accepted.clear();
-            this.seen = true;
             this.watch();
+        } else if (event.type === "dragenter") {
+            // a drag that ended unseen (no dragleave, no drop) gives way to the new one
+            const types = Array.from(transfer.types);
+            if (types.join("\n") !== this.types.join("\n")) {
+                this.types = types;
+                this.accepted.clear();
+            }
         }
         this.seen = true;
         const target = this.targetOf(event);

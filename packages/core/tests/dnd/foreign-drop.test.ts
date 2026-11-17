@@ -158,6 +158,20 @@ describe("a foreign drop", () => {
         expect(dropped).toHaveLength(0);
     });
 
+    it("a new drag's types replace those of a drag that ended unseen", () => {
+        const { foreignDrop } = recording(({ types }) =>
+            types.includes("Files"),
+        );
+        const { m } = setup({ foreignDrop });
+        const text = dataTransfer(["text/plain"]);
+        nativeDrag(m.root, "dragenter", 40, m.rowY("app", 0.1), text);
+        expect(m.engine.get("drop-target")).toBeNull();
+        expect(
+            nativeDrag(m.root, "dragenter", 40, m.rowY("app", 0.1), files()),
+        ).toBe(true);
+        expect(m.engine.get("drop-target")).not.toBeNull();
+    });
+
     it("a disabled or non-droppable parent takes no foreign drop", () => {
         const { foreignDrop } = recording();
         const json = filesJson();
