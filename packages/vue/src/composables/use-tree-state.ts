@@ -2,6 +2,7 @@
 // and licence.
 import type { AnyTypes, TreeModel, TreeState, TreeTypes } from "@fragiola/tree";
 import {
+    computed,
     inject,
     type MaybeRefOrGetter,
     type Ref,
@@ -10,6 +11,7 @@ import {
     watch,
 } from "vue";
 import { ModelKey, typedModel } from "../context";
+import { onClient } from "../utils/render";
 
 export interface UseTreeStateOptions<
     T extends TreeTypes = AnyTypes,
@@ -48,24 +50,32 @@ export function useTreeState<T extends TreeTypes = AnyTypes, S = unknown>(
         }
         return model;
     };
-    const first = resolve();
-    const value = shallowRef<S>(selector(first.state, first));
-    watch(
-        resolve,
-        (model, previous, onCleanup) => {
-            const select = () => {
-                const next = selector(model.state, model);
-                if (!isEqual(value.value, next)) {
-                    value.value = next;
-                }
-            };
-            if (previous !== undefined) {
-                // another model: its selection, whatever `isEqual` says
-                value.value = selector(model.state, model);
-            }
-            onCleanup(model.subscribe(select));
-        },
-        { immediate: true, flush: "sync" },
-    );
-    return value;
+    resolve();
+    // the model's commits, on the client only (a server render subscribes to nothing)
+    const tick = shallowRef(0);
+    onClient(() => {
+        watch(
+            resolve,
+            (model, _previous, onCleanup) => {
+                const bump = () => {
+                    tick.value++;
+                };
+                bump();
+                onCleanup(model.subscribe(bump));
+            },
+            { immediate: true, flush: "sync" },
+        );
+    });
+    // selected again on a commit, another model, or a reactive value the selector reads (a prop)
+    let last: { model: TreeModel<T>; value: S } | undefined;
+    return computed(() => {
+        tick.value;
+        const model = resolve();
+        const value = selector(model.state, model);
+        if (last?.model === model && isEqual(last.value, value)) {
+            return last.value;
+        }
+        last = { model, value };
+        return value;
+    });
 }

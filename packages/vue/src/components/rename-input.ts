@@ -1,5 +1,5 @@
 import type { CommandError } from "@fragiola/tree";
-import { shallowRef } from "vue";
+import { nextTick, shallowRef } from "vue";
 import { itemDataAttributes } from "../composables/internal";
 import type { TreeItemState } from "../composables/use-tree-item";
 import { useItemContext, useTreeContext } from "../context";
@@ -54,8 +54,16 @@ export const RenameInput: TreeComponent<
             done = false;
             error.value = undefined;
             input.value = itemContext.value.item.label;
-            input.focus({ preventScroll: true });
-            input.select();
+            const target = input;
+            const focus = () => {
+                if (input !== target) return;
+                target.focus({ preventScroll: true });
+                target.select();
+            };
+            // an input mounted with its item (a new item renamed at once) is not in the document
+            // yet: it takes focus once the flush has inserted it
+            if (target.isConnected) focus();
+            else void nextTick(focus);
             return () => {
                 input = null;
             };

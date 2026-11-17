@@ -6,9 +6,11 @@ import {
     camelize,
     computed,
     type FunctionalComponent,
+    getCurrentInstance,
     h,
     mergeProps,
     normalizeStyle,
+    onBeforeMount,
     onScopeDispose,
     type Slot,
     shallowRef,
@@ -90,20 +92,36 @@ export function elementRef(
 }
 
 /**
+ * Runs `start` on the client only: before the component mounts (a server render never mounts, so
+ * it never subscribes to anything it could not unsubscribe from), or at once outside a component.
+ * What `start` creates (a watcher, an `onScopeDispose`) belongs to the component and ends with it.
+ */
+export function onClient(start: () => void): void {
+    if (getCurrentInstance()) {
+        onBeforeMount(start);
+    } else {
+        start();
+    }
+}
+
+/**
  * A value read from an external store, as a computed ref: it re-reads `getSnapshot` whenever the
  * store notifies (and whenever a reactive value it reads changes), and triggers its readers only
- * when the value changes. The subscription ends with the component.
+ * when the value changes. The subscription starts on the client (`onClient`), re-reading the
+ * store then, and ends with the component.
  */
 export function useExternal<S>(
     subscribe: (listener: () => void) => () => void,
     getSnapshot: () => S,
 ): ComputedRef<S> {
     const tick = shallowRef(0);
-    onScopeDispose(
-        subscribe(() => {
+    onClient(() => {
+        const bump = () => {
             tick.value++;
-        }),
-    );
+        };
+        onScopeDispose(subscribe(bump));
+        bump();
+    });
     return computed(() => {
         tick.value;
         return getSnapshot();

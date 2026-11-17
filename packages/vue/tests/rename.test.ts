@@ -157,4 +157,23 @@ describe("inline rename", () => {
         expect(model.state.selectedItemIds).toEqual([]);
         expect(model.state.renamingItemId).toBe("app");
     });
+
+    it("takes focus when its item is added and renamed at once", async () => {
+        const model = filesModel();
+        await render(() => fileTree({ model }));
+        model.run("item.add", {
+            item: {
+                id: "new",
+                kind: "file",
+                label: "new.ts",
+                data: { size: 0 },
+            },
+            to: { parentItemId: null, index: 1 },
+        });
+        model.run("item.start-rename", { itemId: "new" });
+        await settle();
+        const input = textbox();
+        expect(input?.value).toBe("new.ts");
+        expect(input).toHaveFocus();
+    });
 });

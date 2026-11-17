@@ -2,7 +2,7 @@
 import type { AnyTypes, CheckState, ItemOf, TreeModel } from "@fragiola/tree";
 import { nextTick, onScopeDispose, watch } from "vue";
 import type { TreeContextValue } from "../context";
-import { dataAttributes } from "../utils/render";
+import { dataAttributes, onClient } from "../utils/render";
 import type { TreeItemState } from "./use-tree-item";
 
 /**
@@ -198,7 +198,7 @@ function controlledKey(props: ControlledProps): string {
  * of the three lists emits its `update:*` event with the new list. A controlled prop the app does
  * not update reverts the change.
  *
- * The model is brought to the props once per change of their value (before the root renders),
+ * The model is brought to the props before the root mounts, once per change of their value,
  * and once after each commit of its own, when the app has had its flush to answer the event: what
  * the model then makes of them (a cascade checks a parent's children, an unknown id is dropped) is
  * settled, never fought over.
@@ -210,34 +210,38 @@ export function useControlledState(
 ): void {
     let pending = false;
     let stopped = false;
-    sync(model, props);
     watch(
         () => controlledKey(props),
         () => sync(model, props),
     );
-    onScopeDispose(() => {
-        stopped = true;
+    // on the client only, as React's layout effects: a server render neither changes a model
+    // that may be shared by other requests, nor subscribes to it
+    onClient(() => {
+        sync(model, props);
+        onScopeDispose(() => {
+            stopped = true;
+        });
+        onScopeDispose(
+            model.subscribe((event) => {
+                if (event.meta?.source === CONTROLLED_META.source) return;
+                const { before, after } = event;
+                if (!sameSet(before.expandedItemIds, after.expandedItemIds)) {
+                    emit("update:expandedItemIds", [...after.expandedItemIds]);
+                }
+                if (!sameSet(before.selectedItemIds, after.selectedItemIds)) {
+                    emit("update:selectedItemIds", [...after.selectedItemIds]);
+                }
+                if (!sameSet(before.checkedItemIds, after.checkedItemIds)) {
+                    emit("update:checkedItemIds", [...after.checkedItemIds]);
+                }
+                // once the app's answer (a new prop value, or none) has reached the root
+                if (pending) return;
+                pending = true;
+                void nextTick(() => {
+                    pending = false;
+                    if (!stopped) sync(model, props);
+                });
+            }),
+        );
     });
-    onScopeDispose(
-        model.subscribe((event) => {
-            if (event.meta?.source === CONTROLLED_META.source) return;
-            const { before, after } = event;
-            if (!sameSet(before.expandedItemIds, after.expandedItemIds)) {
-                emit("update:expandedItemIds", [...after.expandedItemIds]);
-            }
-            if (!sameSet(before.selectedItemIds, after.selectedItemIds)) {
-                emit("update:selectedItemIds", [...after.selectedItemIds]);
-            }
-            if (!sameSet(before.checkedItemIds, after.checkedItemIds)) {
-                emit("update:checkedItemIds", [...after.checkedItemIds]);
-            }
-            // once the app's answer (a new prop value, or none) has reached the root
-            if (pending) return;
-            pending = true;
-            void nextTick(() => {
-                pending = false;
-                if (!stopped) sync(model, props);
-            });
-        }),
-    );
 }

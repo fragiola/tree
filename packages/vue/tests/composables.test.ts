@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { defineComponent, h, type PropType } from "vue";
+import { defineComponent, h, type PropType, ref } from "vue";
 import {
     createTreeRef,
     type ItemOf,
@@ -155,5 +155,25 @@ describe("the composables", () => {
         expect(tree.value?.engine.can("focus", { itemId: "app" })).toBe(true);
         wrapper.unmount();
         expect(tree.value).toBeNull();
+    });
+
+    it("useTreeState selects again when a reactive value its selector reads changes", async () => {
+        const model = filesModel();
+        const id = ref("app");
+        const Label = defineComponent({
+            setup() {
+                const label = useTreeState(
+                    (state) => state.items[id.value]?.label,
+                    { model },
+                );
+                return () =>
+                    h("output", { "data-testid": "label" }, label.value);
+            },
+        });
+        await render(() => h(Label));
+        expect(testId("label")).toHaveTextContent("app.ts");
+        id.value = "readme";
+        await settle();
+        expect(testId("label")).toHaveTextContent("readme.md");
     });
 });

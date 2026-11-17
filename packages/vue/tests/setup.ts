@@ -5,7 +5,8 @@ import { afterEach } from "vitest";
 // every wrapper mounted by a test unmounts after it, as Testing Library's cleanup does
 enableAutoUnmount(afterEach);
 afterEach(() => {
-    document.body.innerHTML = "";
+    // a test file in the node environment (server rendering) has no document
+    if (typeof document !== "undefined") document.body.innerHTML = "";
 });
 
 /** The height of a row (`Tree.ItemContent`) in the tests' fake layout. */
