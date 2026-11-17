@@ -5,7 +5,8 @@
 #   Package           `pnpm check:package`: builds and packs every package with pnpm, lints the
 #                     tarballs (dist-only exports, publint, attw), checks each adapter pins the
 #                     core's exact version, then installs each adapter into its own scratch app
-#                     outside the workspace that builds and loads its dev server (React's).
+#                     outside the workspace that builds and loads its dev server (React's,
+#                     Vue's and Angular's).
 #   Changesets        on a pull request, `pnpm changeset status` fails when the PR changes what a
 #                     package ships (`changedFilePatterns` in .changeset/config.json) without
 #                     adding a changeset. Skipped for the Version Packages PR (changeset-release/*),
@@ -13,7 +14,8 @@
 #   E2E               the Playwright suites, in parallel jobs: the playground (its fixtures, shell
 #                     and scenarios, against its dev server, which serves the packages from source)
 #                     and one job per framework's examples app (every `examples/<framework>` with a
-#                     playwright.config.ts, found by the Examples apps job), each running the
+#                     playwright.config.ts, found by the Examples apps job: React, Vue and
+#                     Angular), each running the
 #                     shared specs of examples/shared/e2e against its own embed, built against the
 #                     packages' dist.
 #   Site export       fragiola.com builds /tree from `pnpm site:export` (contract v1.2,

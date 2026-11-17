@@ -15,18 +15,19 @@ framework has an adapter, so **every piece of logic that isn't rendering lives i
 | `packages/core` | `@fragiola/tree` | the tree model (JSON document v1 and its JSON Schema, the command bus, commands with JSON Schemas, `get`/`is` queries, middleware, events), and the engine (DOM focus, the WAI-ARIA keyboard model with type-ahead, Pointer Events drag and drop with keyboard drag, the async children loader, announcements) | DOM only, zero runtime deps |
 | `packages/react` | `@fragiola/tree-react` | the `Tree.*` primitives (`Root`, `Items`, `Item`, `ItemContent`, `Group`, `Toggle`, `Checkbox`, `RenameInput`, `DropIndicator`, `LiveRegion`) and hooks (`useTree`, `useTreeItem`, `useTreeState`, `useTreeRef`, `createTreeRef`) over the core, and the core re-exported | the core (`workspace:*`, published as the exact version); peer `react`, `react-dom` (^19) |
 | `packages/vue` | `@fragiola/tree-vue` | the same `Tree.*` primitives as Vue 3.5 components (plain `.ts` render functions, `as` and a `render` scoped slot, default scoped slots for the recursion, `v-model:*-item-ids`), `typedTree<Types>()`, the composables (`useTree`, `useTreeItem`, `useTreeState`, `useTreeRef`, `createTreeRef`), and the core re-exported | the core (`workspace:*`, published as the exact version); peer `vue` (^3.5) |
-| `packages/angular` | `@fragiola/tree-angular` | the same primitives as Angular directives (Epic #14) | the core; peer `@angular/core` |
+| `packages/angular` | `@fragiola/tree-angular` | the same primitives as Angular standalone attribute directives on the consumer's elements (`[treeRoot]`, `ng-template[treeItems]` for the recursion, `[treeItem]`, `[treeItemContent]`, `[treeGroup]`, `[treeToggle]`, `[treeCheckbox]`, `input[treeRenameInput]`, `[treeDropIndicator]`, `[treeLiveRegion]`, the `TREE` array; signals, `host` bindings, zoneless), the injection functions (`injectTree`, `injectTreeItem`, `injectTreeState`), and the core re-exported. Built by ng-packagr (Angular Package Format, partial compilation, ESM only) on TypeScript 6.0.3, pinned in this package (the Angular compiler supports `>=6.0 <6.1`); published from its `dist` (`publishConfig.directory`, its manifest written by `scripts/publish-manifest.ts`) | the core (`workspace:*`, published as the exact version); peer `@angular/core` (^22) |
 | `examples/shared` | `examples-shared`, private | what every framework's examples share: the metadata (`src/meta/<id>.ts`), the two themes, the embed protocol, the manifest builder and loader generator, every Playwright spec | no framework |
 | `examples/react` | `examples-react`, private | the 13 React examples (`src/examples/<id>/`), the vendored Fragiola UI (`src/components`, `scripts/vendor-fragiola.ts`), the embed app | `@fragiola/tree-react`, Fragiola UI's stack |
 | `examples/vue` | `examples-vue`, private | the 13 examples in Vue (`src/examples/<id>/index.vue`, `styles.ts` copied from React's), the Vue kit (Dockable's, over Reka UI, with the React kit's classes; `src/styles` and `src/lib/cn.ts` copied from examples/react, `tests/vendored.test.ts`), the embed app; single-file components checked by `vue-tsc` on TypeScript 6.0.3, pinned in this app only | `@fragiola/tree-vue`, Vue 3.5, Reka UI, `@lucide/vue` |
+| `examples/angular` | `examples-angular`, private | the 13 examples in Angular (`src/examples/<id>/index.ts`, a default-exported standalone component with an inline template, and `styles.ts` copied from Vue's), the Angular kit (Dockable's clickable and switch, with the React kit's classes; `src/styles` and `src/lib/cn.ts` copied from examples/react, `tests/vendored.test.ts`), the embed app (Vite + `@analogjs/vite-plugin-angular`, zoneless); typechecked by `ngc` (strict templates) on TypeScript 6.0.3, pinned in this app only | `@fragiola/tree-angular`, Angular 22, `@lucide/angular` |
 | `apps/playground` | `playground`, private | every example live, dev-only scenarios (`src/scenarios/<area>/<id>.tsx`), unstyled fixtures for Playwright (`fixtures/<name>/`), the Inspector | `@fragiola/tree-react` |
 | `site` | `site`, private | the site export (`export.ts`, `contract.ts`, `dev.ts`, `dev-proxy.ts`, `sources.ts`), the pages fragiola.com/tree serves (`site/docs`), the repository's script tests | |
 
-Vue came with Epic #11; the Angular adapter comes with its Epic (#14), adding its package, its
-examples app (porting the 13 examples with the same ids, passing the shared specs unchanged), its
-CI job, its entry in `ADAPTERS` (`scripts/check-package.ts`), its framework in
-`site/project.json` and in `COMPLETE_FRAMEWORKS` (`examples/shared/e2e/available.ts`), as Vue
-did.
+Vue came with Epic #11 and Angular with Epic #14: each adapter has its package, its examples app
+(the 13 examples with the same ids, passing the shared specs unchanged), its CI e2e job (one per
+`examples/*/playwright.config.ts`), its entry in `ADAPTERS` (`scripts/check-package.ts`), its
+framework in `site/project.json` and in `COMPLETE_FRAMEWORKS` (`examples/shared/e2e/available.ts`):
+React, Vue and Angular all ship every example.
 
 **The Vue adapter** follows Dockable's (`../dockable/packages/vue`): the same primitive file
 names as `packages/react` (`root.ts`, `item.ts`, …), `utils/render.ts` / `primitive.ts` /
@@ -36,6 +37,26 @@ No function form of `class`/`style` (Dockable's choice): state looks go through 
 `render` slot. The engine is created once mounted; a server render neither subscribes to the
 model nor runs a command on it (`onClient` in `utils/render.ts`). Another `model` remounts the
 root. Biome's React hook rule (`useHookAtTopLevel`) is off for Vue code.
+
+**The Angular adapter** follows Dockable's (`../dockable/packages/angular`): one standalone
+attribute directive per primitive, in a file named as React's plus `.directive.ts`
+(`root.directive.ts`, `item.directive.ts`, …; `templates.directive.ts` holds the template
+contexts), classes with the `Directive` suffix (`TreeRootDirective`: the core already exports a
+`TreeItem` type), signal inputs, `host` bindings for the ARIA, `data-*` and listeners, the
+structural style applied by an effect (it wins over a static `style`), each part's `state()`
+through `exportAs`. `<ng-template [treeItems]="model" let-item>` replaces children functions (typed
+by the model or the JSON through `ngTemplateContextGuard`); a `[treeGroup]` with no template of
+its own renders its children with the enclosing one (detached views placed in the group,
+`utils/views.ts`), so the recursion is one template. The controlled lists are inputs plus
+`…Change` outputs, so `[(expandedItemIds)]` binds both ways and a one-way binding reverts (as
+React's controlled props). Behaviour parity: `packages/angular/tests/parity.test.ts` renders one
+document with React and Angular. The one difference: a directive is on the app's element, which
+exists where React renders nothing (a collapsed item's group, the rename input of an item not
+renaming, the drop indicator without a target); the directive empties and hides it
+(`display: none`), and an app that needs it out of the DOM wraps it in `@if` (examples/angular's
+drag-and-drop: `@if (tree.state().dragging)`). The engine is created after the first render
+(`afterNextRender`), the element registration runs after each render (`afterRenderEffect`).
+No zone.js anywhere.
 
 ## Non-negotiable rules
 
@@ -155,15 +176,15 @@ The words never swap meaning, in code, docs and examples.
 | `pnpm install` | install dependencies |
 | `pnpm check` | Biome lint + format + assist (non-mutating), then the source layout over `git ls-files` (`check:layout`, `scripts/check-layout.ts`), then builds the core and checks that `site/docs/api/commands.mdx` matches the registry (`check:commands`) |
 | `pnpm check:fix` | Biome check with auto-fix |
-| `pnpm typecheck` | `pnpm -r typecheck` (TypeScript 7, no emit) |
-| `pnpm test` | Vitest: `core` (node; the engine's files opt into jsdom), `react` (jsdom, Testing Library), `vue` (jsdom, `@vue/test-utils`; `parity.test.ts` renders React too), `playground`, `examples-shared`, `examples-react`, `examples-vue`, `site` (the export, the contract, `docs-reference.test.ts`, the scripts' tests) |
-| `pnpm build` | `pnpm -r build` (tsdown), then `scripts/check-dts.ts` (no `any` in the built declarations) |
-| `pnpm check:package` | builds the packages, packs them with pnpm, checks the packed `exports` are the repo's without the source condition, runs `publint` and `attw --profile esm-only` on the tarballs, then the smoke app of each adapter in `ADAPTERS` (React: a Vite + React app that installs only the tarball, typechecks, builds and loads its dev server; Vue: a Vite + Vue app of single-file components checked by `vue-tsc` on examples/vue's TypeScript) |
+| `pnpm typecheck` | `pnpm -r typecheck` (TypeScript 7, no emit; `examples/vue` runs `vue-tsc` on its own TypeScript 6.0.3; `packages/angular` and `examples/angular` run `ngc` with strict templates on their own TypeScript 6.0.3) |
+| `pnpm test` | Vitest: `core` (node; the engine's files opt into jsdom), `react` (jsdom, Testing Library), `vue` (jsdom, `@vue/test-utils`; `parity.test.ts` renders React too), `angular` (jsdom, `@analogjs/vitest-angular`, zoneless TestBed; `parity.test.ts` renders React too), `playground`, `examples-shared`, `examples-react`, `examples-vue`, `examples-angular`, `site` (the export, the contract, `docs-reference.test.ts`, the scripts' tests) |
+| `pnpm build` | `pnpm -r build` (tsdown; ng-packagr for the Angular package), then `scripts/check-dts.ts` (no `any` in the built declarations; the Angular compiler's `ɵ` metadata is ignored) |
+| `pnpm check:package` | builds the packages, packs them with pnpm, checks the packed `exports` are the repo's without the source condition, runs `publint` and `attw --profile esm-only` on the tarballs, then the smoke app of each adapter in `ADAPTERS` (React: a Vite + React app that installs only the tarball, typechecks, builds and loads its dev server; Vue: a Vite + Vue app of single-file components checked by `vue-tsc` on examples/vue's TypeScript; Angular: a Vite + `@analogjs/vite-plugin-angular` app with a standalone component checked by `ngc` (strict templates) on packages/angular's TypeScript 6.0.3). The Angular package is packed from its `dist` (`publishConfig.directory`): its packed `exports` are the repo's relative to it |
 | `pnpm changeset` | adds a changeset (`.changeset/*.md`): every PR that changes what a package ships (`changedFilePatterns` in `.changeset/config.json`) carries one, and CI's Changesets job fails one that does not; every package is in one `fixed` group (`@fragiola/*`) |
 | `pnpm release:version` | `changeset version`: only the release workflow runs it (the Version Packages PR); never commit a version bump by hand |
 | `pnpm dev` | the playground (`apps/playground`) on http://localhost:5173 (`PLAYGROUND_PORT` moves it): every example, the scenarios, the fixtures, the Inspector |
 | `pnpm e2e` | Playwright: the playground's suite (fixtures, shell, scenarios), then each examples app's run of the shared specs (`examples/shared/e2e`) against its production embed; build the packages first (`pnpm build`) |
-| `pnpm site:export --base /tree --out <dir>` | the site export (contract v1.2, `../www/CONTRACT.md`): pages, `examples.json`, `project.json` and the React and Vue embeds, validated by `site/contract.ts` |
+| `pnpm site:export --base /tree --out <dir>` | the site export (contract v1.2, `../www/CONTRACT.md`): pages, `examples.json`, `project.json` and the React, Vue and Angular embeds, validated by `site/contract.ts` |
 | `pnpm site:dev --base /tree --port 5183` | every framework's embed with hot reload under `/tree/embed/<framework>/`, for `www`'s dev server |
 
 **Dev ports.** The playground is 5173. The React embed alone (`pnpm --filter examples-react dev`)
@@ -171,7 +192,8 @@ and `pnpm site:dev` default to **5183**, the port `www` registers for `tree` (th
 after ui 5174, dockable 5180, data-grid 5181, grid-layout 5182); fragiola/www#32 adds
 `{ "slug": "tree", "devUrl": "http://localhost:5183" }` to `../www/projects.json`. The Vue embed
 alone (`pnpm --filter examples-vue dev`) defaults to 5184; `site:dev` runs each framework's embed
-on a free port behind its one port.
+on a free port behind its one port. The Angular embed alone (`pnpm --filter examples-angular dev`)
+defaults to 5185.
 
 **Releasing is a merge, and it is disabled today.** `.github/workflows/release.yml` is Dockable's
 (Version Packages PR, then npm trusted publishing with pnpm), gated on the repository variable
@@ -199,6 +221,12 @@ packages/react/     @fragiola/tree-react  src/index.ts, parts.ts (the Tree names
                     src/hooks/          one hook per file; internal.ts for those only the primitives call
                     src/utils/          merge-props.ts, use-render.ts (from Dockable), engine-facade.ts
                     tests/              named after behaviour (aria, contract, keyboard, dnd, …)
+packages/angular/   @fragiola/tree-angular  src/public-api.ts, and src/lib/: tree.ts (the TREE array), context.ts (the tokens),
+                    src/lib/directives/ one directive per file (root.directive.ts, item.directive.ts, …, templates.directive.ts)
+                    src/lib/inject/     one injection function per file
+                    src/lib/utils/      helpers.ts, views.ts, signals.ts (from Dockable), item-state.ts, controlled.ts, engine-facade.ts
+                    scripts/            publish-manifest.ts (dist/package.json)
+                    tests/              the React adapter's behaviour files, parity.test.ts, inject.test.ts, types/
 packages/vue/       @fragiola/tree-vue  src/index.ts, parts.ts, typed.ts (typedTree), context.ts, and
                     src/components/     one primitive per file, named as in React (root.ts, item.ts, …)
                     src/composables/    one composable per file; internal.ts for those only the primitives call
@@ -207,6 +235,7 @@ packages/vue/       @fragiola/tree-vue  src/index.ts, parts.ts, typed.ts (typedT
 examples/shared/    src/meta/, src/themes/, src/embed/, scripts/, e2e/ (every spec), tests/
 examples/react/     src/examples/<id>/ (index.tsx, styles.ts), src/examples/_kit/, src/components/ (vendored), src/embed/
 examples/vue/       src/examples/<id>/ (index.vue, tree.ts, *.vue, styles.ts), src/examples/_kit/ (React's), src/components/ (Vue kit), src/embed/
+examples/angular/   src/examples/<id>/ (index.ts, *.ts, styles.ts), src/examples/_kit/ (React's), src/components/ (Angular kit), src/embed/
 apps/playground/    src/shell/, src/scenarios/<area>/, src/inspector/, src/fixture/, fixtures/<name>/, e2e/
 site/               export.ts, contract.ts, dev.ts, dev-proxy.ts, sources.ts, project.json
                     docs/               the pages fragiola.com/tree serves (docs/api/commands.mdx is generated)
@@ -225,8 +254,7 @@ never npm.
 
 The docs and examples are served by `fragiola.com/tree`, built by the `www` repo from this repo's
 site export (`../www/CONTRACT.md` v1.2, `pnpm site:export`). This repo provides the pages
-(`site/docs`, sidebar `site/docs/config.json`), `site/project.json` (`frameworks: ["react", "vue"]`; Angular
-joins with its Epic), the gallery configuration (built from `examples/shared`) and one
+(`site/docs`, sidebar `site/docs/config.json`), `site/project.json` (`frameworks: ["react", "vue", "angular"]`), the gallery configuration (built from `examples/shared`) and one
 examples app per framework; the registration in `www` is fragiola/www#32.
 
 - Pages follow the contract: titles <= 60 characters, descriptions 50-160 characters, no `#` in
@@ -239,16 +267,17 @@ examples app per framework; the registration in `www` is fragiola/www#32.
 - The JSON model is documented in `site/docs/api/json-model.mdx`, the commands in the generated
   `site/docs/api/commands.mdx`. The examples' workarounds and the packages' known gaps are listed
   in `docs/docs-examples-gaps.md` and on `site/docs/limitations.mdx`.
-- **The examples** (`examples/react/src/examples/README.md`): 13 ids, final, that Vue (done) and
+- **The examples** (`examples/react/src/examples/README.md`): 13 ids, final, that Vue and
   Angular port in full: `hello-tree`, `file-explorer`, `multi-select`, `checkboxes`, `async-loading`,
   `rename`, `drag-and-drop`, `keyboard`, `controlled`, `save-restore`, `undo-redo`,
   `command-console`, `rtl`. The shared specs reach them only through `data-tree-part`,
   `data-tree-path`, roles, accessible names and test ids. Fragiola UI is vendored into the
   examples (committed copies), never a dependency of a package.
-- **Vue in the docs**: `<Framework name="vue">` blocks where the code differs (installation, your
-  first tree, composition, controlled state) and `site/docs/api/vue.mdx`, which maps every React
-  prop of the API pages onto Vue (`docs-reference.test.ts` checks it lists every Vue export and
-  part). The other guides show React code; their examples' Vue code is in the gallery.
+- **Every framework in the docs**: every page that shows framework code has a
+  `<Framework name="react">`, a `<Framework name="vue">` and a `<Framework name="angular">` block
+  (Epic #14), each written from (and typechecked like) that framework's examples. `site/docs/api/vue.mdx`
+  and `site/docs/api/angular.mdx` map every React prop of the API pages onto Vue and Angular
+  (`docs-reference.test.ts` checks they list every export and part of their package).
 
 ## Provenance
 
@@ -282,6 +311,12 @@ and the view are Fragiola's own.
   blanket `!` on every index access is not a fix.
 - Pin dependencies to exact versions published at least 7 days ago (`npm view <pkg> time`).
   TypeScript 7.0.2, Vitest 5.0.2, Biome 2.5.14, tsdown 0.23.0, Vite 8.3.0, pnpm 11, Node ≥ 24.
+  TypeScript is 7.0.2 everywhere but `examples/vue`, `packages/angular` and `examples/angular`, which
+  pin 6.0.3 (vue-tsc and the Angular compiler do not run on TypeScript 7); in the Angular folders
+  `@analogjs/vite-plugin-angular` gets it through a `packageExtensions` peer (`pnpm-workspace.yaml`).
+  Angular is Dockable's stack: Angular 22.2.5, `@angular/build` and ng-packagr 22.2.6, Analog's
+  plugins 2.9.6, `@lucide/angular` 1.70.0. The root pins Vite 8.3.0 too, so Vitest never picks
+  `@angular/build`'s Vite 8.3.5.
 - Commits are gitmoji-conventional: `✨ feat(core): …`, `🐛 fix(react): …`, `✅ test(core): …`,
   `🔧 chore: …`, `📝 docs: …`. Branches `<type>/epic-<n>-…`, worktrees under `.worktrees/`.
 - Code, docs, commit messages, issues and pull requests in English.
