@@ -8,6 +8,7 @@ export default defineConfig({
             "apps/playground",
             "examples/shared",
             "examples/react",
+            "examples/vue",
             "site",
         ],
     },

@@ -1,0 +1,29 @@
+<script setup lang="ts">
+import type { ItemOf } from "@fragiola/tree-vue";
+import { ChevronRight, File, Folder } from "@lucide/vue";
+import * as styles from "./styles";
+import { Tree, type Types } from "./tree";
+
+defineProps<{ item: ItemOf<Types> }>();
+</script>
+
+<template>
+    <Tree.Item :item="item" :class="styles.item">
+        <Tree.ItemContent :class="styles.row">
+            <!-- the chevron points to the inline end: mirrored in rtl (styles.ts) -->
+            <Tree.Toggle :class="styles.toggle">
+                <ChevronRight aria-hidden="true" />
+            </Tree.Toggle>
+            <Folder
+                v-if="item.kind === 'folder'"
+                aria-hidden="true"
+                :class="styles.folderIcon"
+            />
+            <File v-else aria-hidden="true" :class="styles.fileIcon" />
+            <span :class="styles.label">{{ item.label }}</span>
+        </Tree.ItemContent>
+        <Tree.Group v-slot="{ item: child }">
+            <ItemNode :item="child" />
+        </Tree.Group>
+    </Tree.Item>
+</template>

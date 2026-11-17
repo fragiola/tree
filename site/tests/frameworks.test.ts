@@ -19,7 +19,7 @@ import {
     readProject,
 } from "../sources.ts";
 
-// The export handles any number of frameworks (Tree ships React only today): one manifest and one embed per framework of
+// The export handles any number of frameworks (Tree ships React and Vue today): one manifest and one embed per framework of
 // project.json, each from its own app. A fake Vue app (two examples) stands in for a second one.
 
 let dirs: string[] = [];
@@ -53,7 +53,7 @@ const appOf = (vue: ExamplesApp) => (framework: Framework) =>
 describe("the frameworks of project.json", () => {
     it("are known frameworks; an unknown one throws", () => {
         // the site ships React only, for now; another framework is one more app and one more name
-        expect(frameworksOf(readProject())).toEqual(["react"]);
+        expect(frameworksOf(readProject())).toEqual(["react", "vue"]);
         expect(frameworksOf({ frameworks: ["react", "vue"] })).toEqual([
             "react",
             "vue",

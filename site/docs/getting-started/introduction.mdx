@@ -3,9 +3,10 @@ title: Introduction
 description: What the tree view packages give you (the behaviour, the keyboard model and the accessibility of a tree) and what stays yours.
 ---
 
-`@fragiola/tree-react` is a **headless** tree view for React 19: file explorers, outlines,
-navigation menus, nested settings and permission pickers. It ships the behaviour of a tree and its
-accessibility, as composable primitives over a framework-free core.
+Fragiola Tree (`@fragiola/tree-react`, `@fragiola/tree-vue`) is a **headless** tree view for
+React 19 and Vue 3.5: file explorers, outlines, navigation menus, nested settings and permission
+pickers. It ships the behaviour of a tree and its accessibility, as composable primitives over a
+framework-free core.
 
 <Callout type="info" title="Not on npm yet">
     The packages are not published on npm yet: these pages describe the upcoming first release.
@@ -45,12 +46,13 @@ The packages ship **no CSS, no icons, no text and no rendered menus**:
 
 ## How it is built
 
-Two packages, one per layer:
+A core, and one adapter per framework:
 
 | package | what it holds |
 | --- | --- |
 | `@fragiola/tree` | the core: the model (the document, its commands, `get`/`is` queries, middleware and events) and the engine (DOM focus, the keyboard, drag and drop, the async loader). No framework, zero runtime dependencies. |
 | `@fragiola/tree-react` | the `Tree.*` primitives and the hooks, and the whole core re-exported: a React app installs this one package. |
+| `@fragiola/tree-vue` | the same `Tree.*` primitives as Vue components and the composables, and the whole core re-exported: a Vue app installs this one package ([Vue primitives](/docs/api/vue)). |
 
 The model holds what is true with no screen (what is expanded, selected, checked, focused, being
 renamed); the engine is the one tree on screen (see [Model and engine](/docs/concepts/model-and-engine)).

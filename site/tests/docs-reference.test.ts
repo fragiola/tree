@@ -346,6 +346,54 @@ describe("the React reference", () => {
     });
 });
 
+describe("the Vue reference", () => {
+    const VUE_SRC = join(ROOT, "packages/vue/src");
+    const vueIndex = read(join(VUE_SRC, "index.ts"));
+    const vueParts = namedExports(read(join(VUE_SRC, "parts.ts")));
+    const mdx = page("vue");
+
+    it("re-exports the core and exports the Tree namespace from parts.ts", () => {
+        expect(vueIndex).toMatch(/^export \* from "@fragiola\/tree";$/m);
+        expect(vueIndex).toMatch(/export \* as Tree from "\.\/parts"/);
+    });
+
+    it("mentions every named export on api/vue.mdx", () => {
+        const names = namedExports(vueIndex).map((entry) => entry.name);
+        expect(names.length).toBeGreaterThan(0);
+        expect(names.filter((name) => !mentions(mdx, name))).toEqual([]);
+    });
+
+    it("lists every part as Tree.<Part> in its components table, the same parts as React's", () => {
+        expect(vueParts.map((entry) => entry.name).sort()).toEqual(
+            partExports.map((entry) => entry.name).sort(),
+        );
+        for (const { name } of vueParts) {
+            expect(mdx, `Tree.${name}`).toMatch(
+                new RegExp(`^\\| \`Tree\\.${name}\` \\|`, "m"),
+            );
+        }
+    });
+
+    it("lists every prop of Tree.Root and every event", () => {
+        const root = read(join(VUE_SRC, "components/root.ts"));
+        const fields = interfaceFields(root, "RootProps")?.fields ?? [];
+        expect(fields.length).toBeGreaterThan(10);
+        const row = mdx
+            .split("\n")
+            .find((line) => line.startsWith("| `Tree.Root` |"));
+        for (const field of fields) {
+            expect(row, field).toContain(`\`${field}\``);
+        }
+        for (const event of [
+            "update:expandedItemIds",
+            "update:selectedItemIds",
+            "update:checkedItemIds",
+        ]) {
+            expect(row, event).toContain(`\`${event}\``);
+        }
+    });
+});
+
 describe("the concept pages", () => {
     const componentSources = readdirSync(join(REACT_SRC, "components"))
         .map((file) => read(join(REACT_SRC, "components", file)))

@@ -14,6 +14,7 @@ document lists the root items, then every item by its id; a parent lists its chi
 `childItemIds`.
 
 ```ts title="files.ts"
+// in a Vue app, from "@fragiola/tree-vue"
 import type { TreeJson } from "@fragiola/tree-react";
 
 export type Types = { items: { folder: undefined; file: { size: number } } };
@@ -35,6 +36,8 @@ export const json: TreeJson<Types> = {
 on [The JSON model](/docs/api/json-model).
 
 ## The item component
+
+<Framework name="react">
 
 You own the recursion. An item renders its row (`Tree.ItemContent`), then its group
 (`Tree.Group`), which calls your function with each child, so the same component renders every
@@ -58,11 +61,54 @@ export function FileItem({ item }: { item: ItemOf<Types> }) {
 }
 ```
 
+</Framework>
+
+<Framework name="vue">
+
+You own the recursion. An item renders its row (`Tree.ItemContent`), then its group
+(`Tree.Group`), which renders its default slot with each child, so the same component (a
+single-file component refers to itself by its file name) renders every level. A template cannot
+pass a type argument: `typedTree<Types>()` gives the primitives typed by your registry, once.
+
+```ts title="tree.ts"
+import { typedTree } from "@fragiola/tree-vue";
+import type { Types } from "./files";
+
+export const Tree = typedTree<Types>();
+```
+
+```vue title="file-item.vue"
+<script setup lang="ts">
+import type { ItemOf } from "@fragiola/tree-vue";
+import type { Types } from "./files";
+import { Tree } from "./tree";
+
+defineProps<{ item: ItemOf<Types> }>();
+</script>
+
+<template>
+    <Tree.Item :item="item" class="item">
+        <Tree.ItemContent class="row">
+            <Tree.Toggle class="toggle">▸</Tree.Toggle>
+            <span>{{ item.label }}</span>
+            <small v-if="item.kind === 'file'">{{ item.data.size }} B</small>
+        </Tree.ItemContent>
+        <Tree.Group v-slot="{ item: child }">
+            <FileItem :item="child" />
+        </Tree.Group>
+    </Tree.Item>
+</template>
+```
+
+</Framework>
+
 `item.data` narrows on `item.kind`: inside `item.kind === "file"`, `item.data.size` is a
 `number`. `Tree.Toggle` expands and collapses on a press; the keyboard uses the arrows on the item.
 `Tree.Group` renders nothing while its item is collapsed.
 
 ## The root
+
+<Framework name="react">
 
 `Tree.Root` is the `role="tree"` element. Given `defaultTree`, it creates the model and keeps it;
 `Tree.Items` calls your function with each root item. The accessible name is yours:
@@ -83,6 +129,33 @@ export function FileTree() {
 
 `Tree.Items` and `Tree.Group` hand items to a function, and a function cannot infer the registry
 through context: give them the type argument (`<Tree.Items<Types>>`).
+
+</Framework>
+
+<Framework name="vue">
+
+`Tree.Root` is the `role="tree"` element. Given `default-tree`, it creates the model and keeps it;
+`Tree.Items` renders its default slot with each root item. The accessible name is yours:
+
+```vue title="file-tree.vue"
+<script setup lang="ts">
+import FileItem from "./file-item.vue";
+import { json } from "./files";
+import { Tree } from "./tree";
+</script>
+
+<template>
+    <Tree.Root :default-tree="json" aria-label="Project files" class="tree">
+        <Tree.Items v-slot="{ item }">
+            <FileItem :item="item" />
+        </Tree.Items>
+    </Tree.Root>
+</template>
+```
+
+`Tree` from `typedTree<Types>()` types the slots: `item` is an item of your registry.
+
+</Framework>
 
 ## The styles
 
@@ -117,6 +190,8 @@ The item is the element that takes DOM focus, so its focus ring is drawn on its 
 
 ## Changing the tree
 
+<Framework name="react">
+
 Every change is a command on the model. Create the model yourself to reach it from outside the
 tree, and pass it as `model`:
 
@@ -145,6 +220,41 @@ export function FileTree() {
     );
 }
 ```
+
+</Framework>
+
+<Framework name="vue">
+
+Every change is a command on the model. Create the model yourself (once, outside Vue's
+reactivity: never in `ref()` or `reactive()`) to reach it from outside the tree, and pass it as
+`model`:
+
+```vue title="file-tree.vue"
+<script setup lang="ts">
+import { createTreeModel } from "@fragiola/tree-vue";
+import FileItem from "./file-item.vue";
+import { json, type Types } from "./files";
+import { Tree } from "./tree";
+
+const model = createTreeModel<Types>(json);
+const addFile = () =>
+    model.run("item.add", {
+        item: { kind: "file", label: "notes.md", data: { size: 0 } },
+        to: { parentItemId: "src" },
+    });
+</script>
+
+<template>
+    <button type="button" @click="addFile">New file in src</button>
+    <Tree.Root :model="model" aria-label="Project files">
+        <Tree.Items v-slot="{ item }">
+            <FileItem :item="item" />
+        </Tree.Items>
+    </Tree.Root>
+</template>
+```
+
+</Framework>
 
 `model.run` returns `{ ok: true, value }` or `{ ok: false, error }`: it never throws on bad
 input. Every command is listed on [Commands](/docs/api/commands).

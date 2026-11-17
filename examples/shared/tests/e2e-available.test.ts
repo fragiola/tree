@@ -41,8 +41,8 @@ describe("a spec's examples", () => {
 describe("a complete framework", () => {
     const available = ["hello-tree"];
 
-    it("is React, until the Vue and Angular Epics port the examples", () => {
-        expect(COMPLETE_FRAMEWORKS).toEqual(["react"]);
+    it("is React and Vue, until the Angular Epic ports the examples", () => {
+        expect(COMPLETE_FRAMEWORKS).toEqual(["react", "vue"]);
     });
 
     it("fails a spec whose example it lacks, instead of skipping it", () => {
@@ -53,8 +53,8 @@ describe("a complete framework", () => {
     });
 
     it("skips for a framework that ships a subset", () => {
-        expect(skipOrFail("vue", available, ["rtl"])).toBe(
-            "vue has no rtl example",
+        expect(skipOrFail("angular", available, ["rtl"])).toBe(
+            "angular has no rtl example",
         );
     });
 });

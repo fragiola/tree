@@ -78,6 +78,16 @@
                     }
                 }
             }
+        },
+        {
+            "includes": ["packages/vue/**", "examples/vue/**"],
+            "linter": {
+                "rules": {
+                    "correctness": {
+                        "useHookAtTopLevel": "off"
+                    }
+                }
+            }
         }
     ]
 }
