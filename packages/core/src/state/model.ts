@@ -20,7 +20,12 @@ import { isObject, validate } from "../schema/validator";
 import { Draft } from "./draft";
 import { type CreateId, IdSource } from "./ids";
 import type { TreeJson } from "./json";
-import { buildState, type DataSchemas, TreeValidationError } from "./load";
+import {
+    buildState,
+    type DataSchemas,
+    dataIssues,
+    TreeValidationError,
+} from "./load";
 import {
     type ModelGetKey,
     type ModelGetPayload,
@@ -157,6 +162,8 @@ class Model<T extends TreeTypes> implements TreeModel<T> {
     private readonly middleware: Middleware<T>[] = [];
     private readonly listeners = new Set<CommandListener<T>>();
     private inFlight = 0;
+    /** dry runs under way (`can`, `check`): a command a middleware issues then is one too */
+    private dryRuns = 0;
     private readonly queue: (() => void)[] = [];
     private readonly events: CommandEvent<T>[] = [];
     private delivering = false;
@@ -298,6 +305,10 @@ class Model<T extends TreeTypes> implements TreeModel<T> {
         options: RunOptions | undefined,
         prefix: string,
     ): CommandResult<unknown> {
+        if (this.dryRuns > 0) {
+            // issued from a middleware during `can` / `check`: nothing may commit, so it is a dry run
+            return this.execute(command, payload, options ?? {}, true, prefix);
+        }
         if (this.inFlight > 0) {
             // issued from a middleware: runs once the current command committed
             this.queue.push(() => {
@@ -339,7 +350,9 @@ class Model<T extends TreeTypes> implements TreeModel<T> {
             steps: [],
             thrown: undefined,
         };
-        if (!dryRun) {
+        if (dryRun) {
+            this.dryRuns++;
+        } else {
             this.inFlight++;
         }
         let ran: { result: CommandResult<unknown>; payload: unknown };
@@ -352,7 +365,9 @@ class Model<T extends TreeTypes> implements TreeModel<T> {
                 false,
             );
         } finally {
-            if (!dryRun) {
+            if (dryRun) {
+                this.dryRuns--;
+            } else {
                 this.inFlight--;
             }
         }
@@ -452,10 +467,8 @@ class Model<T extends TreeTypes> implements TreeModel<T> {
 
         const reduceContext: ReduceContext = {
             draft,
-            validateData: (kind, data, path) => {
-                const schema = this.dataSchemas?.[kind];
-                return schema && invalid(validate(schema, data, path));
-            },
+            validateData: (kind, data, path) =>
+                invalid(dataIssues(this.dataSchemas, kind, data, path)),
             loadTree: (json, path) => {
                 const built = buildState(
                     json,

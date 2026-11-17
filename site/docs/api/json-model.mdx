@@ -92,6 +92,8 @@ The state the model holds, and the document it writes back, is the loaded docume
 
 - every setting filled in from the defaults, and every list and single id present;
 - an expanded leaf dropped from `expandedItemIds`;
+- a `loading` item made `unloaded` again (a load is never saved: the engine starts it again);
+- a disabled item dropped from the selection and from `renamingItemId`;
 - a `loaded` parent given an empty `childItemIds` when it had none;
 - in `cascade` mode, the checks made consistent: a listed parent checks all its descendants, then
   a parent with children is checked exactly when all of them are (a parent with only some of its

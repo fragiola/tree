@@ -188,4 +188,44 @@ describe("async children", () => {
             },
         });
     });
+
+    it("an expanded item reset during its load loads again; the old load is aborted", async () => {
+        const model = filesModel();
+        const loader = deferredLoader();
+        engine = createTreeEngine(model, { loadChildren: loader.loadChildren });
+        model.run("item.expand", { itemId: "lib" });
+        model.run("item.reset-children", { itemId: "lib" });
+        expect(loader.calls[0]?.signal.aborted).toBe(true);
+        expect(loader.calls.map((call) => call.itemId)).toEqual(["lib", "lib"]);
+        loader.calls[0]?.resolve([
+            { id: "old", kind: "file", label: "old", data: { size: 1 } },
+        ]);
+        loader.calls[1]?.resolve([
+            { id: "new", kind: "file", label: "new", data: { size: 1 } },
+        ]);
+        await flush();
+        expect(
+            model
+                .get("child-items-by", { itemId: "lib" })
+                .map((item) => item.id),
+        ).toEqual(["new"]);
+    });
+
+    it("a new document drops the loads of the old one, and a saved load starts again", async () => {
+        const model = filesModel();
+        const loader = deferredLoader();
+        engine = createTreeEngine(model, { loadChildren: loader.loadChildren });
+        model.run("item.expand", { itemId: "lib" });
+        const saved = model.get("tree-json");
+        expect(saved.items.lib?.childrenStatus).toBe("loading");
+        model.run("tree.load", { json: saved });
+        // a load is never saved: the document loads it again
+        expect(loader.calls[0]?.signal.aborted).toBe(true);
+        expect(loader.calls).toHaveLength(2);
+        loader.calls[0]?.resolve([
+            { id: "stale", kind: "file", label: "s", data: { size: 1 } },
+        ]);
+        await flush();
+        expect(model.get("item-by", { id: "stale" })).toBeUndefined();
+    });
 });

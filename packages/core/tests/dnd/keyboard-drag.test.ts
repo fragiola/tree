@@ -102,4 +102,35 @@ describe("a keyboard drag", () => {
         expect(m.engine.run("cancel-drag").ok).toBe(true);
         expect(m.engine.can("cancel-drag")).toBe(false);
     });
+
+    it("does not start while a pointer press is under way", () => {
+        const { m } = setup();
+        const view = document.defaultView as Window & typeof globalThis;
+        m.content("app").dispatchEvent(
+            new view.PointerEvent("pointerdown", {
+                bubbles: true,
+                pointerId: 1,
+                isPrimary: true,
+                button: 0,
+                clientX: 5,
+                clientY: 25,
+            }),
+        );
+        expect(
+            m.engine.check("start-keyboard-drag", { itemIds: ["readme"] }),
+        ).toMatchObject({
+            ok: false,
+            error: { code: "refused" },
+        });
+        document.dispatchEvent(
+            new view.PointerEvent("pointerup", {
+                pointerId: 1,
+                clientX: 5,
+                clientY: 25,
+            }),
+        );
+        expect(
+            m.engine.can("start-keyboard-drag", { itemIds: ["readme"] }),
+        ).toBe(true);
+    });
 });

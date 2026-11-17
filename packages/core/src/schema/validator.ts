@@ -1,6 +1,54 @@
 // From Dockable (fragiola/dockable, packages/core/src/schema/validator.ts), same author and licence.
 import type { JsonSchema, ValidationIssue } from "./types";
 
+/**
+ * The problems of a value that is not plain JSON (a cycle, a function, `undefined` inside it, a
+ * BigInt, a non-finite number, a class instance): data the state cannot hold or write back.
+ */
+export function jsonIssues(value: unknown, path = ""): ValidationIssue[] {
+    const issues: ValidationIssue[] = [];
+    const seen = new Set<object>();
+    const visit = (node: unknown, at: string) => {
+        if (
+            node === null ||
+            typeof node === "string" ||
+            typeof node === "boolean"
+        )
+            return;
+        if (typeof node === "number") {
+            if (!Number.isFinite(node))
+                issues.push({ path: at, message: "must be a finite number" });
+            return;
+        }
+        if (typeof node !== "object") {
+            issues.push({
+                path: at,
+                message: `must be JSON, not ${typeof node}`,
+            });
+            return;
+        }
+        if (seen.has(node)) {
+            issues.push({ path: at, message: "must be JSON, not a cycle" });
+            return;
+        }
+        const prototype = Object.getPrototypeOf(node);
+        if (
+            !Array.isArray(node) &&
+            prototype !== Object.prototype &&
+            prototype !== null
+        ) {
+            issues.push({ path: at, message: "must be a plain object" });
+            return;
+        }
+        seen.add(node);
+        for (const [key, child] of Object.entries(node))
+            visit(child, joinPointer(at, key));
+        seen.delete(node);
+    };
+    if (value !== undefined) visit(value, path);
+    return issues;
+}
+
 /** Escapes a key for a JSON pointer (RFC 6901). */
 export function pointerSegment(key: string | number): string {
     return String(key).replace(/~/g, "~0").replace(/\//g, "~1");

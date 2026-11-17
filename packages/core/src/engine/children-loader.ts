@@ -1,8 +1,9 @@
 // The async children lifecycle. When an item whose children come from the loader is expanded and
 // visible while `unloaded`, the engine runs `item.set-children-status loading`, awaits the app's
 // `loadChildren(item, { signal })`, then `item.set-children` (or `status: error`). Collapsing
-// during a load aborts nothing: the children still arrive. `destroy()` aborts every load, and an
-// aborted load runs no command. The package itself never loads anything.
+// during a load aborts nothing: the children still arrive. A load whose item leaves `loading` (a
+// reset, a removal, a new document) is aborted and runs no command, nor does any load after
+// `destroy()`. The package itself never loads anything.
 import type { TreeItemJson } from "../state/json";
 import type { AnyTypes, ItemOf, TreeTypes } from "../state/types";
 import type { EngineHost } from "./host";
@@ -30,6 +31,13 @@ export class ChildrenLoader {
     scan(): void {
         if (!this.loadChildren || this.host.isDestroyed()) return;
         const { model } = this.host;
+        // a load whose item left "loading" (a reset, a removal, a new document) is stale: abort it
+        for (const [itemId, controller] of [...this.loads]) {
+            if (model.get("children-status-by", { itemId }) !== "loading") {
+                controller.abort();
+                this.loads.delete(itemId);
+            }
+        }
         for (const itemId of model.state.expandedItemIds) {
             if (
                 model.get("children-status-by", { itemId }) === "unloaded" &&
@@ -71,9 +79,12 @@ export class ChildrenLoader {
             if (this.loads.get(itemId) === controller)
                 this.loads.delete(itemId);
             if (controller.signal.aborted || this.host.isDestroyed()) return;
-            // a reset, a removal or a new document while it loaded: the result is stale
-            if (model.get("children-status-by", { itemId }) !== "loading")
+            // a reset, a removal or a new document while it loaded: the result is stale, and the
+            // item may need a load of its own
+            if (model.get("children-status-by", { itemId }) !== "loading") {
+                this.scan();
                 return;
+            }
             apply();
         };
         let pending: Promise<readonly TreeItemJson[]>;

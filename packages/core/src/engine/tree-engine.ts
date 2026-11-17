@@ -375,7 +375,9 @@ class Engine<T extends TreeTypes> implements TreeEngine<T>, EngineHost {
                 );
             }
         }
-        if (this.dragState) return fail("refused", "a drag is under way");
+        if (this.dragState || this.pointerDrag.pressed) {
+            return fail("refused", "a drag is under way");
+        }
         if (dryRun) return ok({ itemIds: [...itemIds] });
         return this.keyboardDrag.start(itemIds)
             ? ok({ itemIds: [...itemIds] })

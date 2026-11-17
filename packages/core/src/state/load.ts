@@ -2,7 +2,7 @@
 // per item, no cycle, the selection mode), then the normalized state.
 import { treeSchema } from "../schema/tree";
 import type { JsonSchema, ValidationIssue } from "../schema/types";
-import { joinPointer, validate } from "../schema/validator";
+import { joinPointer, jsonIssues, validate } from "../schema/validator";
 import { normalizeChecks } from "./check-state";
 import { Draft, deepFreeze } from "./draft";
 import { IdSource } from "./ids";
@@ -45,6 +45,8 @@ export function dataIssues(
     data: unknown,
     path: string,
 ): ValidationIssue[] {
+    const notJson = jsonIssues(data, path);
+    if (notJson.length > 0) return notJson;
     const schema = dataSchemas?.[kind];
     return schema ? validate(schema, data, path) : [];
 }
@@ -244,7 +246,12 @@ export function buildState(
 
     const items: Record<string, TreeItem> = {};
     for (const [key, item] of Object.entries(input.items)) {
-        items[key] = itemFromJson(key, item);
+        const loaded = itemFromJson(key, item);
+        // a load is never saved with the document: a "loading" item loads again
+        items[key] =
+            loaded.childrenStatus === "loading"
+                ? { ...loaded, childrenStatus: "unloaded" }
+                : loaded;
     }
     const settings: TreeSettings = {
         ...DEFAULT_SETTINGS,
@@ -259,11 +266,18 @@ export function buildState(
             const item = items[id];
             return item !== undefined && !isLeaf(item);
         }),
-        selectedItemIds: [...(input.selectedItemIds ?? [])],
+        // a disabled item is never selected nor renamed
+        selectedItemIds: (input.selectedItemIds ?? []).filter(
+            (id) => items[id]?.disabled !== true,
+        ),
         checkedItemIds: [...(input.checkedItemIds ?? [])],
         selectionAnchorItemId: input.selectionAnchorItemId ?? null,
         focusedItemId: input.focusedItemId ?? null,
-        renamingItemId: input.renamingItemId ?? null,
+        renamingItemId:
+            input.renamingItemId != null &&
+            items[input.renamingItemId]?.disabled !== true
+                ? input.renamingItemId
+                : null,
     };
     // loading draws no id: a document's ids are its keys
     const draft = new Draft(base, new IdSource());

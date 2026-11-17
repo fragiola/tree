@@ -312,6 +312,11 @@ export class PointerDrag {
         return this.session !== undefined;
     }
 
+    /** A press (not yet a drag) or a drag is under way. */
+    get pressed(): boolean {
+        return this.press !== undefined;
+    }
+
     private end(): void {
         const session = this.session;
         const press = this.press;

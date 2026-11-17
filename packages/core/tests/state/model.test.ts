@@ -366,4 +366,82 @@ describe("the command catalogue", () => {
         }
         expect(commands.map((info) => info.name)).toContain("item.move");
     });
+
+    describe("found in review", () => {
+        it("a command a middleware runs during can or check commits nothing", () => {
+            const model = filesModel();
+            const events: unknown[] = [];
+            model.subscribe((event) => events.push(event));
+            model.use((ctx, next) => {
+                if (ctx.command === "item.select")
+                    model.run("item.expand", { itemId: "utils" });
+                return next();
+            });
+            expect(model.can("item.select", { itemId: "app" })).toBe(true);
+            expect(model.check("item.select", { itemId: "app" }).ok).toBe(true);
+            expect(events).toEqual([]);
+            expect(model.is("item-expanded", { itemId: "utils" })).toBe(false);
+        });
+
+        it("data that is not plain JSON is an invalid payload, never a throw", () => {
+            const model = filesModel();
+            const cyclic: Record<string, unknown> = { size: 1 };
+            cyclic.self = cyclic;
+            expect(
+                model.run("item.set-data", {
+                    itemId: "app",
+                    data: cyclic as never,
+                }),
+            ).toMatchObject({
+                ok: false,
+                error: { code: "invalid_payload", path: "/data/self" },
+            });
+            expect(
+                model.run("item.add", {
+                    item: {
+                        kind: "file",
+                        label: "x",
+                        data: { size: 1n } as never,
+                    },
+                    to: { parentItemId: null },
+                }),
+            ).toMatchObject({
+                ok: false,
+                error: { code: "invalid_payload", path: "/item/data/size" },
+            });
+            expect(
+                model.run("item.set-data", {
+                    itemId: "app",
+                    data: { size: () => 1 } as never,
+                }),
+            ).toMatchObject({ ok: false, error: { code: "invalid_payload" } });
+        });
+
+        it("a disabled item is never selected nor renamed", () => {
+            const model = filesModel({
+                settings: { selectionMode: "multiple" },
+                selectedItemIds: ["app", "readme"],
+            });
+            model.run("item.select", { itemId: "app", mode: "toggle" });
+            model.run("item.select", { itemId: "app", mode: "toggle" });
+            model.run("item.set-flags", { itemId: "app", disabled: true });
+            expect(model.state.selectedItemIds).toEqual(["readme"]);
+            expect(model.state.selectionAnchorItemId).toBeNull();
+            const loaded = filesModel({
+                items: {
+                    ...filesModel().get("tree-json").items,
+                    app: {
+                        kind: "file",
+                        label: "app.ts",
+                        data: { size: 1 },
+                        disabled: true,
+                    },
+                },
+                selectedItemIds: ["app"],
+                renamingItemId: "app",
+            });
+            expect(loaded.state.selectedItemIds).toEqual([]);
+            expect(loaded.state.renamingItemId).toBeNull();
+        });
+    });
 });
