@@ -7,6 +7,7 @@ import {
     Tree,
     type TreeModel,
     useTree,
+    useTreeItemRename,
     veto,
 } from "@fragiola/tree-react";
 import { ChevronRight, File, Folder, FolderOpen } from "lucide-react";
@@ -97,6 +98,9 @@ interface FileItemProps {
 function FileItem({ item, ...props }: FileItemProps) {
     const { model } = useTree<FileTypes>();
     const { errorId, onError, onEdit } = props;
+    // the rename wired onto the app's own input: it starts with the label, focused and selected;
+    // Enter commits, Escape cancels, and a refused label keeps it open (`aria-invalid`)
+    const rename = useTreeItemRename(item, { onRenameError: onError });
     return (
         <Tree.Item item={item} className={styles.item}>
             <Tree.ItemContent
@@ -118,14 +122,19 @@ function FileItem({ item, ...props }: FileItemProps) {
                     <File aria-hidden className={styles.fileIcon} />
                 )}
                 <span className={styles.label}>{item.label}</span>
-                {/* rendered only while this item is renaming; a refused label keeps it open */}
-                <Tree.RenameInput
-                    aria-label={`Rename ${item.label}`}
-                    aria-describedby={errorId}
-                    className={styles.input}
-                    onRenameError={onError}
-                    onChange={onEdit}
-                />
+                {/* rendered only while this item is renaming */}
+                {rename.state.renaming && (
+                    <input
+                        {...rename.props}
+                        aria-label={`Rename ${item.label}`}
+                        aria-describedby={errorId}
+                        className={styles.input}
+                        onChange={(event) => {
+                            rename.props.onChange?.(event);
+                            onEdit();
+                        }}
+                    />
+                )}
             </Tree.ItemContent>
             <Tree.Group<FileTypes>>
                 {(child) => <FileItem item={child} {...props} />}

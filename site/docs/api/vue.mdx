@@ -54,7 +54,7 @@ export const Tree = typedTree<Types>();
 | `expandedItemIds` + `onExpandedItemIdsChange` | `v-model:expanded-item-ids` (or `:expanded-item-ids` with `@update:expanded-item-ids`) |
 | `selectedItemIds` + `onSelectedItemIdsChange` | `v-model:selected-item-ids` |
 | `checkedItemIds` + `onCheckedItemIdsChange` | `v-model:checked-item-ids` |
-| `onRenameError` (`Tree.RenameInput`) | `@rename-error` |
+| `useTreeItemRename(item, { onRenameError })` | the same composable and option; `@input` of your own runs next to its listener |
 | `treeRef={tree}` | `:tree-ref="tree"`; the handle is `tree.value`, in the template too (React: `tree.current`) |
 | `defaultTree`, `expandOnClick`, `keyMap`, … | the same props in kebab-case (`default-tree`, `expand-on-click`, `key-map`); a boolean prop takes a bare attribute (`checkboxes`) |
 | `<Tree.Items<Types>>` and the other type arguments | `typedTree<Types>().Items` |
@@ -73,8 +73,6 @@ Every part is `Tree.<Part>`, with the props of its React page except `render`, `
 | `Tree.ItemContent` | none | default `{ state }` | none |
 | `Tree.Group` | `keepMounted` | default `{ item }` | none |
 | `Tree.Toggle` | none | default `{ state }` | none |
-| `Tree.Checkbox` | none | default `{ state }` | none |
-| `Tree.RenameInput` | none | none | `renameError` |
 | `Tree.DropIndicator` | none | none | none |
 | `Tree.LiveRegion` | none | none | none |
 
@@ -91,6 +89,7 @@ The hooks of [the React reference](/docs/api/hooks), as composables. Call them i
 | `useTree<T>()` | `{ model, engine }`, a `UseTreeResult<T>` (plain values: another model remounts the root) |
 | `useTreeState(selector, options?)` | a read-only ref of the selection, changed only when `isEqual` says it changed (`UseTreeStateOptions`: `model`, `isEqual`); it selects again when a reactive value the selector reads changes |
 | `useTreeItem(item)` | `UseTreeItemResult`: `state` (`TreeItemState`) and `props` (`TreeItemElementProps`: the ARIA, `tabindex`, `data-*`, `onFocus`, the structural style and the template `ref`), as computed refs; bind `v-bind="props"` on your element. `item` is a value, a ref or a getter |
+| `useTreeItemRename(item, options?)` | `UseTreeItemRenameResult`: `state` (`TreeItemRenameState`: `renaming`, `invalid`, `error`) and `props` (`TreeItemRenameProps`: the template `ref`, which writes the label and focuses and selects it, `aria-invalid`, `data-invalid`, `onKeydown`, `onBlur`, `onInput`), as computed refs; render your input with `v-if="state.renaming"` and bind `v-bind="props"`. `item` is a value, a ref or a getter; `UseTreeItemRenameOptions`: `onRenameError` |
 | `useTreeRef<T>()` | a `TreeRef<T>`, whose read-only, reactive `value` is the root's `TreeHandle` (`model`, `engine`) while it is mounted, `null` otherwise. It is not a Vue ref, so a template does not unwrap it: `:tree-ref="tree"` passes it, and the template reads `tree.value` |
 | `createTreeRef<T>()` | the same tree ref, anywhere (a module, a test) |
 | `useTreeVirtualWindow()` | a computed ref of the root's `VirtualWindow` (the rows a virtualized tree renders), `null` before it mounts and without `virtual` |
@@ -105,11 +104,11 @@ Each part exports its props and its slots, named as in React, and its state and 
 has them: `RootProps`, `RootSlots`, `RootState`, `RootEmits`, `ItemsProps`, `ItemsSlots`,
 `VirtualItemsProps`, `VirtualItemsSlots`,
 `ItemProps`, `ItemSlots`, `ItemContentProps`, `ItemContentSlots`, `GroupProps`, `GroupSlots`,
-`ToggleProps`, `ToggleSlots`, `CheckboxProps`, `CheckboxSlots`, `RenameInputProps`,
-`RenameInputSlots`, `RenameInputState`, `RenameInputEmits`, `DropIndicatorProps`,
+`ToggleProps`, `ToggleSlots`, `DropIndicatorProps`,
 `DropIndicatorSlots`, `DropIndicatorState`, `LiveRegionProps`, `LiveRegionSlots`,
 `LiveRegionState`, `TreeItemState`, `TreeItemElementProps`, `UseTreeResult`, `UseTreeItemResult`,
-`UseTreeStateOptions`, `TreeHandle`, `TreeRef`.
+`UseTreeStateOptions`, `TreeItemRenameState`, `TreeItemRenameProps`, `UseTreeItemRenameOptions`,
+`UseTreeItemRenameResult`, `TreeHandle`, `TreeRef`.
 
 | type | description |
 | --- | --- |

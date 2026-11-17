@@ -226,9 +226,9 @@ functions):
 | `selected` | `boolean` | it is part of the selection |
 | `focused` | `boolean` | it is the focused item (model data: the roving tab stop as stored) |
 | `tabStop` | `boolean` | it is the roving tab stop: the one item with `tabindex` 0 |
-| `checkState` | `CheckState`: `"checked" \| "unchecked" \| "mixed"` | its checkbox |
-| `checked` | `boolean` | its checkbox is checked (not mixed) |
-| `indeterminate` | `boolean` | its checkbox is mixed: only some of its descendants are checked |
+| `checkState` | `CheckState`: `"checked" \| "unchecked" \| "mixed"` | its check (`mixed` only when the root has `checkboxes`); your check control reads it |
+| `checked` | `boolean` | it is checked (not mixed) |
+| `indeterminate` | `boolean` | it is mixed: only some of its descendants are checked |
 | `renaming` | `boolean` | its label is being edited |
 | `loading` | `boolean` | its children are being loaded |
 | `loadError` | `boolean` | the last load of its children failed |
@@ -237,6 +237,97 @@ functions):
 | `dragging` | `boolean` | it is being dragged |
 | `dropTarget` | `boolean` | the drop target of the drag under way is relative to it |
 | `dropPosition` | `DropPosition \| undefined` | while it is the drop target: `before`, `after` or `inside` |
+
+## `useTreeItemRename`
+
+```ts
+function useTreeItemRename<T extends TreeTypes = AnyTypes>(
+    item: ItemOf<T>,
+    options?: UseTreeItemRenameOptions,
+): UseTreeItemRenameResult;
+```
+
+An item's rename, wired onto an input of yours: the part hook of the label editor, with no
+element of its own. Render your input only while `state.renaming`, spread `props` on it and name
+it. It opens with the label, focused and selected. Enter commits (`engine.run("commit-rename")`)
+and Escape cancels (`engine.run("cancel-rename")`), and focus goes back to the item. Leaving it
+commits, or cancels when refused, and leaves focus where it went. A refused commit keeps it open
+with `aria-invalid` and `data-invalid`. See the [rename guide](/docs/guides/rename).
+
+<Framework name="react">
+
+```tsx
+function Label({ item }: { item: ItemOf<Types> }) {
+    const { state, props } = useTreeItemRename(item);
+    if (!state.renaming) return <span>{item.label}</span>;
+    return <input {...props} aria-label={`Rename ${item.label}`} />;
+}
+```
+
+To add a handler of your own on the input, call the hook's handler first (`props.onChange?.(event)`).
+
+</Framework>
+
+<Framework name="vue">
+
+```vue
+<script setup lang="ts">
+import { type ItemOf, useTreeItemRename } from "@fragiola/tree-vue";
+
+const props = defineProps<{ item: ItemOf<Types> }>();
+// the item as a value, a ref or a getter; state and props are computed refs
+const { state, props: inputProps } = useTreeItemRename(() => props.item);
+</script>
+
+<template>
+    <input v-if="state.renaming" v-bind="inputProps" :aria-label="`Rename ${item.label}`" />
+    <span v-else>{{ item.label }}</span>
+</template>
+```
+
+The input starts with the label when it mounts (`props` carries no `value`, so what you type
+survives a re-render); a listener of your own (`@input`) runs next to the composable's.
+
+</Framework>
+
+<Framework name="angular">
+
+In Angular, the directive on your own input is this hook: `input[treeItemRename]`, inside an
+item, rendered with `@if`. It gives `state()` through `exportAs: "treeItemRename"` and emits
+`(renameError)`.
+
+```html
+<div [treeItem]="item" #node="treeItem">
+    @if (node.state().renaming) {
+        <input treeItemRename [attr.aria-label]="'Rename ' + item.label" />
+    } @else {
+        <span>{{ item.label }}</span>
+    }
+</div>
+```
+
+</Framework>
+
+`UseTreeItemRenameOptions`:
+
+| field | type | description |
+| --- | --- | --- |
+| `onRenameError` | `(error: CommandError) => void` | called when a commit is refused (an empty label, a middleware's veto) |
+
+`UseTreeItemRenameResult`:
+
+| field | type | description |
+| --- | --- | --- |
+| `state` | `TreeItemRenameState` | the rename's state (below) |
+| `props` | `TreeItemRenameProps` | spread onto your input: its ref (focus and selection), `defaultValue`, the key, blur and change handlers, `aria-invalid`, `data-invalid` |
+
+`TreeItemRenameState`:
+
+| field | type | description |
+| --- | --- | --- |
+| `renaming` | `boolean` | the item's label is being edited (`item.start-rename`, F2): render your input |
+| `invalid` | `boolean` | the last commit was refused (an empty label, a middleware's veto) |
+| `error` | `CommandError \| undefined` | why the last commit was refused |
 
 ## `useTreeRef`
 

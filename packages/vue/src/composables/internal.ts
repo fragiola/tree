@@ -25,8 +25,7 @@ export function treeItemState(
         parent === undefined
             ? state.rootItemIds.length
             : (parent.childItemIds?.length ?? 0);
-    // the mixed state walks the item's subtree: only a tree with checkboxes pays for it (the
-    // Checkbox part reads it on its own)
+    // the mixed state walks the item's subtree: only a tree with checkboxes pays for it
     const checkState: CheckState = context.checkboxes.value
         ? model.get("check-state-by", { itemId })
         : model.is("item-checked", { itemId })

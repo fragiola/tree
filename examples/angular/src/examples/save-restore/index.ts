@@ -68,7 +68,7 @@ function restore(): { model: TreeModel<FileTypes>; restored: boolean } {
                 [class]="styles.root"
             >
                 <ng-template [treeItems]="model" let-item>
-                    <div [treeItem]="item" [class]="styles.item">
+                    <div [treeItem]="item" #node="treeItem" [class]="styles.item">
                         <div treeItemContent [class]="styles.row">
                             <span treeToggle [class]="styles.toggle">
                                 <svg lucideChevronRight aria-hidden="true"></svg>
@@ -79,7 +79,9 @@ function restore(): { model: TreeModel<FileTypes>; restored: boolean } {
                                 <svg lucideFile aria-hidden="true" [class]="styles.fileIcon"></svg>
                             }
                             <span [class]="styles.label">{{ item.label }}</span>
-                            <input treeRenameInput [attr.aria-label]="'Rename ' + item.label" [class]="styles.input" />
+                            @if (node.state().renaming) {
+                                <input treeItemRename [attr.aria-label]="'Rename ' + item.label" [class]="styles.input" />
+                            }
                         </div>
                         <div treeGroup></div>
                     </div>

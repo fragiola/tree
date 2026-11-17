@@ -113,18 +113,19 @@ extra facts (a size, "locked"), use `aria-describedby` with the id of an element
 the [async loading](/docs/guides/async-loading) and [drag and drop](/docs/guides/drag-and-drop)
 examples do.
 
-`Tree.Toggle` and `Tree.Checkbox` are hidden from assistive technology (`aria-hidden`): the item
-already says `aria-expanded` and `aria-checked`, and the keyboard acts on the item. They need no
-name.
+`Tree.Toggle` is hidden from assistive technology (`aria-hidden`): the item already says
+`aria-expanded`, and the keyboard acts on the item. It needs no name. The same goes for your own
+check control: the item says `aria-checked` and Space toggles it, so make the control an element
+that never takes focus, with `aria-hidden` and no name ([checkboxes](/docs/guides/checkboxes)).
 
 ## The rename input
 
-`Tree.RenameInput` is a text field: name it.
+Your rename input (wired by `useTreeItemRename`) is a text field: name it.
 
 <Framework name="react">
 
 ```tsx
-<Tree.RenameInput aria-label={`Rename ${item.label}`} />
+<input {...rename.props} aria-label={`Rename ${item.label}`} />
 ```
 
 </Framework>
@@ -132,7 +133,7 @@ name.
 <Framework name="vue">
 
 ```vue
-<Tree.RenameInput :aria-label="`Rename ${item.label}`" />
+<input v-bind="renameProps" :aria-label="`Rename ${item.label}`" />
 ```
 
 </Framework>
@@ -140,7 +141,7 @@ name.
 <Framework name="angular">
 
 ```html
-<input treeRenameInput [attr.aria-label]="'Rename ' + item.label" />
+<input treeItemRename [attr.aria-label]="'Rename ' + item.label" />
 ```
 
 </Framework>

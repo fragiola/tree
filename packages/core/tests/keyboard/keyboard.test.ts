@@ -191,17 +191,19 @@ describe("the APG keyboard: selecting", () => {
         ]);
     });
 
-    it("F2 starts renaming; the rename input's own keys are left to it", () => {
+    it("F2 starts renaming; the app's editor keeps its own keys", () => {
         const m = setup();
         m.engine.run("focus", { itemId: "app" });
         m.key("F2");
         expect(m.model.is("item-renaming", { itemId: "app" })).toBe(true);
         const input = document.createElement("input");
-        input.setAttribute("data-tree-part", "rename-input");
         m.item("app").append(input);
         input.focus();
         expect(m.key("ArrowDown")).toBe(false);
-        expect(m.engine.adapter.commitRename("app", "main.ts").ok).toBe(true);
+        expect(
+            m.engine.run("commit-rename", { itemId: "app", label: "main.ts" })
+                .ok,
+        ).toBe(true);
         expect(m.model.get("item-by", { id: "app" })?.label).toBe("main.ts");
         expect(active()).toBe("app");
     });

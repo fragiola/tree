@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it } from "vitest";
+import { DRAG_EXEMPT, isDragExempt } from "../../src/dom/owner";
 import { createTreeEngine } from "../../src/engine/tree-engine";
 import { filesModel } from "../fixture";
 import { type Mounted, mount } from "./dom";
@@ -148,10 +149,132 @@ describe("clicks", () => {
         expect(m.model.state.selectedItemIds).toEqual(["app", "utils"]);
         m.engine.adapter.handleToggleClick("utils");
         expect(m.model.is("item-expanded", { itemId: "utils" })).toBe(false);
-        m.engine.adapter.handleCheckboxClick("utils");
-        expect(m.model.get("check-state-by", { itemId: "utils" })).toBe(
-            "checked",
-        );
+    });
+});
+
+describe("renaming", () => {
+    /** starts renaming an item and puts a plain input of the app's (no part attribute) in it, focused */
+    function editing(m: Mounted, itemId: string): HTMLInputElement {
+        m.engine.run("focus", { itemId });
+        m.model.run("item.start-rename", { itemId });
+        const input = document.createElement("input");
+        m.content(itemId).append(input);
+        input.focus();
+        return input;
+    }
+
+    it("commit-rename renames and focuses the item; a refused label keeps it renaming", () => {
+        mounted = mount(filesModel());
+        const m = mounted;
+        const input = editing(m, "app");
+        expect(
+            m.engine.run("commit-rename", { itemId: "app", label: "" }),
+        ).toMatchObject({ ok: false, error: { code: "invalid_payload" } });
+        expect(m.model.is("item-renaming", { itemId: "app" })).toBe(true);
+        expect(document.activeElement).toBe(input);
+        expect(
+            m.engine.run("commit-rename", { itemId: "app", label: "main.ts" }),
+        ).toEqual({ ok: true, value: { itemId: "app" } });
+        expect(m.model.get("item-by", { id: "app" })?.label).toBe("main.ts");
+        expect(m.model.state.renamingItemId).toBeNull();
+        expect(document.activeElement).toBe(m.item("app"));
+    });
+
+    it("cancel-rename keeps the label and focuses the item", () => {
+        mounted = mount(filesModel());
+        const m = mounted;
+        editing(m, "app");
+        expect(m.engine.run("cancel-rename", { itemId: "app" })).toEqual({
+            ok: true,
+            value: { itemId: "app" },
+        });
+        expect(m.model.get("item-by", { id: "app" })?.label).toBe("app.ts");
+        expect(document.activeElement).toBe(m.item("app"));
+        expect(
+            m.engine.check("cancel-rename", { itemId: "app" }),
+        ).toMatchObject({ ok: false, error: { code: "refused" } });
+    });
+
+    it("focus: false leaves DOM focus where it went (a blur)", () => {
+        mounted = mount(filesModel());
+        const m = mounted;
+        const input = editing(m, "app");
+        const outside = document.createElement("button");
+        document.body.append(outside);
+        outside.focus();
+        expect(
+            m.engine.run("commit-rename", {
+                itemId: "app",
+                label: "main.ts",
+                focus: false,
+            }).ok,
+        ).toBe(true);
+        expect(document.activeElement).toBe(outside);
+        input.remove();
+        const again = editing(m, "lib");
+        outside.focus();
+        expect(
+            m.engine.run("cancel-rename", { itemId: "lib", focus: false }).ok,
+        ).toBe(true);
+        expect(document.activeElement).toBe(outside);
+        again.remove();
+        outside.remove();
+    });
+
+    it("can and check answer without changing the model or focus", () => {
+        mounted = mount(filesModel());
+        const m = mounted;
+        const input = editing(m, "app");
+        expect(
+            m.engine.can("commit-rename", { itemId: "app", label: "x.ts" }),
+        ).toBe(true);
+        expect(
+            m.engine.can("commit-rename", { itemId: "app", label: "" }),
+        ).toBe(false);
+        expect(m.engine.can("cancel-rename", { itemId: "app" })).toBe(true);
+        expect(m.model.get("item-by", { id: "app" })?.label).toBe("app.ts");
+        expect(m.model.is("item-renaming", { itemId: "app" })).toBe(true);
+        expect(document.activeElement).toBe(input);
+        m.engine.destroy();
+        expect(
+            m.engine.run("commit-rename", { itemId: "app", label: "x.ts" }),
+        ).toMatchObject({ ok: false, error: { code: "refused" } });
+    });
+
+    it("a command that ends the rename elsewhere takes focus from the app's editor back to the item", () => {
+        mounted = mount(filesModel());
+        const m = mounted;
+        editing(m, "app");
+        m.model.run("item.cancel-rename", { itemId: "app" });
+        expect(document.activeElement).toBe(m.item("app"));
+    });
+
+    it("leaves focus in another control of an item outside a rename", () => {
+        mounted = mount(filesModel());
+        const m = mounted;
+        m.engine.run("focus", { itemId: "app" });
+        const button = document.createElement("button");
+        m.content("app").append(button);
+        button.focus();
+        m.model.run("item.toggle-check", { itemId: "app" });
+        // the test DOM re-appends every row on a change, which blurs the button: the point is that
+        // the engine does not pull focus onto the item
+        expect(document.activeElement).not.toBe(m.item("app"));
+    });
+
+    it("exempts an app's native controls and opt-outs from drags and keys, with no part attribute", () => {
+        mounted = mount(filesModel());
+        const m = mounted;
+        const custom = document.createElement("span");
+        custom.setAttribute("data-tree-no-drag", "");
+        const button = document.createElement("button");
+        const plain = document.createElement("span");
+        m.content("app").append(custom, button, plain);
+        expect(isDragExempt(custom, m.item("app"))).toBe(true);
+        expect(isDragExempt(button, m.item("app"))).toBe(true);
+        expect(isDragExempt(plain, m.item("app"))).toBe(false);
+        expect(DRAG_EXEMPT).not.toContain("checkbox");
+        expect(DRAG_EXEMPT).not.toContain("rename-input");
     });
 });
 

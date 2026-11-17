@@ -89,13 +89,6 @@ export type SpanPrimitiveProps<State> = PrimitiveProps<State> &
         "className" | "style" | "children"
     >;
 
-/** The props of a primitive that renders an `input` by default. */
-export type InputPrimitiveProps<State> = PrimitiveProps<State> &
-    Omit<
-        React.InputHTMLAttributes<HTMLInputElement>,
-        "className" | "style" | "children" | "defaultValue" | "value"
-    >;
-
 /** `data-*` attributes from a record: `true` → present (empty), `false`/`undefined` → absent. */
 export function dataAttributes(
     record: Record<string, string | number | boolean | undefined>,

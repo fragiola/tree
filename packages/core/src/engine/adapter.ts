@@ -1,4 +1,3 @@
-import type { CommandResult } from "../commands/types";
 import type { KeyEventLike } from "../keyboard/key-map";
 import type { TreeModel } from "../state/model";
 import type { AnyTypes, TreeTypes } from "../state/types";
@@ -18,7 +17,7 @@ export interface PressInput {
 
 /**
  * What only an adapter (React, Vue, Angular) calls on an engine: the root and item elements, the
- * events it forwards, the rename input, and the revision it re-renders on. An app never needs it:
+ * events it forwards, and the revision it re-renders on. An app never needs it:
  * it uses `run`, `can`, `check`, `get` and `is`. The adapter forwards events; the core decides.
  */
 export interface TreeEngineAdapter<T extends TreeTypes = AnyTypes> {
@@ -42,8 +41,6 @@ export interface TreeEngineAdapter<T extends TreeTypes = AnyTypes> {
     handleClick(itemId: string, event: PressInput): void;
     /** a press on an item's toggle (`Tree.Toggle`): expand or collapse */
     handleToggleClick(itemId: string): void;
-    /** a press on an item's checkbox (`Tree.Checkbox`): toggle its check */
-    handleCheckboxClick(itemId: string): void;
     /** DOM focus entered an item's element: it becomes the focused item */
     handleFocus(itemId: string): void;
     /**
@@ -51,20 +48,6 @@ export interface TreeEngineAdapter<T extends TreeTypes = AnyTypes> {
      * content with the `foreignDrop` option, ignored without it
      */
     handleDragEvent(event: DragEvent): void;
-    /**
-     * the rename input committed a label (Enter, blur): `item.rename`, then focus goes back to the
-     * item unless `focus` is false (a blur: focus went elsewhere and stays there)
-     */
-    commitRename(
-        itemId: string,
-        label: string,
-        options?: { focus?: boolean },
-    ): CommandResult<unknown>;
-    /**
-     * the rename input was cancelled (Escape, a refused blur): `item.cancel-rename`, then focus
-     * goes back to the item unless `focus` is false
-     */
-    cancelRename(itemId: string, options?: { focus?: boolean }): void;
 
     /** calls `listener` when adapters should re-render (a commit, a drag step, an announcement); returns its remover */
     subscribe(listener: () => void): () => void;

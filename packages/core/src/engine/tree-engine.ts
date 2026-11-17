@@ -199,6 +199,8 @@ class Engine<T extends TreeTypes> implements TreeEngine<T>, EngineHost {
     private readonly virtual: VirtualController | undefined;
     /** a virtualized tree focuses this item once its row is rendered */
     private pendingFocus: string | undefined;
+    /** the renaming item as of the last model change, to find its editor once the rename ends */
+    private renamingItemId: string | null = null;
     /** the drag group joined with the root (`dragGroup`) */
     private group: { group: DragGroup; leave: () => void } | undefined;
     private readonly foreign: ForeignDropController | undefined;
@@ -253,6 +255,16 @@ class Engine<T extends TreeTypes> implements TreeEngine<T>, EngineHost {
                     dryRun,
                 ),
             "cancel-drag": (_payload, dryRun) => this.cancelDrag(dryRun),
+            "commit-rename": (payload, dryRun) =>
+                this.commitRename(
+                    payload as EngineActionPayload<"commit-rename">,
+                    dryRun,
+                ),
+            "cancel-rename": (payload, dryRun) =>
+                this.cancelRename(
+                    payload as EngineActionPayload<"cancel-rename">,
+                    dryRun,
+                ),
         };
         this.adapter = this.createAdapter(model);
         this.virtual = options.virtual?.connect({
@@ -270,6 +282,7 @@ class Engine<T extends TreeTypes> implements TreeEngine<T>, EngineHost {
         });
         this.foreign = options.foreignDrop?.connect(this);
         this.outside = options.dropOutside?.connect(this, () => this.changed());
+        this.renamingItemId = this.model.state.renamingItemId;
         this.unsubscribeModel = model.subscribe(() => this.modelChanged());
         if (options.root) this.attachRoot(options.root);
         this.loader.scan();
@@ -521,6 +534,32 @@ class Engine<T extends TreeTypes> implements TreeEngine<T>, EngineHost {
         return ok({});
     }
 
+    private commitRename(
+        { itemId, label, focus }: EngineActionPayload<"commit-rename">,
+        dryRun: boolean,
+    ): CommandResult<unknown> {
+        const payload = { itemId, label };
+        const result = dryRun
+            ? this.model.check("item.rename", payload)
+            : this.model.run("item.rename", payload);
+        if (!result.ok) return result;
+        if (!dryRun && focus !== false) this.focusElement(itemId);
+        return ok({ itemId });
+    }
+
+    private cancelRename(
+        { itemId, focus }: EngineActionPayload<"cancel-rename">,
+        dryRun: boolean,
+    ): CommandResult<unknown> {
+        const payload = { itemId };
+        const result = dryRun
+            ? this.model.check("item.cancel-rename", payload)
+            : this.model.run("item.cancel-rename", payload);
+        if (!result.ok) return result;
+        if (!dryRun && focus !== false) this.focusElement(itemId);
+        return ok({ itemId });
+    }
+
     // ---------------------------------------------------------------------------------------------
     // the host the drags and the loader share
     // ---------------------------------------------------------------------------------------------
@@ -611,13 +650,17 @@ class Engine<T extends TreeTypes> implements TreeEngine<T>, EngineHost {
         // removal moved it): read before the adapters re-render and remove the old element
         const root = this.rootElement;
         const active = root?.ownerDocument.activeElement;
+        // the item whose rename this change ended (a commit, a cancel, another command): its editor
+        // goes away, so focus goes back to the item; while a rename goes on, focus stays in it
+        const previous = this.renamingItemId;
+        this.renamingItemId = this.model.state.renamingItemId;
+        const ended = previous !== this.renamingItemId ? previous : null;
         const hadFocus =
             root !== undefined &&
             active !== null &&
             active !== undefined &&
             root.contains(active) &&
-            (this.isItemElement(active) ||
-                active.closest(`[${PART_ATTRIBUTE}="rename-input"]`) !== null);
+            (this.isItemElement(active) || this.inRenamingItem(active, ended));
         // an item moved to another parent is a new element: the adapter registers it after this
         // re-render, and it takes the focus the old one had (registerItem)
         this.refocus = hadFocus || (this.refocus && this.focusLost());
@@ -650,6 +693,16 @@ class Engine<T extends TreeTypes> implements TreeEngine<T>, EngineHost {
         for (const item of this.items.values())
             if (item === element) return true;
         return false;
+    }
+
+    /**
+     * Whether an element is inside the element of the item whose rename just ended: the app's label
+     * editor, whatever element it is. Focus elsewhere inside an item is left where it is.
+     */
+    private inRenamingItem(element: Element, itemId: string | null): boolean {
+        if (itemId === null) return false;
+        const item = this.items.get(itemId);
+        return item !== undefined && item !== element && item.contains(element);
     }
 
     // ---------------------------------------------------------------------------------------------
@@ -751,10 +804,6 @@ class Engine<T extends TreeTypes> implements TreeEngine<T>, EngineHost {
                 if (this.destroyed) return;
                 this.model.run("item.toggle", { itemId });
             },
-            handleCheckboxClick: (itemId) => {
-                if (this.destroyed) return;
-                this.model.run("item.toggle-check", { itemId });
-            },
             handleFocus: (itemId) => {
                 if (this.destroyed || this.model.state.focusedItemId === itemId)
                     return;
@@ -762,22 +811,6 @@ class Engine<T extends TreeTypes> implements TreeEngine<T>, EngineHost {
             },
             handleDragEvent: (event) => {
                 if (!this.destroyed) this.foreign?.handle(event);
-            },
-            commitRename: (itemId, label, options) => {
-                if (this.destroyed)
-                    return fail("refused", "the engine was destroyed");
-                const result = this.model.run("item.rename", { itemId, label });
-                if (result.ok && options?.focus !== false)
-                    this.focusElement(itemId);
-                return result;
-            },
-            cancelRename: (itemId, options) => {
-                if (this.destroyed) return;
-                if (
-                    this.model.run("item.cancel-rename", { itemId }).ok &&
-                    options?.focus !== false
-                )
-                    this.focusElement(itemId);
             },
             subscribe: (listener) => {
                 const wrapper = () => listener();
@@ -822,8 +855,8 @@ class Engine<T extends TreeTypes> implements TreeEngine<T>, EngineHost {
 
     private keyDown(event: KeyEventInput): boolean {
         if (this.destroyed) return false;
-        // the rename input, and any control inside an item (a button, a link, an input: the
-        // DRAG_EXEMPT elements), handle their own keys
+        // any control inside an item (a button, a link, an input, the app's rename editor: the
+        // DRAG_EXEMPT elements) handles its own keys
         const target = asElement(event.target);
         const item = target?.closest(`[${PART_ATTRIBUTE}="item"]`);
         if (target && item && isDragExempt(target, item)) return false;

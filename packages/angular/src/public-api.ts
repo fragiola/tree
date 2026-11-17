@@ -1,7 +1,6 @@
 // The whole core, so that an Angular app installs and imports one package. A local export would
 // silently shadow a core name of the same spelling: tests/index.test.ts fails on one.
 export * from "@fragiola/tree";
-export { TreeCheckboxDirective } from "./lib/directives/checkbox.directive";
 export {
     type DropIndicatorState,
     TreeDropIndicatorDirective,
@@ -9,15 +8,15 @@ export {
 export { TreeGroupDirective } from "./lib/directives/group.directive";
 export { TreeItemDirective } from "./lib/directives/item.directive";
 export { TreeItemContentDirective } from "./lib/directives/item-content.directive";
+export {
+    TreeItemRenameDirective,
+    type TreeItemRenameState,
+} from "./lib/directives/item-rename.directive";
 export { TreeItemsDirective } from "./lib/directives/items.directive";
 export {
     type LiveRegionState,
     TreeLiveRegionDirective,
 } from "./lib/directives/live-region.directive";
-export {
-    type RenameInputState,
-    TreeRenameInputDirective,
-} from "./lib/directives/rename-input.directive";
 export {
     type RootState,
     TreeRootDirective,

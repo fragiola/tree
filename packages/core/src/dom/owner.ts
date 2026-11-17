@@ -13,7 +13,8 @@ export const NO_DRAG_ATTRIBUTE = "data-tree-no-drag";
 
 /**
  * What never starts a drag (nor a selection) when pressed inside an item's content: native
- * controls, links, editable text, the toggle and checkbox parts, and the subtrees that opt out.
+ * controls, links, editable text, the toggle part, and the subtrees that opt out (an app's own
+ * check control that is not a native control carries `data-tree-no-drag`).
  */
 export const DRAG_EXEMPT = [
     "input",
@@ -24,8 +25,6 @@ export const DRAG_EXEMPT = [
     "a[href]",
     '[contenteditable]:not([contenteditable="false"])',
     `[${PART_ATTRIBUTE}="toggle"]`,
-    `[${PART_ATTRIBUTE}="checkbox"]`,
-    `[${PART_ATTRIBUTE}="rename-input"]`,
     `[${NO_DRAG_ATTRIBUTE}]`,
 ].join(", ");
 

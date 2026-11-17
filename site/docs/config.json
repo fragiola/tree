@@ -166,14 +166,6 @@
                     "path": "api/toggle"
                 },
                 {
-                    "label": "Tree.Checkbox",
-                    "path": "api/checkbox"
-                },
-                {
-                    "label": "Tree.RenameInput",
-                    "path": "api/rename-input"
-                },
-                {
                     "label": "Tree.DropIndicator",
                     "path": "api/drop-indicator"
                 },

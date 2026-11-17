@@ -1,6 +1,11 @@
 // Parity with @fragiola/tree-react: the same document, rendered by both adapters with every part,
 // gives the same elements (part, tag, order) with the same ARIA, `data-*` and structural style.
-import { Tree as ReactTree } from "@fragiola/tree-react";
+import {
+    Tree as ReactTree,
+    useTree as useReactTree,
+    useTreeItem as useReactTreeItem,
+    useTreeItemRename as useReactTreeItemRename,
+} from "@fragiola/tree-react";
 import * as React from "react";
 import { act } from "react";
 import { createRoot } from "react-dom/client";
@@ -21,6 +26,29 @@ type Item = { id: string; label: string; childItemIds?: string[] };
 
 const r = React.createElement;
 
+/** The app's own check control, as `tests/tree.ts`'s `Check` (and packages/react's). */
+function ReactCheck({ item }: { item: Item }) {
+    const { model } = useReactTree();
+    const { state } = useReactTreeItem(item as never);
+    return r("button", {
+        type: "button",
+        tabIndex: -1,
+        "aria-hidden": true,
+        "data-testid": "check",
+        "data-checked": state.checked ? "" : undefined,
+        "data-indeterminate": state.indeterminate ? "" : undefined,
+        onClick: () => model.run("item.toggle-check", { itemId: item.id }),
+    });
+}
+
+/** The app's own rename editor, as `tests/tree.ts`'s `RenameField`. */
+function ReactRenameField({ item }: { item: Item }) {
+    const { state, props } = useReactTreeItemRename(item as never);
+    return state.renaming
+        ? r("input", { ...props, "aria-label": "Name" })
+        : null;
+}
+
 function reactItem(item: Item): React.ReactElement {
     return r(
         ReactTree.Item,
@@ -29,9 +57,9 @@ function reactItem(item: Item): React.ReactElement {
             ReactTree.ItemContent,
             null,
             r(ReactTree.Toggle),
-            r(ReactTree.Checkbox),
+            r(ReactCheck, { item }),
             r("span", null, item.label),
-            r(ReactTree.RenameInput, { "aria-label": "Name" }),
+            r(ReactRenameField, { item }),
         ),
         r(ReactTree.Group, {
             children: (child: Item) => reactItem(child),
@@ -39,9 +67,16 @@ function reactItem(item: Item): React.ReactElement {
     );
 }
 
-/** Every element of a tree, as its part, tag, ARIA, `data-*` and style. */
+/**
+ * Every element of a tree, as its part, tag, ARIA, `data-*` and style: the parts, and the app's
+ * own check controls and rename editors (what the composables give them).
+ */
 function snapshot(root: Element) {
-    return [...root.querySelectorAll("[data-tree-part]")].map((element) => ({
+    return [
+        ...root.querySelectorAll(
+            '[data-tree-part], [data-testid="check"], input',
+        ),
+    ].map((element) => ({
         tag: element.tagName,
         attributes: Object.fromEntries(
             [...element.attributes]
@@ -114,14 +149,10 @@ describe("parity with @fragiola/tree-react", () => {
         expect(vue).toEqual(react);
     });
 
-    it("renders the same rename input", async () => {
+    it("gives the app's rename editor the same attributes", async () => {
         const json = files({ renamingItemId: "readme" });
         const { vue, react } = await both(json);
-        expect(
-            vue.find(
-                (part) => part.attributes["data-tree-part"] === "rename-input",
-            ),
-        ).toBeDefined();
+        expect(vue.find((part) => part.tag === "INPUT")).toBeDefined();
         expect(vue).toEqual(react);
     });
 });

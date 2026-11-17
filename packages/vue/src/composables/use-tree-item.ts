@@ -123,7 +123,7 @@ export function useTreeItem<T extends TreeTypes = AnyTypes>(
         () => [context.engine.value, current().id],
     );
     const onFocus = (event: FocusEvent) => {
-        // the item's own element, not a control inside it (the rename input)
+        // the item's own element, not a control inside it (a rename editor)
         if (event.target === event.currentTarget) {
             context.engine.value?.adapter.handleFocus(current().id);
         }

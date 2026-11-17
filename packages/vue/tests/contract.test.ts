@@ -52,10 +52,7 @@ describe("the primitive contract", () => {
                 h(Tree.Items, null, {
                     default: ({ item }: { item: Child }) => [
                         h(Tree.Item, { item }, () => [
-                            h(Tree.ItemContent, null, () => [
-                                h(Tree.Toggle),
-                                h(Tree.Checkbox),
-                            ]),
+                            h(Tree.ItemContent, null, () => [h(Tree.Toggle)]),
                             h(Tree.Group, null, {
                                 default: ({ item: child }: { item: Child }) => [
                                     h(Tree.Item, { item: child }),

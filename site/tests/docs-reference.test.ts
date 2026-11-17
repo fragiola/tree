@@ -81,13 +81,12 @@ const MODULE_PAGES: Record<string, string> = {
     "./components/item-content": "item-content",
     "./components/group": "group",
     "./components/toggle": "toggle",
-    "./components/checkbox": "checkbox",
-    "./components/rename-input": "rename-input",
     "./components/drop-indicator": "drop-indicator",
     "./components/live-region": "live-region",
     "./components/virtual-items": "virtual-items",
     "./hooks/use-tree": "hooks",
     "./hooks/use-tree-item": "hooks",
+    "./hooks/use-tree-item-rename": "hooks",
     "./hooks/use-tree-state": "hooks",
     "./hooks/use-tree-ref": "hooks",
     "./hooks/create-tree-ref": "hooks",
@@ -210,14 +209,12 @@ describe("the React reference", () => {
     it("documents every part as Tree.<Part> on its own page", () => {
         expect(partExports.map((entry) => entry.name).sort()).toEqual(
             [
-                "Checkbox",
                 "DropIndicator",
                 "Group",
                 "Item",
                 "ItemContent",
                 "Items",
                 "LiveRegion",
-                "RenameInput",
                 "Root",
                 "Toggle",
                 "VirtualItems",
@@ -315,6 +312,7 @@ describe("the React reference", () => {
                 "createTreeRef",
                 "useTree",
                 "useTreeItem",
+                "useTreeItemRename",
                 "useTreeRef",
                 "useTreeState",
                 "useTreeVirtualWindow",
@@ -429,7 +427,7 @@ describe("the Angular reference", () => {
     });
 
     it("lists every directive with its selector and exportAs, and TREE holds them all", () => {
-        expect(directives.length).toBe(11);
+        expect(directives.length).toBe(10);
         for (const { selector, exportAs, name } of directives) {
             expect(mdx, name).toMatch(
                 new RegExp(
@@ -474,7 +472,7 @@ describe("the concept pages", () => {
                 ),
             ),
         );
-        expect(names.size).toBe(10);
+        expect(names.size).toBe(8);
         const mdx = docsPage("concepts/parts-and-paths");
         for (const name of names) {
             expect(mdx, `part "${name}"`).toContain(`\`${name}\``);

@@ -1,8 +1,8 @@
-// Angular: every item's rename input is the app's element, there and hidden (`display: none`)
-// while its item is not renaming, where React and Vue render none; `renameInput()` is the one
-// shown.
+// The rename editor is the app's own input, rendered while its item renames (`@if`) and wired by
+// `[treeItemRename]`; `renameInput()` is the one shown.
+import { Component, input } from "@angular/core";
 import { describe, expect, it } from "vitest";
-import { veto } from "../src/public-api";
+import { TREE, veto } from "../src/public-api";
 import {
     filesModel,
     fire,
@@ -10,6 +10,7 @@ import {
     itemElement,
     press,
     renameInput,
+    render,
     renderFiles,
     settle,
     type,
@@ -25,16 +26,9 @@ async function start(model = filesModel()) {
 }
 
 describe("inline rename", () => {
-    it("hides every rename input while its item is not renaming", async () => {
+    it("renders no editor while no item renames", async () => {
         await renderFiles({ model: filesModel() });
-        const inputs = document.querySelectorAll<HTMLInputElement>(
-            'input[data-tree-part="rename-input"]',
-        );
-        expect(inputs).toHaveLength(5);
-        for (const input of inputs) {
-            expect(input).toHaveStyle({ display: "none" });
-            expect(input).toHaveAttribute("type", "text");
-        }
+        expect(document.querySelector("input")).toBeNull();
         expect(renameInput()).toBeNull();
     });
 
@@ -44,8 +38,8 @@ describe("inline rename", () => {
         expect(input.value).toBe("app.ts");
         expect(input.selectionStart).toBe(0);
         expect(input.selectionEnd).toBe("app.ts".length);
-        expect(input).toHaveAttribute("data-tree-part", "rename-input");
-        expect(input).not.toHaveStyle({ display: "none" });
+        // the app's own element: the directive adds no part attribute, and hides nothing
+        expect(input).not.toHaveAttribute("data-tree-part");
         expect(itemElement("app.ts")).toHaveAttribute("data-renaming", "");
     });
 
@@ -55,7 +49,7 @@ describe("inline rename", () => {
         await fire(input, "keydown", { key: "Enter" });
         expect(model.get("item-by", { id: "app" })?.label).toBe("main.ts");
         expect(renameInput()).toBeNull();
-        expect(input).toHaveStyle({ display: "none" });
+        expect(input.isConnected).toBe(false);
         expect(itemElement("main.ts")).toHaveFocus();
     });
 
@@ -180,8 +174,116 @@ describe("inline rename", () => {
         await fire(input, "keydown", { key: "Escape" });
         model.run("item.start-rename", { itemId: "app" });
         await settle();
-        expect(renameInput()).toBe(input);
-        expect(input.value).toBe("app.ts");
-        expect(input).toHaveFocus();
+        const again = renameInput();
+        expect(again).not.toBe(input);
+        expect(again?.value).toBe("app.ts");
+        expect(again).toHaveFocus();
+    });
+});
+
+/** The editor's state through `exportAs`, and its `(renameError)`. */
+@Component({
+    selector: "test-editor",
+    imports: [TREE],
+    template: `
+        <div [treeRoot]="model()" aria-label="Files">
+            <ng-template treeItems let-item>
+                <div [treeItem]="item" #node="treeItem">
+                    <div treeItemContent>
+                        <span>{{ item.label }}</span>
+                        @if (node.state().renaming) {
+                            <input
+                                treeItemRename
+                                #rename="treeItemRename"
+                                aria-label="Name"
+                                [attr.data-state]="rename.state().invalid ? 'invalid' : ''"
+                                (renameError)="errors.push($event.code)"
+                            />
+                        }
+                    </div>
+                </div>
+            </ng-template>
+        </div>
+    `,
+})
+class Editor {
+    readonly model = input(filesModel());
+    readonly errors: string[] = [];
+}
+
+describe("[treeItemRename]", () => {
+    it("exposes the rename's state and reports a refused commit", async () => {
+        const model = filesModel();
+        const view = await render(Editor, { model });
+        await focus(itemElement("readme.md"));
+        await press("F2");
+        const input = renameInput();
+        if (!input) throw new Error("no rename input");
+        expect(input).toHaveAttribute("data-state", "");
+        await type(input, "");
+        await fire(input, "keydown", { key: "Enter" });
+        expect(input).toHaveAttribute("data-state", "invalid");
+        expect(view.component.errors).toEqual(["invalid_payload"]);
+        await type(input, "notes.md");
+        expect(input).toHaveAttribute("data-state", "");
+        await fire(input, "keydown", { key: "Enter" });
+        expect(model.get("item-by", { id: "readme" })?.label).toBe("notes.md");
+    });
+});
+
+/** Renaming by hand: the item's state and the engine's actions, no `[treeItemRename]`. */
+@Component({
+    selector: "test-manual",
+    imports: [TREE],
+    template: `
+        <div [treeRoot]="model()" #tree="treeRoot" aria-label="Files">
+            <ng-template treeItems let-item>
+                <div [treeItem]="item" #node="treeItem">
+                    <div treeItemContent>
+                        <span>{{ item.label }}</span>
+                        @if (node.state().renaming) {
+                            <input
+                                #field
+                                aria-label="Name"
+                                [value]="item.label"
+                                (keydown.enter)="tree.engine.run('commit-rename', { itemId: item.id, label: field.value })"
+                                (keydown.escape)="tree.engine.run('cancel-rename', { itemId: item.id })"
+                            />
+                        }
+                    </div>
+                </div>
+            </ng-template>
+        </div>
+    `,
+})
+class Manual {
+    readonly model = input(filesModel());
+}
+
+describe("renaming by hand", () => {
+    async function renderManual(model = filesModel()) {
+        await render(Manual, { model });
+        await focus(itemElement("readme.md"));
+        await press("F2");
+        const input = renameInput();
+        if (!input) throw new Error("no rename input");
+        await focus(input);
+        return { model, input };
+    }
+
+    it("commits with commit-rename, and focus goes back to the item", async () => {
+        const { model, input } = await renderManual();
+        input.value = "notes.md";
+        await fire(input, "keydown", { key: "Enter" });
+        expect(model.get("item-by", { id: "readme" })?.label).toBe("notes.md");
+        expect(renameInput()).toBeNull();
+        expect(itemElement("notes.md")).toHaveFocus();
+    });
+
+    it("cancels with cancel-rename", async () => {
+        const { model, input } = await renderManual();
+        await fire(input, "keydown", { key: "Escape" });
+        expect(model.state.renamingItemId).toBeNull();
+        expect(itemElement("readme.md")).toHaveFocus();
     });
 });

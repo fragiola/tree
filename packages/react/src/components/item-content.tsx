@@ -6,14 +6,14 @@ import type { TreeItemState } from "../hooks/use-tree-item";
 import { type DivPrimitiveProps, useRenderElement } from "../utils/use-render";
 
 export interface ItemContentProps extends DivPrimitiveProps<TreeItemState> {
-    /** the row's content: the label, an icon, the toggle, the checkbox; no text of its own */
+    /** the row's content: the label, an icon, the toggle, your check control or rename editor; no text of its own */
     children?: React.ReactNode;
 }
 
 /**
  * An item's row: the element a press selects (Shift extends, Ctrl/Cmd toggles; `expandOnClick`
  * also expands) and a drag starts from (Pointer Events), and the rect the drag hit-tests. A press
- * on a control inside it (a button, an input, the toggle, the checkbox) is the control's.
+ * on a control inside it (a button, an input, the toggle) is the control's.
  */
 export function ItemContent(props: ItemContentProps) {
     const { children, ...rest } = props;

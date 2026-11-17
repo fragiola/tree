@@ -15,33 +15,30 @@ const OWN = [
     "typedTree",
     "useTree",
     "useTreeItem",
+    "useTreeItemRename",
     "useTreeRef",
     "useTreeState",
     "useTreeVirtualWindow",
 ];
 /** The same primitives as @fragiola/tree-react's, in files of the same names. */
 const PRIMITIVES = [
-    "Checkbox",
     "DropIndicator",
     "Group",
     "Item",
     "ItemContent",
     "Items",
     "LiveRegion",
-    "RenameInput",
     "Root",
     "Toggle",
     "VirtualItems",
 ];
 const FILES = [
-    "checkbox",
     "drop-indicator",
     "group",
     "item",
     "item-content",
     "items",
     "live-region",
-    "rename-input",
     "root",
     "toggle",
 ];
@@ -108,6 +105,7 @@ describe("@fragiola/tree-vue", () => {
                 "internal",
                 "use-tree",
                 "use-tree-item",
+                "use-tree-item-rename",
                 "use-tree-ref",
                 "use-tree-state",
             ].map((name) => `src/composables/${name}.ts`),

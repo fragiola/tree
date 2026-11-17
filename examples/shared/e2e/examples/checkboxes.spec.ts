@@ -1,7 +1,8 @@
 import { expect, test } from "@playwright/test";
 import { item, openExample, row, tree } from "../helpers";
 
-// checkboxes: an item's accessible name is its label; its check is its aria-checked.
+// checkboxes: an item's accessible name is its label; its check is its aria-checked. The check
+// control is the app's own (a span hidden from assistive technology), reached by its test id.
 
 test("a group is mixed, and checking its last permission checks it", async ({
     page,
@@ -11,19 +12,20 @@ test("a group is mixed, and checking its last permission checks it", async ({
     const content = item(perms, "Content");
     const scopes = stage.getByTestId("scopes");
     await expect(content).toHaveAttribute("aria-checked", "mixed");
-    await expect(
-        row(content).locator('[data-tree-part="checkbox"]'),
-    ).toHaveAttribute("data-indeterminate", "");
+    await expect(row(content).getByTestId("check")).toHaveAttribute(
+        "data-indeterminate",
+        "",
+    );
     await expect(scopes).toContainText("content:read");
     await expect(scopes).not.toContainText("content:publish");
 
-    await row(item(perms, "Publish pages"))
-        .locator('[data-tree-part="checkbox"]')
-        .click();
+    await row(item(perms, "Publish pages")).getByTestId("check").click();
     await expect(item(perms, "Publish pages")).toHaveAttribute(
         "aria-checked",
         "true",
     );
+    // the box never takes focus: the press focuses the item, and the arrows keep working
+    await expect(item(perms, "Publish pages")).toBeFocused();
     await expect(content).toHaveAttribute("aria-checked", "true");
     await expect(scopes).toContainText("content:publish");
 });
@@ -31,9 +33,7 @@ test("a group is mixed, and checking its last permission checks it", async ({
 test("checking a group checks every permission inside it", async ({ page }) => {
     const stage = await openExample(page, "checkboxes");
     const perms = tree(page, "Permissions");
-    await row(item(perms, "Members"))
-        .locator('[data-tree-part="checkbox"]')
-        .click();
+    await row(item(perms, "Members")).getByTestId("check").click();
     await expect(item(perms, "Invite members")).toHaveAttribute(
         "aria-checked",
         "true",

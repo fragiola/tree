@@ -4,6 +4,8 @@ import {
     createTreeModel,
     type ItemOf,
     Tree,
+    useTree,
+    useTreeItem,
     useTreeState,
 } from "@fragiola/tree-react";
 import { Check, ChevronRight, Minus } from "lucide-react";
@@ -68,16 +70,39 @@ function PermissionItem({ item }: { item: ItemOf<PermissionTypes> }) {
                 <Tree.Toggle className={styles.toggle}>
                     <ChevronRight aria-hidden />
                 </Tree.Toggle>
-                {/* a press toggles the check; it shows a check mark, or a dash when mixed */}
-                <Tree.Checkbox className={styles.checkbox}>
-                    <Check aria-hidden className={styles.checkIcon} />
-                    <Minus aria-hidden className={styles.mixedIcon} />
-                </Tree.Checkbox>
+                <CheckControl item={item} />
                 <span className={styles.label}>{item.label}</span>
             </Tree.ItemContent>
             <Tree.Group<PermissionTypes>>
                 {(child) => <PermissionItem item={child} />}
             </Tree.Group>
         </Tree.Item>
+    );
+}
+
+/**
+ * The app's own check control: a press toggles the item's check (`item.toggle-check`, with the
+ * cascade); it shows a check mark, or a dash when mixed. The item already carries `aria-checked`
+ * and Space toggles it, so the box is a span hidden from assistive technology that never takes
+ * focus (a press focuses the item, and the arrows keep working); `data-tree-no-drag` keeps a press
+ * from dragging or selecting.
+ */
+function CheckControl({ item }: { item: ItemOf<PermissionTypes> }) {
+    const { model } = useTree<PermissionTypes>();
+    const { state } = useTreeItem(item);
+    return (
+        <span
+            aria-hidden
+            data-tree-no-drag=""
+            data-testid="check"
+            data-checked={state.checked ? "" : undefined}
+            data-indeterminate={state.indeterminate ? "" : undefined}
+            data-disabled={state.disabled ? "" : undefined}
+            className={styles.checkbox}
+            onClick={() => model.run("item.toggle-check", { itemId: item.id })}
+        >
+            <Check aria-hidden className={styles.checkIcon} />
+            <Minus aria-hidden className={styles.mixedIcon} />
+        </span>
     );
 }

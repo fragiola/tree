@@ -1,28 +1,46 @@
 ---
 title: Checkboxes
-description: Tri-state checkboxes for permission pickers and filters - checks that cascade to children and back up as mixed parents, or independent ones.
+description: Tri-state checks for permission pickers and filters - checks that cascade to children and back up as mixed parents, with a check control of your own.
 ---
 
-Checks are model state: `state.checkedItemIds`. `Tree.Checkbox` is the box you draw; the root's
-`checkboxes` prop puts `aria-checked` on every item and makes Space toggle the focused item's
-check instead of its selection. What a check means (a scope to grant, a filter to apply) is yours.
+Checks are model state: `state.checkedItemIds`. The root's `checkboxes` prop puts
+`aria-checked` on every item (`mixed` included), makes Space toggle the focused item's check
+instead of its selection, and gives each item its check state (`checked`, `indeterminate`,
+`checkState`, and `data-checked` / `data-indeterminate`). The box is yours: any control that reads
+that state and runs `item.toggle-check`. The package renders none. What a check means (a scope to
+grant, a filter to apply) is yours too.
 
 ## Turning them on
 
 <Framework name="react">
 
 ```tsx
-import { type ItemOf, Tree } from "@fragiola/tree-react";
+import { type ItemOf, Tree, useTree, useTreeItem } from "@fragiola/tree-react";
+
+function CheckBox({ item }: { item: ItemOf<Types> }) {
+    const { model } = useTree<Types>();
+    const { state } = useTreeItem(item);
+    return (
+        <span
+            aria-hidden
+            data-tree-no-drag=""
+            className="box"
+            data-checked={state.checked ? "" : undefined}
+            data-indeterminate={state.indeterminate ? "" : undefined}
+            onClick={() => model.run("item.toggle-check", { itemId: item.id })}
+        >
+            <CheckIcon className="check" aria-hidden />
+            <MinusIcon className="dash" aria-hidden />
+        </span>
+    );
+}
 
 function PermissionItem({ item }: { item: ItemOf<Types> }) {
     return (
         <Tree.Item item={item}>
             <Tree.ItemContent className="row">
                 <Tree.Toggle>▸</Tree.Toggle>
-                <Tree.Checkbox className="box">
-                    <CheckIcon className="check" aria-hidden />
-                    <MinusIcon className="dash" aria-hidden />
-                </Tree.Checkbox>
+                <CheckBox item={item} />
                 <span>{item.label}</span>
             </Tree.ItemContent>
             <Tree.Group<Types>>{(child) => <PermissionItem item={child} />}</Tree.Group>
@@ -45,20 +63,30 @@ export function Permissions() {
 
 ```vue title="permission-item.vue"
 <script setup lang="ts">
-import type { ItemOf } from "@fragiola/tree-vue";
+import { type ItemOf, useTree, useTreeItem } from "@fragiola/tree-vue";
 import { Tree, type Types } from "./tree";
 
-defineProps<{ item: ItemOf<Types> }>();
+const props = defineProps<{ item: ItemOf<Types> }>();
+const { model } = useTree<Types>();
+const { state } = useTreeItem(() => props.item);
+const toggleCheck = () => model.run("item.toggle-check", { itemId: props.item.id });
 </script>
 
 <template>
     <Tree.Item :item="item">
         <Tree.ItemContent class="row">
             <Tree.Toggle>▸</Tree.Toggle>
-            <Tree.Checkbox class="box">
+            <span
+                aria-hidden="true"
+                data-tree-no-drag
+                class="box"
+                :data-checked="state.checked ? '' : undefined"
+                :data-indeterminate="state.indeterminate ? '' : undefined"
+                @click="toggleCheck"
+            >
                 <CheckIcon class="check" aria-hidden="true" />
                 <MinusIcon class="dash" aria-hidden="true" />
-            </Tree.Checkbox>
+            </span>
             <span>{{ item.label }}</span>
         </Tree.ItemContent>
         <Tree.Group v-slot="{ item: child }">
@@ -95,12 +123,19 @@ import { json } from "./tree";
     selector: "app-permissions",
     imports: [TREE, LucideCheck, LucideMinus],
     template: `
-        <div treeRoot [defaultTree]="json" checkboxes aria-label="Permissions">
+        <div treeRoot [defaultTree]="json" checkboxes aria-label="Permissions" #tree="treeRoot">
             <ng-template [treeItems]="json" let-item>
-                <div [treeItem]="item">
+                <div [treeItem]="item" #node="treeItem">
                     <div treeItemContent class="row">
                         <span treeToggle>▸</span>
-                        <span treeCheckbox class="box">
+                        <span
+                            aria-hidden="true"
+                            data-tree-no-drag
+                            class="box"
+                            [attr.data-checked]="node.state().checked ? '' : null"
+                            [attr.data-indeterminate]="node.state().indeterminate ? '' : null"
+                            (click)="tree.model().run('item.toggle-check', { itemId: item.id })"
+                        >
                             <svg lucideCheck class="check" aria-hidden="true"></svg>
                             <svg lucideMinus class="dash" aria-hidden="true"></svg>
                         </span>
@@ -131,8 +166,11 @@ export class Permissions {
 ```
 
 A press on the box toggles the check (`item.toggle-check`); a press on the rest of the row still
-selects. The box is `role="checkbox"` but hidden from assistive technology and never focused: the
-item carries `aria-checked` (`true`, `false` or `"mixed"`), and Space acts on it.
+selects. The item carries `aria-checked` (`true`, `false` or `"mixed"`), and Space acts on it, so
+the box is an element that never takes focus, hidden from assistive technology (`aria-hidden`): a
+screen reader reads the item, not a second checkbox inside it, and a press focuses the item, so the
+arrows keep working. `data-tree-no-drag` keeps a press on it from starting a drag or a selection.
+A `button` would take focus when clicked and keep the tree's keys to itself.
 
 <Example id="checkboxes" />
 

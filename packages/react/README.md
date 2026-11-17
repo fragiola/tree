@@ -6,8 +6,9 @@ single and multiple selection, the WAI-ARIA keyboard model with type-ahead, drag
 children, inline rename and tri-state checkboxes.
 
 Fragiola Tree is **headless**. It ships the behaviour, the accessibility and the primitives
-(`Tree.Root`, `Items`, `VirtualItems`, `Item`, `ItemContent`, `Group`, `Toggle`, `Checkbox`, `RenameInput`,
-`DropIndicator`, `LiveRegion`), and **no CSS, no icons and no text**: you style every part with
+(`Tree.Root`, `Items`, `VirtualItems`, `Item`, `ItemContent`, `Group`, `Toggle`, `DropIndicator`,
+`LiveRegion`) and the hooks below them (`useTreeItem`, `useTreeItemRename`, …), and **no CSS, no
+icons and no text**: you style every part with
 `className`, `style` and the `data-*` attributes it exposes, and every visible word and accessible
 name comes from you.
 

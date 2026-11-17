@@ -1,5 +1,4 @@
 import type { TreeTypes } from "@fragiola/tree";
-import type { CheckboxProps, CheckboxSlots } from "./components/checkbox";
 import type {
     DropIndicatorProps,
     DropIndicatorSlots,
@@ -15,11 +14,6 @@ import type {
     LiveRegionProps,
     LiveRegionSlots,
 } from "./components/live-region";
-import type {
-    RenameInputEmits,
-    RenameInputProps,
-    RenameInputSlots,
-} from "./components/rename-input";
 import type { RootEmits, RootProps, RootSlots } from "./components/root";
 import type { ToggleProps, ToggleSlots } from "./components/toggle";
 import type {
@@ -31,18 +25,12 @@ import type { TreeComponent } from "./utils/primitive";
 
 /** The `Tree` primitives typed by the registry `T`: items and their data in props and slots. */
 export interface TypedTree<T extends TreeTypes> {
-    Checkbox: TreeComponent<CheckboxProps, CheckboxSlots>;
     DropIndicator: TreeComponent<DropIndicatorProps, DropIndicatorSlots>;
     Group: TreeComponent<GroupProps, GroupSlots<T>>;
     Item: TreeComponent<ItemProps<T>, ItemSlots>;
     ItemContent: TreeComponent<ItemContentProps, ItemContentSlots>;
     Items: TreeComponent<ItemsProps, ItemsSlots<T>>;
     LiveRegion: TreeComponent<LiveRegionProps, LiveRegionSlots>;
-    RenameInput: TreeComponent<
-        RenameInputProps,
-        RenameInputSlots,
-        RenameInputEmits
-    >;
     Root: TreeComponent<RootProps<T>, RootSlots, RootEmits>;
     Toggle: TreeComponent<ToggleProps, ToggleSlots>;
     VirtualItems: TreeComponent<VirtualItemsProps, VirtualItemsSlots<T>>;

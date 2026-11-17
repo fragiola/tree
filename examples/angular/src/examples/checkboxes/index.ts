@@ -16,13 +16,28 @@ import * as styles from "./styles";
         <div [class]="styles.frame">
             <div [treeRoot]="model" checkboxes aria-label="Permissions" [class]="styles.root">
                 <ng-template [treeItems]="model" let-item>
-                    <div [treeItem]="item" [class]="styles.item">
+                    <div [treeItem]="item" #node="treeItem" [class]="styles.item">
                         <div treeItemContent [class]="styles.row">
                             <span treeToggle [class]="styles.toggle">
                                 <svg lucideChevronRight aria-hidden="true"></svg>
                             </span>
-                            <!-- a press toggles the check; it shows a check mark, or a dash when mixed -->
-                            <span treeCheckbox [class]="styles.checkbox">
+                            <!-- the app's own check control: a press toggles the item's check
+                                 (item.toggle-check, with the cascade); it shows a check mark, or a
+                                 dash when mixed. The item already carries aria-checked and Space
+                                 toggles it, so the box is a span hidden from assistive technology
+                                 that never takes focus (a press focuses the item, and the arrows
+                                 keep working); data-tree-no-drag keeps a press from dragging or
+                                 selecting -->
+                            <span
+                                aria-hidden="true"
+                                data-tree-no-drag
+                                data-testid="check"
+                                [attr.data-checked]="node.state().checked ? '' : null"
+                                [attr.data-indeterminate]="node.state().indeterminate ? '' : null"
+                                [attr.data-disabled]="node.state().disabled ? '' : null"
+                                [class]="styles.checkbox"
+                                (click)="model.run('item.toggle-check', { itemId: item.id })"
+                            >
                                 <svg lucideCheck aria-hidden="true" [class]="styles.checkIcon"></svg>
                                 <svg lucideMinus aria-hidden="true" [class]="styles.mixedIcon"></svg>
                             </span>

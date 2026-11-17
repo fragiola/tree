@@ -13,8 +13,8 @@ import { bindRegistration } from "../utils/signals";
 /**
  * An item's row: `<div treeItemContent>`, the element a press selects (Shift extends, Ctrl/Cmd
  * toggles; `expandOnClick` also expands) and a drag starts from (Pointer Events), and the rect the
- * drag hit-tests. A press on a control inside it (a button, an input, the toggle, the checkbox) is
- * the control's.
+ * drag hit-tests. A press on a control inside it (a button, an input, the toggle, an element with
+ * `data-tree-no-drag`) is the control's.
  */
 @Directive({
     selector: "[treeItemContent]",

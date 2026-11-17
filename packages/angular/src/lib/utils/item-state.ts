@@ -28,11 +28,11 @@ export interface TreeItemState {
     focused: boolean;
     /** it is the roving tab stop: the one item with `tabindex` 0 */
     tabStop: boolean;
-    /** its checkbox: checked, unchecked or mixed */
+    /** its check: checked, unchecked or mixed */
     checkState: CheckState;
-    /** its checkbox is checked (not mixed) */
+    /** it is checked (not mixed) */
     checked: boolean;
-    /** its checkbox is mixed: only some of its descendants are checked */
+    /** its check is mixed: only some of its descendants are checked */
     indeterminate: boolean;
     /** its label is being edited */
     renaming: boolean;
@@ -96,8 +96,7 @@ export function treeItemState(
         parent === undefined
             ? state.rootItemIds.length
             : (parent.childItemIds?.length ?? 0);
-    // the mixed state walks the item's subtree: only a tree with checkboxes pays for it (the
-    // checkbox part reads it on its own)
+    // the mixed state walks the item's subtree: only a tree with checkboxes pays for it
     const checkState: CheckState = context.checkboxes()
         ? model.get("check-state-by", { itemId })
         : model.is("item-checked", { itemId })

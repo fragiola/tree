@@ -6,8 +6,8 @@ single and multiple selection, the WAI-ARIA keyboard model with type-ahead, drag
 children, inline rename and tri-state checkboxes.
 
 Fragiola Tree is **headless**. It ships the behaviour, the accessibility and the primitives
-(`Tree.Root`, `Items`, `VirtualItems`, `Item`, `ItemContent`, `Group`, `Toggle`, `Checkbox`, `RenameInput`,
-`DropIndicator`, `LiveRegion`), and **no CSS, no icons and no text**: you style every part with
+(`Tree.Root`, `Items`, `VirtualItems`, `Item`, `ItemContent`, `Group`, `Toggle`, `DropIndicator`,
+`LiveRegion`), and **no CSS, no icons and no text**: you style every part with
 `class`, `style` and the `data-*` attributes it exposes, and every visible word and accessible name
 comes from you. The primitives, their ARIA and their `data-*` are the same as
 `@fragiola/tree-react`'s.
@@ -97,9 +97,48 @@ of Vue's reactivity: never put it in `ref()` or `reactive()`.
 
 - `useTree<Types>()`: `{ model, engine }` of the enclosing root.
 - `useTreeItem(item)`: `{ state, props }` of an item, as computed refs, to build one on any element.
+- `useTreeItemRename(item, { onRenameError? })`: `{ state, props }` of an item's rename, wired
+  onto your own input (below).
 - `useTreeState(selector, { model? })`: a read-only ref of a value of the state.
 - `useTreeRef<Types>()` / `createTreeRef<Types>()`: the root's `{ model, engine }` from outside it
   (`<Tree.Root :tree-ref="tree">`, then `tree.value`).
+
+## Checks and rename: your own controls
+
+There is no checkbox and no rename input to import: the item carries the state, you render the
+control.
+
+- **Checks.** With `checkboxes` on the root, each item has `aria-checked` and `data-checked` /
+  `data-indeterminate`, and Space toggles it. A visible control is yours: read
+  `useTreeItem(item).state` (`checked`, `indeterminate`, `checkState`) and run
+  `model.run("item.toggle-check", { itemId })`. Make it an element that never takes focus (a
+  press then focuses the item, and the arrows keep working), hidden from assistive technology (the
+  item already says it), with `data-tree-no-drag` so a press on it starts no drag and no selection.
+
+  ```vue
+  <span aria-hidden="true" data-tree-no-drag
+      :data-checked="state.checked ? '' : undefined"
+      :data-indeterminate="state.indeterminate ? '' : undefined"
+      @click="model.run('item.toggle-check', { itemId: item.id })" />
+  ```
+
+- **Rename.** `useTreeItemRename(() => props.item)` gives `state` (`renaming`, `invalid`,
+  `error`) and `props` to bind on your input, rendered only while `state.renaming`: it starts with
+  the label, focused and selected; Enter commits, Escape cancels, leaving it commits (or cancels
+  when refused); `aria-invalid` and `data-invalid` while a commit is refused. Focus goes back to
+  the item. Or call `engine.run("commit-rename", { itemId, label })` and
+  `engine.run("cancel-rename", { itemId })` yourself.
+
+  ```vue
+  <script setup lang="ts">
+  const props = defineProps<{ item: ItemOf<Types> }>();
+  const { state: rename, props: renameProps } = useTreeItemRename(() => props.item);
+  </script>
+
+  <template>
+      <input v-if="rename.renaming" v-bind="renameProps" :aria-label="`Rename ${item.label}`" />
+  </template>
+  ```
 
 ## The primitive contract
 

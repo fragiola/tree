@@ -1,7 +1,12 @@
-import { veto } from "@fragiola/tree";
+import {
+    type AnyTypes,
+    type CommandError,
+    type ItemOf,
+    veto,
+} from "@fragiola/tree";
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { Tree } from "../src";
+import { Tree, useTree, useTreeItem, useTreeItemRename } from "../src";
 import { FileTree, filesModel, itemElement } from "./tree";
 
 function start(model = filesModel()) {
@@ -12,6 +17,45 @@ function start(model = filesModel()) {
     return { model, input: input as HTMLInputElement };
 }
 
+function Editor({
+    item,
+    onRenameError,
+}: {
+    item: ItemOf<AnyTypes>;
+    onRenameError: (error: CommandError) => void;
+}) {
+    const { state, props } = useTreeItemRename(item, { onRenameError });
+    return state.renaming ? (
+        <input
+            {...props}
+            aria-label="Name"
+            data-state={state.invalid ? "invalid" : ""}
+        />
+    ) : null;
+}
+
+/** Renaming by hand: the item's state and the engine's actions, no hook. */
+function ManualEditor({ item }: { item: ItemOf<AnyTypes> }) {
+    const { engine } = useTree();
+    const { state } = useTreeItem(item);
+    if (!state.renaming) return null;
+    return (
+        <input
+            aria-label="Name"
+            defaultValue={item.label}
+            onKeyDown={(event) => {
+                if (event.key === "Enter")
+                    engine.run("commit-rename", {
+                        itemId: item.id,
+                        label: event.currentTarget.value,
+                    });
+                if (event.key === "Escape")
+                    engine.run("cancel-rename", { itemId: item.id });
+            }}
+        />
+    );
+}
+
 describe("inline rename", () => {
     it("starts with the label, focused and selected", () => {
         const { input } = start();
@@ -19,7 +63,8 @@ describe("inline rename", () => {
         expect(input.value).toBe("app.ts");
         expect(input.selectionStart).toBe(0);
         expect(input.selectionEnd).toBe("app.ts".length);
-        expect(input).toHaveAttribute("data-tree-part", "rename-input");
+        // the app's own element: the hook adds no part attribute
+        expect(input).not.toHaveAttribute("data-tree-part");
         expect(itemElement("app.ts")).toHaveAttribute("data-renaming", "");
     });
 
@@ -68,6 +113,17 @@ describe("inline rename", () => {
         expect(itemElement("app.ts")).toHaveFocus();
     });
 
+    it("keeps focus and the typed text in the editor through an unrelated change", () => {
+        const { model, input } = start();
+        fireEvent.change(input, { target: { value: "half" } });
+        act(() => {
+            model.run("item.toggle-check", { itemId: "readme" });
+        });
+        expect(input).toHaveFocus();
+        expect(input.value).toBe("half");
+        expect(model.state.renamingItemId).toBe("app");
+    });
+
     it("cancels on Escape", () => {
         const { model, input } = start();
         fireEvent.change(input, { target: { value: "x" } });
@@ -100,8 +156,8 @@ describe("inline rename", () => {
                         <Tree.Item item={item}>
                             <Tree.ItemContent>
                                 {item.label}
-                                <Tree.RenameInput
-                                    aria-label="Name"
+                                <Editor
+                                    item={item}
                                     onRenameError={onRenameError}
                                 />
                             </Tree.ItemContent>
@@ -137,5 +193,53 @@ describe("inline rename", () => {
         fireEvent.click(input);
         expect(model.state.selectedItemIds).toEqual([]);
         expect(model.state.renamingItemId).toBe("app");
+    });
+});
+
+describe("renaming by hand", () => {
+    function renderManual(model = filesModel()) {
+        render(
+            <Tree.Root model={model} aria-label="Files">
+                <Tree.Items>
+                    {(item) => (
+                        <Tree.Item item={item}>
+                            <Tree.ItemContent>
+                                {item.label}
+                                <ManualEditor item={item} />
+                            </Tree.ItemContent>
+                        </Tree.Item>
+                    )}
+                </Tree.Items>
+            </Tree.Root>,
+        );
+        act(() => screen.getByRole("treeitem", { name: "readme.md" }).focus());
+        fireEvent.keyDown(document.activeElement ?? document.body, {
+            key: "F2",
+        });
+        return model;
+    }
+
+    it("commits with commit-rename, and focus goes back to the item", () => {
+        const model = renderManual();
+        const input = screen.getByRole("textbox", { name: "Name" });
+        act(() => input.focus());
+        fireEvent.change(input, { target: { value: "notes.md" } });
+        fireEvent.keyDown(input, { key: "Enter" });
+        expect(model.get("item-by", { id: "readme" })?.label).toBe("notes.md");
+        expect(screen.queryByRole("textbox")).toBeNull();
+        expect(
+            screen.getByRole("treeitem", { name: "notes.md" }),
+        ).toHaveFocus();
+    });
+
+    it("cancels with cancel-rename", () => {
+        const model = renderManual();
+        const input = screen.getByRole("textbox", { name: "Name" });
+        act(() => input.focus());
+        fireEvent.keyDown(input, { key: "Escape" });
+        expect(model.state.renamingItemId).toBeNull();
+        expect(
+            screen.getByRole("treeitem", { name: "readme.md" }),
+        ).toHaveFocus();
     });
 });
