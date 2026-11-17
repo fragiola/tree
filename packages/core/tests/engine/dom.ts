@@ -118,6 +118,10 @@ export function mount(
     root.addEventListener("keydown", (event) => {
         engine.adapter.handleKeyDown(event);
     });
+    for (const type of ["dragenter", "dragover", "dragleave", "drop"])
+        root.addEventListener(type, (event) =>
+            engine.adapter.handleDragEvent(event as DragEvent),
+        );
     const view = host.defaultView as Window & typeof globalThis;
     return {
         root,
@@ -189,3 +193,39 @@ export function pointer(
 
 export const wait = (ms: number) =>
     new Promise((resolve) => setTimeout(resolve, ms));
+
+/** A `DataTransfer` as a test gives one: its types, its files, its text. */
+export function dataTransfer(
+    types: readonly string[],
+    data: { files?: readonly File[]; text?: Record<string, string> } = {},
+): DataTransfer {
+    return {
+        types: [...types],
+        files: data.files ?? [],
+        dropEffect: "none",
+        effectAllowed: "all",
+        getData: (format: string) => data.text?.[format] ?? "",
+    } as unknown as DataTransfer;
+}
+
+/** Dispatches a native drag event on `target` (jsdom has no `DragEvent`): true when it was cancelled. */
+export function nativeDrag(
+    target: Element,
+    type: "dragenter" | "dragover" | "dragleave" | "drop",
+    x: number,
+    y: number,
+    transfer: DataTransfer,
+    relatedTarget: Element | null = null,
+): boolean {
+    const view = target.ownerDocument.defaultView as Window & typeof globalThis;
+    const event = new view.MouseEvent(type, {
+        bubbles: true,
+        cancelable: true,
+        clientX: x,
+        clientY: y,
+        relatedTarget,
+    });
+    Object.defineProperty(event, "dataTransfer", { value: transfer });
+    target.dispatchEvent(event);
+    return event.defaultPrevented;
+}

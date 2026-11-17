@@ -3,6 +3,7 @@
 
 import type { DragGroup } from "../dnd/drag-group";
 import type { DropTarget } from "../dnd/drop-evaluation";
+import type { DropOutsideController } from "../dnd/drop-outside";
 import type { TransferHandler } from "../dnd/transfer";
 import type { Scheduler } from "../dom/owner";
 import type { TreeModel } from "../state/model";
@@ -51,6 +52,27 @@ export type AnnounceEvent =
       }
     | { readonly type: "drag-cancel"; readonly itemIds: readonly string[] }
     | {
+          /** a pointer drag released outside every tree, taken by the app's `dropOutside` */
+          readonly type: "drop-outside";
+          readonly itemIds: readonly string[];
+          /** the element under the pointer, or null */
+          readonly element: Element | null;
+      }
+    | {
+          /** a foreign drag (`foreignDrop`: files, links, text) over the tree: its target changed */
+          readonly type: "foreign-drag-over";
+          /** the drag's `DataTransfer.types` */
+          readonly types: readonly string[];
+          /** null: no target the tree takes under the pointer */
+          readonly target: DropTarget | null;
+      }
+    | {
+          /** foreign content dropped on the tree, handed to the app's `onDrop` */
+          readonly type: "foreign-drop";
+          readonly types: readonly string[];
+          readonly target: DropTarget;
+      }
+    | {
           readonly type: "load-error";
           readonly itemId: string;
           readonly error: unknown;
@@ -76,7 +98,8 @@ export interface ResolvedEngineOptions {
 
 /** A drag under way. */
 export interface DragState {
-    readonly mode: "pointer" | "keyboard";
+    /** `foreign`: native drag of foreign content (`foreignDrop`), with no items */
+    readonly mode: "pointer" | "keyboard" | "foreign";
     /** the dragged items (empty in another tree of the group whose model is not the source's) */
     readonly itemIds: readonly string[];
     readonly target: DropTarget | null;
@@ -118,4 +141,6 @@ export interface EngineHost {
     reveal(itemId: string): void;
     /** the drag group the tree is in (the `dragGroup` option, once its root is attached) */
     dragGroup(): DragGroup | undefined;
+    /** the app's drop outside every tree (the `dropOutside` option), if any */
+    dropOutside(): DropOutsideController | undefined;
 }

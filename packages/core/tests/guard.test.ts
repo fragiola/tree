@@ -145,6 +145,25 @@ describe("core package guard", () => {
         expect(missing).toEqual([]);
     });
 
+    it("reaches the opt-in parts only through their options: an app that never imports their factories leaves them out", () => {
+        // createTreeVirtualizer, createTreeForeignDrop, createTreeDropOutside: only the entry
+        // imports their code; every other file imports their types
+        const OPT_IN =
+            /^import\s+(?!type\b)[^;]*?from\s+"[^"]*\/(?:virtual\/virtualizer|dnd\/foreign-drop|dnd\/drop-outside)"/m;
+        const offenders = listFiles(src).filter((file) => {
+            const relative = file.slice(src.length + 1);
+            if (
+                relative === "index.ts" ||
+                relative.startsWith("virtual/") ||
+                relative === "dnd/foreign-drop.ts" ||
+                relative === "dnd/drop-outside.ts"
+            )
+                return false;
+            return OPT_IN.test(readFileSync(file, "utf8"));
+        });
+        expect(offenders).toEqual([]);
+    });
+
     it("ships the root licence", () => {
         const rootLicence = readFileSync(
             join(root, "..", "..", "LICENSE"),

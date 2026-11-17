@@ -5,7 +5,15 @@
 import { fail, ok } from "../commands/define";
 import type { CommandResult, NoPayload } from "../commands/types";
 import { type DragGroup, joinDragGroup } from "../dnd/drag-group";
+import type {
+    DropOutsideController,
+    TreeDropOutside,
+} from "../dnd/drop-outside";
 import { indicatorOf } from "../dnd/drop-target";
+import type {
+    ForeignDropController,
+    TreeForeignDrop,
+} from "../dnd/foreign-drop";
 import { KeyboardDrag } from "../dnd/keyboard-drag";
 import { PointerDrag } from "../dnd/pointer-drag";
 import { modifiersOf, type TransferHandler } from "../dnd/transfer";
@@ -112,6 +120,17 @@ export interface TreeEngineOptions<T extends TreeTypes = AnyTypes> {
      * them (`item.remove`)
      */
     transfer?: TransferHandler | undefined;
+    /**
+     * takes foreign content (files, links, text) dragged on the tree from the desktop or another
+     * window (`createTreeForeignDrop(options)`): the target shows as for a tree drag, and the app's
+     * `onDrop` reads the data and runs its commands. Without it, native drags are ignored
+     */
+    foreignDrop?: TreeForeignDrop<T> | undefined;
+    /**
+     * hands the app a pointer drag of the tree's items released outside every tree of its group
+     * (`createTreeDropOutside(options)`), for its own targets. Without it, such a release cancels
+     */
+    dropOutside?: TreeDropOutside<T> | undefined;
 }
 
 /**
@@ -182,6 +201,8 @@ class Engine<T extends TreeTypes> implements TreeEngine<T>, EngineHost {
     private pendingFocus: string | undefined;
     /** the drag group joined with the root (`dragGroup`) */
     private group: { group: DragGroup; leave: () => void } | undefined;
+    private readonly foreign: ForeignDropController | undefined;
+    private readonly outside: DropOutsideController | undefined;
 
     constructor(model: TreeModel<T>, options: TreeEngineOptions<T>) {
         this.model = model as unknown as TreeModel;
@@ -247,6 +268,8 @@ class Engine<T extends TreeTypes> implements TreeEngine<T>, EngineHost {
             ],
             changed: () => this.changed(),
         });
+        this.foreign = options.foreignDrop?.connect(this);
+        this.outside = options.dropOutside?.connect(this, () => this.changed());
         this.unsubscribeModel = model.subscribe(() => this.modelChanged());
         if (options.root) this.attachRoot(options.root);
         this.loader.scan();
@@ -310,6 +333,7 @@ class Engine<T extends TreeTypes> implements TreeEngine<T>, EngineHost {
             announcement: () => this.announcement,
             direction: () => this.direction(),
             "virtual-window": () => this.virtual?.currentWindow() ?? null,
+            "drop-outside-element": () => this.outside?.element() ?? null,
         };
         return (
             Object.hasOwn(values, key) ? values[key]() : undefined
@@ -355,6 +379,7 @@ class Engine<T extends TreeTypes> implements TreeEngine<T>, EngineHost {
         if (this.destroyed) return;
         this.pointerDrag.cancel();
         this.keyboardDrag.cancel();
+        this.foreign?.cancel();
         this.leaveGroup();
         this.destroyed = true;
         this.loader.destroy(this.settings.resetLoadsOnDestroy === true);
@@ -549,6 +574,10 @@ class Engine<T extends TreeTypes> implements TreeEngine<T>, EngineHost {
         return this.group?.group;
     }
 
+    dropOutside(): DropOutsideController | undefined {
+        return this.outside;
+    }
+
     private leaveGroup(): void {
         const group = this.group;
         this.group = undefined;
@@ -640,6 +669,7 @@ class Engine<T extends TreeTypes> implements TreeEngine<T>, EngineHost {
         if (!this.rootElement) return;
         this.pointerDrag.cancel();
         this.keyboardDrag.cancel();
+        this.foreign?.cancel();
         this.typeAhead.reset();
         this.leaveGroup();
         this.virtual?.detach();
@@ -728,6 +758,9 @@ class Engine<T extends TreeTypes> implements TreeEngine<T>, EngineHost {
                 if (this.destroyed || this.model.state.focusedItemId === itemId)
                     return;
                 this.model.run("item.focus", { itemId });
+            },
+            handleDragEvent: (event) => {
+                if (!this.destroyed) this.foreign?.handle(event);
             },
             commitRename: (itemId, label, options) => {
                 if (this.destroyed)
