@@ -183,11 +183,13 @@ function values(name: string): Map<string, string> {
 }
 
 describe("the five themes", () => {
-    // the engine reads the indentation as a number (the root's `indentation`, 16px): a theme
-    // that changed it would put the drops' levels off the rows
-    it("share one indentation, the root's 16px", () => {
+    // the engine reads the indentation and the drop line's inset as numbers (the root's
+    // `indentation`, 16px, and `indicatorInset`): a theme that changed the indentation or the gap
+    // before the icon would put the drops off the rows
+    it("share one indentation and one gap: the root's numbers (indentation, indicatorInset) follow them", () => {
         for (const theme of THEMES) {
             expect(values(theme.name).get("indent"), theme.name).toBe("1rem");
+            expect(values(theme.name).get("gap"), theme.name).toBe("0.375rem");
         }
     });
 

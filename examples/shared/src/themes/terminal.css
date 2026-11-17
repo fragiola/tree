@@ -6,7 +6,8 @@
         (--tr-font, --tr-size), the radius of a row and of a frame (--tr-radius), a row's height
         and one level's indentation (--tr-row-height, --tr-indent: 1rem in every theme, the
         root's `indentation` of 16px, a number the engine reads for drops), the gap between parts
-        (--tr-gap), the frame's shadow (--tr-shadow), motion (--tr-motion), the indentation
+        (--tr-gap: 0.375rem in every theme, so the root's `indicatorInset` lands on the icon), the
+        frame's shadow (--tr-shadow), motion (--tr-motion), the indentation
         guides' width (--tr-guide-width), the selected row's marker at the inline start
         (--tr-marker, a width: 0px for none), the toggle's look (--tr-toggle-icon, the chevron's
         display; --tr-toggle-closed and --tr-toggle-open, a text drawn instead; --tr-toggle-turn,

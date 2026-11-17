@@ -101,7 +101,8 @@ let nextId = 0;
     template: `
         <div [class]="styles.frame">
             <div
-                [treeRoot]="model" [indicatorInset]="styles.indicatorInset"
+                [treeRoot]="model"
+                [indicatorInset]="styles.indicatorInset"
                 #tree="treeRoot"
                 [announce]="announce"
                 aria-label="Project files"

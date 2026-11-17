@@ -20,8 +20,8 @@ export const row = cn(
     "bg-position-[calc(0.75rem-var(--tr-indent)/2)_0] rtl:bg-position-[right_calc(0.75rem-var(--tr-indent)/2)_top]",
     "[:focus-visible>&]:ring-(length:--tr-focus-width) [:focus-visible>&]:ring-palette-ring [:focus-visible>&]:ring-inset",
     "data-selected:bg-(--tr-selected-bg) data-selected:text-(--tr-selected-fg)",
-    // the theme's marker: a line at the inline start of a selected row (0px: none)
-    "border-s-(length:--tr-marker) border-transparent data-selected:border-(--tr-marker-color)",
+    // the theme's marker: a bar at the inline start of a selected row (0px: none), out of the layout
+    "relative before:absolute before:inset-y-0 before:start-0 before:w-(--tr-marker) before:rounded-full data-selected:before:bg-(--tr-marker-color)",
 );
 
 export const toggle = cn(

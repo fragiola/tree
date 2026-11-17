@@ -24,8 +24,8 @@ export const row = cn(
     "bg-position-[calc(1.5rem+var(--tr-gap)-var(--tr-indent)/2)_0] rtl:bg-position-[right_calc(1.5rem+var(--tr-gap)-var(--tr-indent)/2)_top]",
     "[:focus-visible>&]:ring-(length:--tr-focus-width) [:focus-visible>&]:ring-palette-ring [:focus-visible>&]:ring-inset",
     "data-selected:bg-(--tr-selected-bg) data-selected:text-(--tr-selected-fg)",
-    // the theme's marker: a line at the inline start of a selected row (0px: none)
-    "border-s-(length:--tr-marker) border-transparent data-selected:border-(--tr-marker-color)",
+    // the theme's marker: a bar at the inline start of a selected row (0px: none), out of the layout
+    "relative before:absolute before:inset-y-0 before:start-0 before:w-(--tr-marker) before:rounded-full data-selected:before:bg-(--tr-marker-color)",
     "data-dragging:opacity-45",
     "data-[drop-position=inside]:bg-(--tr-hover-bg)",
 );
@@ -49,15 +49,16 @@ export const label = "min-w-0 flex-1 truncate";
 
 export const lock = "size-3.5 shrink-0 text-palette-accent/85";
 
+/** Where a drop line starts past its level (px), the root's `indicatorInset`: past the root's and
+ * the row's padding (4px each), the grip (14px, pulled 2px back), the toggle (16px) and their gaps
+ * (6px), at the icon. */
+export const indicatorInset = 48;
+
 /**
  * The package positions the indicator (absolute, from the inline start of the target's level, past
  * the grip and the toggle by `indicatorInset`) and gives a line no height: before and after draw a
  * line with a dot at its start, at the icon; inside outlines the row.
  */
-/** Where a drop line starts past its level (px), the root's `indicatorInset`: past the grip (14px,
- * pulled 2px back), the toggle (16px) and their gaps, at the icon. */
-export const indicatorInset = 44;
-
 export const dropIndicator = cn(
     "pointer-events-none z-10",
     "data-[drop-position=before]:-mt-px data-[drop-position=before]:border-t-(length:--tr-indicator-width) data-[drop-position=before]:[border-top-style:var(--tr-indicator-style)] data-[drop-position=before]:border-(--tr-indicator)",

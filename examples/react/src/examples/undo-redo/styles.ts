@@ -26,8 +26,8 @@ export const row = cn(
     "bg-position-[calc(0.75rem-var(--tr-indent)/2)_0] rtl:bg-position-[right_calc(0.75rem-var(--tr-indent)/2)_top]",
     "[:focus-visible>&]:ring-(length:--tr-focus-width) [:focus-visible>&]:ring-palette-ring [:focus-visible>&]:ring-inset",
     "data-selected:bg-(--tr-selected-bg) data-selected:text-(--tr-selected-fg)",
-    // the theme's marker: a line at the inline start of a selected row (0px: none)
-    "border-s-(length:--tr-marker) border-transparent data-selected:border-(--tr-marker-color)",
+    // the theme's marker: a bar at the inline start of a selected row (0px: none), out of the layout
+    "relative before:absolute before:inset-y-0 before:start-0 before:w-(--tr-marker) before:rounded-full data-selected:before:bg-(--tr-marker-color)",
     "data-dragging:opacity-45",
 );
 
@@ -47,9 +47,9 @@ export const label = "min-w-0 truncate [[data-renaming]>&]:hidden";
 export const input =
     "h-[calc(var(--tr-row-height)-6px)] min-w-0 flex-1 rounded-[4px] border border-palette-line bg-palette-base px-1.5 text-palette-contrast outline-none focus:border-palette-ring";
 
-/** Where a drop line starts past its level (px), the root's `indicatorInset`: past the row's
- * padding (4px), the toggle (16px) and the gap, at the icon. */
-export const indicatorInset = 28;
+/** Where a drop line starts past its level (px), the root's `indicatorInset`: past the root's and
+ * the row's padding (4px each), the toggle (16px) and the gap (6px), at the icon. */
+export const indicatorInset = 30;
 
 /** A line before or after a row (from the icon), the row's box inside a folder. */
 export const dropIndicator = cn(

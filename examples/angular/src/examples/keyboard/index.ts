@@ -77,7 +77,8 @@ let nextId = 0;
         <div [class]="styles.frame">
             <div [class]="styles.treeColumn">
                 <div
-                    [treeRoot]="model" [indicatorInset]="styles.indicatorInset"
+                    [treeRoot]="model"
+                    [indicatorInset]="styles.indicatorInset"
                     [announce]="announce"
                     aria-label="Project files"
                     [class]="styles.root"

@@ -1,5 +1,5 @@
 import { expect, type Page, test } from "@playwright/test";
-import { itemAt, openExample, THEMES, tree } from "./helpers";
+import { item, itemAt, openExample, THEMES, tree } from "./helpers";
 
 // The example themes (examples/shared/src/themes) are values every framework's examples read, so
 // their checks run against each framework's embed: checked on computed styles (verify by
@@ -32,7 +32,7 @@ async function shapes(page: Page) {
             (el) => getComputedStyle(el).backgroundImage,
         ),
         marker: await folder.evaluate(
-            (el) => getComputedStyle(el).borderInlineStartWidth,
+            (el) => getComputedStyle(el, "::before").width,
         ),
         toggle: await toggle.evaluate((el) => {
             const icon = el.querySelector("svg");
@@ -141,3 +141,24 @@ test("a row's height and indentation come from the theme tokens", async ({
         );
     expect(await padding(child)).toBeGreaterThan(await padding(rows.nth(0)));
 });
+
+for (const theme of THEMES) {
+    test(`${theme.name}: a keyboard drag's line starts at the icon (indicatorInset)`, async ({
+        page,
+    }) => {
+        await openExample(page, "keyboard", { theme: theme.name });
+        const files = tree(page, "Project files");
+        await item(files, "main.tsx").focus();
+        await page.keyboard.press("Control+Shift+D");
+        // after app.tsx: a line at app.tsx's level, from its icon
+        const line = await files
+            .locator('[data-tree-part="drop-indicator"]')
+            .boundingBox();
+        const icon = await item(files, "app.tsx")
+            .locator(':scope > [data-tree-part="content"] > svg')
+            .first()
+            .boundingBox();
+        if (!line || !icon) throw new Error("no line or icon");
+        expect(Math.abs(line.x - icon.x)).toBeLessThanOrEqual(1);
+    });
+}
