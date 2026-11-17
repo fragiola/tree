@@ -233,7 +233,6 @@ export default class IdeExplorer {
     constructor() {
         const destroyRef = inject(DestroyRef);
         destroyRef.onDestroy(projectRules(this.model));
-        destroyRef.onDestroy(this.editors.destroy);
         destroyRef.onDestroy(
             this.editors.subscribe(() =>
                 this.activeFileId.set(this.editors.get().activeFileId),

@@ -50,7 +50,6 @@ const editors = createEditors(model);
 const announce = announcer(model);
 const tree = useTreeRef<ProjectTypes, typeof features>();
 onScopeDispose(projectRules(model));
-onScopeDispose(editors.destroy);
 
 const activeFileId = shallowRef(editors.get().activeFileId);
 onScopeDispose(

@@ -121,13 +121,22 @@ export function createEditors(model: ProjectModel) {
         )
             set({ openFileIds, activeFileId });
     };
-    const unsubscribe = model.subscribe(sync);
+    // the editors follow the model while someone reads them: a view that unmounts and mounts
+    // again (React's StrictMode) subscribes again
+    let unsubscribe: (() => void) | undefined;
 
     return {
         get: () => editors,
         subscribe(listener: () => void) {
+            if (listeners.size === 0) {
+                unsubscribe = model.subscribe(sync);
+                sync();
+            }
             listeners.add(listener);
-            return () => listeners.delete(listener);
+            return () => {
+                listeners.delete(listener);
+                if (listeners.size === 0) unsubscribe?.();
+            };
         },
         /** Shows a file's tab, selects the file and expands the folders around it. */
         activate(fileId: string) {
@@ -147,7 +156,6 @@ export function createEditors(model: ProjectModel) {
             set({ openFileIds, activeFileId });
             if (activeFileId !== null) reveal(model, activeFileId);
         },
-        destroy: unsubscribe,
     };
 }
 

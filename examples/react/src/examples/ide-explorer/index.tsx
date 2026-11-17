@@ -66,7 +66,6 @@ export default function IdeExplorer() {
     // the last thing the project refused, or did: shown in the status bar and announced
     const [notice, setNotice] = useState("");
     useEffect(() => projectRules(model), [model]);
-    useEffect(() => editors.destroy, [editors]);
 
     const { activeFileId } = useSyncExternalStore(
         editors.subscribe,
