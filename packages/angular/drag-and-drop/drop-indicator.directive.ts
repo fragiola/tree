@@ -1,12 +1,17 @@
 import { computed, Directive, type Signal } from "@angular/core";
-import type { DropPosition } from "@fragiola/tree";
-import { injectTreeContext } from "../context";
+import type {
+    AnyFeatures,
+    AnyTypes,
+    DropPosition,
+    TreeEngine,
+} from "@fragiola/tree";
 import {
-    bindStructuralStyle,
-    dataAttr,
-    injectHost,
-    px,
-} from "../utils/helpers";
+    ɵbindStructuralStyle as bindStructuralStyle,
+    ɵdataAttr as dataAttr,
+    ɵinjectHost as injectHost,
+    ɵinjectTreeContext as injectTreeContext,
+    ɵpx as px,
+} from "@fragiola/tree-angular";
 
 export interface DropIndicatorState {
     /** where the drop goes, relative to `itemId`: a line `before` or `after` it, or `inside` it */
@@ -39,7 +44,12 @@ export class TreeDropIndicatorDirective {
 
     private readonly indicator = computed(() => {
         this.context.revision();
-        return this.context.engine()?.get("drop-indicator") ?? null;
+        // a drag feature's key (`engine.get` reads nothing without one)
+        const engine = this.context.engine() as TreeEngine<
+            AnyTypes,
+            AnyFeatures
+        > | null;
+        return engine?.get("drop-indicator") ?? null;
     });
 
     /** the drop target, or null while there is none */

@@ -12,17 +12,15 @@ import {
 } from "@angular/core";
 import {
     type AnnounceEvent,
+    type AnyFeatures,
     type AnyTypes,
     createTreeEngine,
     createTreeModel,
     FEATURE_ROOT_PROPS,
     type KeyMap,
     type LoadChildren,
-    type TransferHandler,
-    type TreeDropOutside,
     type TreeEngine,
     type TreeFeatures,
-    type TreeForeignDrop,
     type TreeJson,
     type TreeModel,
     type TreeTypes,
@@ -53,7 +51,7 @@ export interface RootState {
     dragging: boolean;
     /** a keyboard drag is under way */
     keyboardDragging: boolean;
-    /** a drag from another tree of the drag group is under way (`dragGroup`) */
+    /** a drag from another tree of the drag group is under way (`dragGroup()`) */
     draggingFromOtherTree: boolean;
     /** the tree has no item */
     empty: boolean;
@@ -138,37 +136,6 @@ export class TreeRootDirective<
     readonly keyMap = input<Partial<KeyMap> | undefined>(undefined);
     /** a click on a parent's content also expands or collapses it (default false) */
     readonly expandOnClick = input(undefined, { transform: optionalBoolean });
-    /** how far (px) a press moves before it is a drag (default 4) */
-    readonly dragThreshold = input<number | undefined>(undefined);
-    /** how long (ms) a drag hovers a collapsed parent before it expands (default 800) */
-    readonly autoExpandDelay = input<number | undefined>(undefined);
-    /** the indentation of one level (px), for the drop level at the end of a sublist (default 16) */
-    readonly indentation = input<number | undefined>(undefined);
-    /** how far (px) a drop line starts past its level's inline start: the toggle, a grip or padding before the label (default 0) */
-    readonly indicatorInset = input<number | undefined>(undefined);
-    /**
-     * joins the trees of the document with the same group name: items drag between them, by pointer
-     * and keyboard (over one model a drop is one `item.move`, over two a transfer)
-     */
-    readonly dragGroup = input<string | undefined>(undefined);
-    /**
-     * what a drop from a tree of another model does here: run your commands (copy, convert kinds)
-     * and return false to refuse; asked first with `dryRun` for each target. Default: the target
-     * model adds the dragged subtrees and the source model removes them
-     */
-    readonly transfer = input<TransferHandler | undefined>(undefined);
-    /**
-     * takes files, links and text dragged on the tree from the desktop or another window
-     * (`createTreeForeignDrop(options)`): the target shows as for a tree drag, and its `onDrop`
-     * runs your commands. Create it once (a field): another one makes another engine
-     */
-    readonly foreignDrop = input<TreeForeignDrop<T> | undefined>(undefined);
-    /**
-     * hands your `onDrop` the items of a pointer drag released outside every tree of the group
-     * (`createTreeDropOutside(options)`), for your own targets. Create it once (a field): another
-     * one makes another engine
-     */
-    readonly dropOutside = input<TreeDropOutside<T> | undefined>(undefined);
 
     /** the expanded items, after every command that changes them */
     readonly expandedItemIdsChange = output<string[]>();
@@ -240,7 +207,8 @@ export class TreeRootDirective<
     readonly state: Signal<RootState> = computed(() => {
         const tree = this.treeState();
         this.tick();
-        const live = this.current();
+        // the drag keys are the drag features' (`engine.is` answers false without them)
+        const live = this.current() as TreeEngine<AnyTypes, AnyFeatures> | null;
         return {
             multiselectable:
                 this.erased().get("root-attributes")["aria-multiselectable"] ===
@@ -269,12 +237,6 @@ export class TreeRootDirective<
             hasLoader: this.loadChildren() !== undefined,
             keyMap: this.keyMap() ?? null,
             expandOnClick: this.expandOnClick(),
-            dragThreshold: this.dragThreshold(),
-            autoExpandDelay: this.autoExpandDelay(),
-            indentation: this.indentation(),
-            indicatorInset: this.indicatorInset(),
-            dragGroup: this.dragGroup(),
-            hasTransfer: this.transfer() !== undefined,
         }),
     );
 
@@ -290,9 +252,6 @@ export class TreeRootDirective<
             if (!rendered()) return;
             const model = this.erased();
             this.options();
-            // a foreign drop, a drop outside by identity (they hold functions JSON leaves out)
-            this.foreignDrop();
-            this.dropOutside();
             untracked(() => {
                 const engine = this.create(model);
                 engine.adapter.attachRoot(this.host);
@@ -402,21 +361,6 @@ export class TreeRootDirective<
             announce: (event) => untracked(this.announce)?.(event),
             keyMap: untracked(this.keyMap),
             expandOnClick: untracked(this.expandOnClick),
-            dragThreshold: untracked(this.dragThreshold),
-            autoExpandDelay: untracked(this.autoExpandDelay),
-            indentation: untracked(this.indentation),
-            indicatorInset: untracked(this.indicatorInset),
-            dragGroup: untracked(this.dragGroup),
-            transfer:
-                untracked(this.transfer) === undefined
-                    ? undefined
-                    : (event) => untracked(this.transfer)?.(event),
-            foreignDrop: untracked(this.foreignDrop) as
-                | TreeForeignDrop
-                | undefined,
-            dropOutside: untracked(this.dropOutside) as
-                | TreeDropOutside
-                | undefined,
             // a new engine (a new model or option, a re-render) loads what this one was loading
             resetLoadsOnDestroy: true,
         });
@@ -427,8 +371,14 @@ export class TreeRootDirective<
         untracked(this.current)?.adapter.handleKeyDown(event);
     }
 
-    /** native drags bring foreign content (`foreignDrop`); the engine ignores them without it */
+    /** native drags bring foreign content: forwarded only with `foreignDrop()` */
     protected onDrag(event: DragEvent): void {
-        untracked(this.current)?.adapter.handleDragEvent(event);
+        const engine = untracked(this.current);
+        if (
+            engine?.adapter.model
+                .get("features")
+                .some(({ name }) => name === "foreign-drop")
+        )
+            engine.adapter.handleDragEvent(event);
     }
 }

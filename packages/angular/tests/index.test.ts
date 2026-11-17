@@ -75,7 +75,7 @@ describe("@fragiola/tree-angular", () => {
     });
 
     it("exports exactly the documented runtime API besides the core", () => {
-        expect(REACT_FILES).toHaveLength(8);
+        expect(REACT_FILES).toHaveLength(7);
         for (const { entry, hook } of FEATURE_PART_HOOKS) {
             expect(
                 readdirSync(
@@ -176,5 +176,34 @@ describe("@fragiola/tree-angular", () => {
         expect("injectTreeVirtualWindow" in angular).toBe(false);
         const selection = await import("../selection/public-api");
         expect(Object.keys(selection)).toEqual(["selection"]);
+    });
+
+    it("ships the drop indicator from /drag-and-drop (and /foreign-drop), out of TREE, named as in the React adapter", async () => {
+        const entry = await import("../drag-and-drop/public-api");
+        expect(Object.keys(entry).sort()).toEqual([
+            "TreeDropIndicatorDirective",
+            "dragAndDrop",
+        ]);
+        expect(
+            readdirSync(
+                join(import.meta.dirname, "../../react/src/drag-and-drop"),
+            ),
+        ).toContain("drop-indicator.tsx");
+        expect(
+            new Set<unknown>(angular.TREE).has(
+                entry.TreeDropIndicatorDirective,
+            ),
+        ).toBe(false);
+        expect("TreeDropIndicatorDirective" in angular).toBe(false);
+        const foreign = await import("../foreign-drop/public-api");
+        expect(foreign.TreeDropIndicatorDirective).toBe(
+            entry.TreeDropIndicatorDirective,
+        );
+        expect(Object.keys(await import("../drag-group/public-api"))).toEqual([
+            "dragGroup",
+        ]);
+        expect(Object.keys(await import("../drop-outside/public-api"))).toEqual(
+            ["dropOutside"],
+        );
     });
 });

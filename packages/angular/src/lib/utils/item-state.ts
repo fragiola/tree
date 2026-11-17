@@ -2,10 +2,12 @@
 // and the `data-*` every part of an item carries.
 
 import type {
+    AnyFeatures,
     AnyTypes,
     CheckState,
     DropPosition,
     ItemOf,
+    TreeEngine,
 } from "@fragiola/tree";
 import type { TreeContext } from "../context";
 import { dataAttr } from "./helpers";
@@ -110,7 +112,8 @@ export function treeItemState(
     const model = context.model();
     const state = context.state();
     context.revision();
-    const engine = context.engine();
+    // the drag keys are the drag features' (`engine.is` answers false without them)
+    const engine = context.engine() as TreeEngine<AnyTypes, AnyFeatures> | null;
     const itemId = item.id;
     const path = model.get("item-path-by", { itemId }) ?? "";
     const segments = path.split("/").filter((segment) => segment !== "");

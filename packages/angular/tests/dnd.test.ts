@@ -4,7 +4,9 @@ import { ROW } from "./setup";
 import {
     content,
     type FileTypes,
+    featuresWith,
     filesModel,
+    filesModelWith,
     fire,
     focus,
     itemElement,
@@ -151,7 +153,9 @@ describe("drag and drop", () => {
     });
 
     it("starts a drop line past its level by indicatorInset", async () => {
-        await renderFiles({ model: filesModel(), indicatorInset: 28 });
+        await renderFiles({
+            model: filesModelWith(featuresWith([], { indicatorInset: 28 })),
+        });
         await pressRow("readme.md");
         // the top of app.ts (level 2): a line before it
         await move(rowY("app.ts", 0.1));
