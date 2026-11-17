@@ -1,10 +1,11 @@
-/* Theme "paper" — Warm and spacious: tall rounded rows, a deep indent, a marked selection.
+/* Theme "paper" — Warm and spacious: tall rounded rows, a serif face, a marked selection.
 
    One file per theme, selected by data-example-theme="paper" on any element (the embed puts it
    on <body>, as an app would). A theme only sets values; it styles no markup. It declares:
      1. shape tokens (--tr-*) that the examples' class names read: the font and its size
         (--tr-font, --tr-size), the radius of a row and of a frame (--tr-radius), a row's height
-        and one level's indentation (--tr-row-height, --tr-indent), the gap between parts
+        and one level's indentation (--tr-row-height, --tr-indent: 1rem in every theme, the
+        root's `indentation` of 16px, a number the engine reads for drops), the gap between parts
         (--tr-gap), the frame's shadow (--tr-shadow), motion (--tr-motion), the indentation
         guides' width (--tr-guide-width), the selected row's marker at the inline start
         (--tr-marker, a width: 0px for none), the toggle's look (--tr-toggle-icon, the chevron's
@@ -21,7 +22,7 @@
         per level, or none). They are declared per palette so that var(--palette-…) resolves
         against the palette the element sits in.
 
-   A serif face, tall rows with a generous radius and a deep indent, no guides, a soft shadow on
+   A serif face, tall rows with a generous radius, no guides, a soft shadow on
    the frame, slow motion, the selected row filled and marked by a thick line at its inline start, a
    3px drop line.
 
@@ -36,7 +37,7 @@
     --tr-size: 0.9375rem;
     --tr-radius: 12px;
     --tr-row-height: 2.25rem;
-    --tr-indent: 1.5rem;
+    --tr-indent: 1rem;
     --tr-gap: 0.5rem;
     --tr-shadow:
         0 1px 2px oklch(0.4 0.04 60 / 0.08),

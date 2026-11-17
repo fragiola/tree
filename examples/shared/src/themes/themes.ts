@@ -43,7 +43,7 @@ export const THEMES = [
         name: "paper",
         title: "Paper",
         description:
-            "Warm and spacious: tall rounded rows, a deep indent, a marked selection.",
+            "Warm and spacious: tall rounded rows, a serif face, a marked selection.",
         scheme: "light",
         swatch: [
             "oklch(0.955 0.014 85)",

@@ -183,6 +183,14 @@ function values(name: string): Map<string, string> {
 }
 
 describe("the five themes", () => {
+    // the engine reads the indentation as a number (the root's `indentation`, 16px): a theme
+    // that changed it would put the drops' levels off the rows
+    it("share one indentation, the root's 16px", () => {
+        for (const theme of THEMES) {
+            expect(values(theme.name).get("indent"), theme.name).toBe("1rem");
+        }
+    });
+
     it("are light, dark, ide, paper and terminal, in Dockable's order", () => {
         expect(THEMES.map((theme) => theme.name)).toEqual([
             "light",
@@ -200,7 +208,7 @@ describe("the five themes", () => {
         (name) => {
             const light = values("light");
             const theme = values(name);
-            for (const token of ["row-height", "radius", "font", "indent"]) {
+            for (const token of ["row-height", "radius", "font"]) {
                 expect(theme.get(token), token).not.toBe(light.get(token));
             }
             expect(
