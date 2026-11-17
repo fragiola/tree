@@ -266,8 +266,8 @@ examples app per framework; the registration in `www` is fragiola/www#32.
   `Callout` (fragiola.com/tree goes live before npm, the maintainer's decision). Remove it with
   the first release.
 - The JSON model is documented in `site/docs/api/json-model.mdx`, the commands in the generated
-  `site/docs/api/commands.mdx`. The examples' workarounds and the packages' known gaps are listed
-  in `docs/docs-examples-gaps.md` and on `site/docs/limitations.mdx`.
+  `site/docs/api/commands.mdx`. The examples' workarounds, when there are any, are listed in
+  `docs/docs-examples-gaps.md`; what the packages leave out is on `site/docs/limitations.mdx`.
 - **The examples** (`examples/react/src/examples/README.md`): 13 ids, final, that Vue and
   Angular port in full: `hello-tree`, `file-explorer`, `multi-select`, `checkboxes`, `async-loading`,
   `rename`, `drag-and-drop`, `keyboard`, `controlled`, `save-restore`, `undo-redo`,

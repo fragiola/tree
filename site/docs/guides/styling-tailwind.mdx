@@ -229,7 +229,8 @@ A theme changes the tree's shape as well as its colours, through values the clas
 
 - **Indentation guides**: a row draws `--tr-guide` (an image, or `none`) over its indentation, one
   line per level: `bg-(image:--tr-guide) bg-size-[calc(var(--tree-depth)*var(--tr-indent))_100%] bg-no-repeat`.
-- **The selected row's marker**: `border-s-(length:--tr-marker) border-transparent data-selected:border-(--tr-marker-color)`.
+- **The selected row's marker**: a bar out of the layout,
+  `relative before:absolute before:inset-y-0 before:start-0 before:w-(--tr-marker) data-selected:before:bg-(--tr-marker-color)`.
 - **The toggle's look**: the chevron's display and turn (`[&_svg]:[display:var(--tr-toggle-icon)]`,
   `data-expanded:rotate-(--tr-toggle-turn)`), or a text drawn instead
   (`before:content-(--tr-toggle-closed) data-expanded:before:content-(--tr-toggle-open)`).

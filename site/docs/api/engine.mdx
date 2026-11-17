@@ -54,7 +54,7 @@ in an iframe or a popup window.
 | `dragThreshold` | `number` | `4` | how far (px) a press moves before it is a drag |
 | `autoExpandDelay` | `number` | `800` | how long (ms) a drag hovers a collapsed parent before it expands |
 | `indentation` | `number` | `16` | one level's indentation (px): the pointer's inline offset at the end of a sublist picks the level |
-| `indicatorInset` | `number` | `0` | how far (px) a drop line (`before`, `after`) starts past its level's inline start; the `inside` box keeps the row's start |
+| `indicatorInset` | `number` | `0` | how far (px) a drop line (`before`, `after`) starts past its level's inline start; the `inside` box gets no inset (`(level - 1) * indentation`, its child level) |
 | `autoScroll` | `{ threshold?: number; speed?: number }` | engine defaults | how close (px) to a scroll container's edge a drag scrolls it, and how fast (px per frame) |
 | `typeAheadTimeout` | `number` | `500` | how long (ms) between two typed characters keeps one search |
 | `resetLoadsOnDestroy` | `boolean` | `false` | `destroy()` puts the items it was loading back to `unloaded`, so the next engine loads them again (adapters set it) |

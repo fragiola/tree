@@ -80,7 +80,7 @@ lands on, and the drop indicator starts at `(level - 1) * indentation + indicato
 from the root's inline start. Tell the root your indentation in pixels with `indentation`
 (default `16`), and where a row's label starts past its level with `indicatorInset` (default
 `0`): the `+ 0.5rem` above, a toggle, a grip. A line then starts at the label; the `inside` box
-keeps the row's start.
+gets no inset.
 
 <Framework name="react">
 
@@ -136,8 +136,8 @@ keeps the row's start.
 
 </Framework>
 
-The examples' rows start with `0.25rem` of padding and a `1rem` toggle (and a grip in
-[drag and drop](/examples/drag-and-drop)), so they pass the toggle's end, in pixels, as
-`indicatorInset`.
+The examples' roots and rows start with `0.25rem` of padding each, then a `1rem` toggle and a
+`0.375rem` gap (and a grip in [drag and drop](/examples/drag-and-drop)), so they pass where the
+icon starts, in pixels, as `indicatorInset`: `30` (`48` with the grip).
 
 <Example id="drag-and-drop" />
