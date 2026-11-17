@@ -16,6 +16,7 @@ import {
     typedTree,
     useTree,
     useTreeState,
+    useTreeVirtualWindow,
     type TreeJson,
 } from "@fragiola/tree-vue";
 ```
@@ -65,8 +66,9 @@ Every part is `Tree.<Part>`, with the props of its React page except `render`, `
 
 | part | Vue props | slots | events |
 | --- | --- | --- | --- |
-| `Tree.Root` | `model`, `defaultTree`, `expandedItemIds`, `selectedItemIds`, `checkedItemIds`, `loadChildren`, `announce`, `keyMap`, `expandOnClick`, `checkboxes`, `dragThreshold`, `autoExpandDelay`, `indentation`, `indicatorInset`, `typeAheadTimeout`, `treeRef` | default | `update:expandedItemIds`, `update:selectedItemIds`, `update:checkedItemIds` |
+| `Tree.Root` | `model`, `defaultTree`, `expandedItemIds`, `selectedItemIds`, `checkedItemIds`, `loadChildren`, `announce`, `keyMap`, `expandOnClick`, `checkboxes`, `dragThreshold`, `autoExpandDelay`, `indentation`, `indicatorInset`, `typeAheadTimeout`, `virtual`, `treeRef` | default | `update:expandedItemIds`, `update:selectedItemIds`, `update:checkedItemIds` |
 | `Tree.Items` | none | default `{ item }` | none |
+| `Tree.VirtualItems` | none | default `{ item, row }` (`row`: its `VirtualRow`) | none |
 | `Tree.Item` | `item` | default `{ state }` | none |
 | `Tree.ItemContent` | none | default `{ state }` | none |
 | `Tree.Group` | `keepMounted` | default `{ item }` | none |
@@ -91,6 +93,7 @@ The hooks of [the React reference](/docs/api/hooks), as composables. Call them i
 | `useTreeItem(item)` | `UseTreeItemResult`: `state` (`TreeItemState`) and `props` (`TreeItemElementProps`: the ARIA, `tabindex`, `data-*`, `onFocus`, the structural style and the template `ref`), as computed refs; bind `v-bind="props"` on your element. `item` is a value, a ref or a getter |
 | `useTreeRef<T>()` | a `TreeRef<T>`, whose read-only, reactive `value` is the root's `TreeHandle` (`model`, `engine`) while it is mounted, `null` otherwise. It is not a Vue ref, so a template does not unwrap it: `:tree-ref="tree"` passes it, and the template reads `tree.value` |
 | `createTreeRef<T>()` | the same tree ref, anywhere (a module, a test) |
+| `useTreeVirtualWindow()` | a computed ref of the root's `VirtualWindow` (the rows a virtualized tree renders), `null` before it mounts and without `virtual` |
 
 A server render (Nuxt, `renderToString`) outputs the tree's markup, never subscribes to the model
 and never runs a command on it: the engine, the controlled lists and the composables' subscriptions
@@ -100,6 +103,7 @@ start once the component mounts in the browser.
 
 Each part exports its props and its slots, named as in React, and its state and events where it
 has them: `RootProps`, `RootSlots`, `RootState`, `RootEmits`, `ItemsProps`, `ItemsSlots`,
+`VirtualItemsProps`, `VirtualItemsSlots`,
 `ItemProps`, `ItemSlots`, `ItemContentProps`, `ItemContentSlots`, `GroupProps`, `GroupSlots`,
 `ToggleProps`, `ToggleSlots`, `CheckboxProps`, `CheckboxSlots`, `RenameInputProps`,
 `RenameInputSlots`, `RenameInputState`, `RenameInputEmits`, `DropIndicatorProps`,

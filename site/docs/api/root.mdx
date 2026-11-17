@@ -116,6 +116,7 @@ or vetoes every command the tree runs, and a listener (`model.subscribe`) every 
 | `indentation` | `number` | `16` | the indentation of one level (px): the drop level at the end of a sublist, and the drop indicator's inline offset |
 | `indicatorInset` | `number` | `0` | how far (px) a drop line (`before`, `after`) starts past its level's inline start: the toggle, a grip or padding before the label ([Keeping drops in line](/docs/getting-started/depth#keeping-drops-in-line)) |
 | `typeAheadTimeout` | `number` | `500` | how long (ms) between two typed characters keeps one type-ahead search |
+| `virtual` | `TreeVirtualizer` | none | renders only the visible items in view: `createTreeVirtualizer(options)`, rendered by [`Tree.VirtualItems`](/docs/api/virtual-items). Create it once (at module level, or memoized): another virtualizer creates another engine |
 | `treeRef` | `TreeRef<T>` | none | access to the model and the engine from outside the root (`useTreeRef`, `createTreeRef`) |
 | `children` | `ReactNode` | none | the tree: `Tree.Items`, `Tree.DropIndicator`, `Tree.LiveRegion`, and anything else |
 

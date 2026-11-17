@@ -332,3 +332,44 @@ it attaches; in a component, `useTreeRef` does.
 | --- | --- | --- |
 | `model` | `TreeModel<T>` | the root's model |
 | `engine` | `TreeEngine<T>` | the root's engine |
+
+## `useTreeVirtualWindow`
+
+```ts
+function useTreeVirtualWindow(): VirtualWindow | null;
+```
+
+The rows the enclosing `Tree.Root` renders when it is virtualized (its `virtual` prop):
+`engine.get("virtual-window")`, read again whenever it changes (a scroll, a measured row, a
+change of the tree). `null` before the root is mounted, and without `virtual`.
+[`Tree.VirtualItems`](/docs/api/virtual-items) renders it; read it to render the rows your own
+way, or to show how many are rendered. Each `VirtualRow` has its `offset`, `size` and the
+`spaceBefore` to keep empty above it; `spaceAfter` follows the last one
+([the engine's reference](/docs/api/engine#virtualization)).
+
+<Framework name="react">
+
+```tsx
+const window = useTreeVirtualWindow();
+return <output>{window?.rows.length ?? 0} of {model.get("visible-items").length} rows rendered</output>;
+```
+
+</Framework>
+
+<Framework name="vue">
+
+```ts
+const window = useTreeVirtualWindow(); // a computed ref
+const rendered = computed(() => window.value?.rows.length ?? 0);
+```
+
+</Framework>
+
+<Framework name="angular">
+
+```ts
+readonly window = injectTreeVirtualWindow(); // a signal
+readonly rendered = computed(() => this.window()?.rows.length ?? 0);
+```
+
+</Framework>

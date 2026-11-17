@@ -123,7 +123,7 @@ tree, and where the pointer is over a row), exported for an adapter's tests.
 option: the engine then renders only the visible items in view, plus `overscan` rows on each
 side, so a tree of hundreds of thousands of visible items scrolls, moves the focus and drags like
 a small one. It is opt-in and costs nothing without it: a bundle that never imports
-`createTreeVirtualizer` leaves it out.
+`createTreeVirtualizer` leaves it out. The guide is [Virtualization](/docs/guides/virtualization).
 
 ```ts
 import { createTreeEngine, createTreeVirtualizer } from "@fragiola/tree";
