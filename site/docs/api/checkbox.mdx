@@ -9,6 +9,8 @@ or `"mixed"`), hidden from assistive technology and never focused: with the root
 the item itself carries the same `aria-checked` (the `treeitem` is what a screen reader reads),
 and Space toggles the focused item's check.
 
+<Framework name="react">
+
 ```tsx
 <Tree.Root<Types> defaultTree={json} checkboxes aria-label="Permissions">
     <Tree.Items<Types>>
@@ -26,6 +28,48 @@ and Space toggles the focused item's check.
     </Tree.Items>
 </Tree.Root>
 ```
+
+</Framework>
+
+<Framework name="vue">
+
+```vue
+<Tree.Root :default-tree="json" checkboxes aria-label="Permissions">
+    <Tree.Items v-slot="{ item }">
+        <Tree.Item :item="item">
+            <Tree.ItemContent class="row">
+                <Tree.Checkbox class="box">
+                    <CheckIcon class="check" aria-hidden="true" />
+                    <MinusIcon class="dash" aria-hidden="true" />
+                </Tree.Checkbox>
+                <span>{{ item.label }}</span>
+            </Tree.ItemContent>
+        </Tree.Item>
+    </Tree.Items>
+</Tree.Root>
+```
+
+</Framework>
+
+<Framework name="angular">
+
+```html
+<div treeRoot [defaultTree]="json" checkboxes aria-label="Permissions">
+    <ng-template [treeItems]="json" let-item>
+        <div [treeItem]="item">
+            <div treeItemContent class="row">
+                <span treeCheckbox class="box">
+                    <svg lucideCheck class="check" aria-hidden="true"></svg>
+                    <svg lucideMinus class="dash" aria-hidden="true"></svg>
+                </span>
+                <span>{{ item.label }}</span>
+            </div>
+        </div>
+    </ng-template>
+</div>
+```
+
+</Framework>
 
 Show the check mark on `[data-checked]` and the dash on `[data-indeterminate]`
 ([Checkboxes](/docs/guides/checkboxes)).

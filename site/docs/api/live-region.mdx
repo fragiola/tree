@@ -8,12 +8,43 @@ root's `announce` returned. The package writes no text: without `announce`, it s
 WAI-ARIA APG asks a drag and drop to be perceivable without sight; this is where your words go.
 Hide it visually with your own class.
 
+<Framework name="react">
+
 ```tsx
 <Tree.Root<Types> defaultTree={json} announce={announce} aria-label="Files">
     <Tree.Items<Types>>{(item) => <FileItem item={item} />}</Tree.Items>
     <Tree.LiveRegion className="visually-hidden" />
 </Tree.Root>
 ```
+
+</Framework>
+
+<Framework name="vue">
+
+```vue
+<Tree.Root :default-tree="json" :announce="announce" aria-label="Files">
+    <Tree.Items v-slot="{ item }"><FileItem :item="item" /></Tree.Items>
+    <Tree.LiveRegion class="visually-hidden" />
+</Tree.Root>
+```
+
+</Framework>
+
+<Framework name="angular">
+
+```html
+<div treeRoot [defaultTree]="json" [announce]="announce" aria-label="Files">
+    <ng-template [treeItems]="json" let-item>
+        <div [treeItem]="item">
+            <div treeItemContent>{{ item.label }}</div>
+            <div treeGroup></div>
+        </div>
+    </ng-template>
+    <div treeLiveRegion class="visually-hidden"></div>
+</div>
+```
+
+</Framework>
 
 `announce` receives an `AnnounceEvent` and returns a string, or `undefined` to say nothing:
 

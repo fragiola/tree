@@ -19,7 +19,7 @@ import {
     readProject,
 } from "../sources.ts";
 
-// The export handles any number of frameworks (Tree ships React and Vue today): one manifest and one embed per framework of
+// The export handles any number of frameworks (Tree ships React, Vue and Angular): one manifest and one embed per framework of
 // project.json, each from its own app. A fake Vue app (two examples) stands in for a second one.
 
 let dirs: string[] = [];
@@ -52,8 +52,12 @@ const appOf = (vue: ExamplesApp) => (framework: Framework) =>
 
 describe("the frameworks of project.json", () => {
     it("are known frameworks; an unknown one throws", () => {
-        // the site ships React only, for now; another framework is one more app and one more name
-        expect(frameworksOf(readProject())).toEqual(["react", "vue"]);
+        // another framework is one more app and one more name
+        expect(frameworksOf(readProject())).toEqual([
+            "react",
+            "vue",
+            "angular",
+        ]);
         expect(frameworksOf({ frameworks: ["react", "vue"] })).toEqual([
             "react",
             "vue",
@@ -100,7 +104,7 @@ describe("the frameworks of project.json", () => {
         const out = temp("site-export-");
         const base = "/tree";
         // the docs have a block for each framework of project.json
-        const frameworks: Framework[] = ["react", "vue"];
+        const frameworks: Framework[] = ["react", "vue", "angular"];
         const project = { ...readProject(), frameworks };
         const manifests = await buildManifests(frameworks, appOf(fakeVueApp()));
         cpSync(DOCS_DIR, join(out, "docs"), { recursive: true });
@@ -124,7 +128,9 @@ describe("the frameworks of project.json", () => {
             );
         }
         const problems = validateExport(out, base);
-        expect(problems.filter((p) => p.includes("embed/react/"))).toEqual([]);
+        expect(
+            problems.filter((p) => /embed\/(react|angular)\//.test(p)),
+        ).toEqual([]);
         expect(problems).toEqual([
             expect.stringMatching(
                 /^embed\/vue\/index\.html:3: needs <meta name="robots"/,

@@ -9,8 +9,12 @@
 // - every adapter (`ADAPTERS`: each package under packages/ but the core) depends on the core at
 //   its exact version, and passes its smoke test: a scratch app outside the workspace that installs
 //   the adapter's tarball only (the core tarball comes as its dependency), typechecks, builds and
-//   loads its dev server. Each adapter Epic adds its entry and its smoke app (Dockable's
-//   `reactSmoke`, `vueSmoke`, `angularSmoke` are the model): `reactSmoke`, `vueSmoke`.
+//   loads its dev server: a Vite + React app (`reactSmoke`); a Vite + Vue app of single-file
+//   components checked by vue-tsc (`vueSmoke`); a Vite app with @analogjs/vite-plugin-angular and a
+//   standalone component checked by ngc with strict templates, on packages/angular's TypeScript 6.0
+//   (`angularSmoke`). A package published from its build output (`publishConfig.directory`: the
+//   Angular one, which ng-packagr builds into `dist`) is packed from that directory: its packed
+//   `exports` are the repo's relative to it, each target a file of the tarball.
 //
 // `--tarballs <dir>` checks the tarballs found in `dir` (at any depth) instead of packing: the
 // release workflow passes the directory `changeset pack` wrote, so what is checked is what is
@@ -626,10 +630,183 @@ async function vueSmoke(
     await loadThroughDevServer(app, "/src/main.ts");
 }
 
+// The Angular smoke app: one standalone component, typed by its model's registry through the
+// template directive, bootstrapped zoneless; the recursion is one template (a group with no
+// template of its own renders with the enclosing one). Everything comes from the Angular package.
+const ANGULAR_SMOKE_MAIN = `import {
+    Component,
+    provideZonelessChangeDetection,
+    signal,
+} from "@angular/core";
+import { bootstrapApplication } from "@angular/platform-browser";
+import {
+    createTreeModel,
+    type ItemOf,
+    TREE,
+    type TreeJson,
+} from "@fragiola/tree-angular";
+
+type Types = { items: { folder: undefined; file: { size: number } } };
+
+const json: TreeJson<Types> = {
+    version: 1,
+    rootItemIds: ["src", "readme"],
+    items: {
+        src: { kind: "folder", label: "src", childItemIds: ["app"] },
+        app: { kind: "file", label: "app.ts", data: { size: 120 } },
+        readme: { kind: "file", label: "README.md", data: { size: 3 } },
+    },
+    expandedItemIds: ["src"],
+};
+
+@Component({
+    selector: "app-root",
+    imports: [TREE],
+    template: \`
+        <div [treeRoot]="model" [(selectedItemIds)]="selected" aria-label="Files">
+            <ng-template [treeItems]="model" let-item>
+                <div [treeItem]="item">
+                    <div treeItemContent>
+                        <span treeToggle></span>
+                        {{ label(item) }}
+                        @if (item.kind === "file") {
+                            <span>{{ item.data.size }}</span>
+                        }
+                    </div>
+                    <div treeGroup></div>
+                </div>
+            </ng-template>
+            <div treeDropIndicator></div>
+            <div treeLiveRegion></div>
+        </div>
+    \`,
+})
+class App {
+    readonly model = createTreeModel<Types>(json);
+    readonly selected = signal<readonly string[]>([]);
+
+    label(item: ItemOf<Types>): string {
+        return item.label;
+    }
+}
+
+bootstrapApplication(App, {
+    providers: [provideZonelessChangeDetection()],
+}).catch((error: unknown) => console.error(error));
+`;
+
+/**
+ * A scratch Vite + Angular app in `dir` (@analogjs/vite-plugin-angular) that depends on the
+ * Angular tarball only (the core tarball comes as its dependency), on the Angular tools and the
+ * TypeScript 6.0 packages/angular pins.
+ */
+function writeAngularSmokeApp(
+    dir: string,
+    core: string,
+    angular: string,
+): void {
+    const version = (name: string) => adapterVersion("angular", name);
+    const manifest = {
+        name: "tree-smoke",
+        private: true,
+        type: "module",
+        dependencies: {
+            "@angular/common": version("@angular/common"),
+            "@angular/compiler": version("@angular/compiler"),
+            "@angular/core": version("@angular/core"),
+            "@angular/platform-browser": version("@angular/platform-browser"),
+            "@fragiola/tree-angular": `file:${angular}`,
+            rxjs: version("rxjs"),
+        },
+        devDependencies: {
+            "@analogjs/vite-plugin-angular": version(
+                "@analogjs/vite-plugin-angular",
+            ),
+            "@angular/build": version("@angular/build"),
+            "@angular/compiler-cli": version("@angular/compiler-cli"),
+            typescript: version("typescript"),
+            vite: version("vite"),
+        },
+    };
+    writeFileSync(
+        join(dir, "package.json"),
+        `${JSON.stringify(manifest, null, 4)}\n`,
+    );
+    // the core tarball for the version the Angular tarball pins; the Analog plugin's TypeScript is
+    // the app's (6.0), and @angular/build's native helpers keep their prebuilt binaries
+    writeFileSync(
+        join(dir, "pnpm-workspace.yaml"),
+        [
+            "overrides:",
+            `  "@fragiola/tree": "file:${core}"`,
+            "packageExtensions:",
+            '  "@analogjs/vite-plugin-angular":',
+            "    peerDependencies:",
+            '      typescript: "*"',
+            "allowBuilds:",
+            "  esbuild: true",
+            '  "@parcel/watcher": false',
+            "  lmdb: false",
+            "  msgpackr-extract: false",
+            "",
+        ].join("\n"),
+    );
+    writeFileSync(
+        join(dir, "vite.config.js"),
+        `import angular from "@analogjs/vite-plugin-angular";\nimport { defineConfig } from "vite";\n\nexport default defineConfig({ plugins: [angular({ tsconfig: "tsconfig.json" })] });\n`,
+    );
+    writeFileSync(
+        join(dir, "index.html"),
+        `<!doctype html>\n<html lang="en">\n<body>\n<app-root></app-root>\n<script type="module" src="/src/main.ts"></script>\n</body>\n</html>\n`,
+    );
+    // strict, strict templates, with the published declarations checked too (no skipLibCheck)
+    const tsconfig = {
+        compilerOptions: {
+            target: "ES2022",
+            lib: ["ES2022", "DOM", "DOM.Iterable"],
+            module: "ESNext",
+            moduleResolution: "bundler",
+            strict: true,
+            noUncheckedIndexedAccess: true,
+            verbatimModuleSyntax: true,
+            useDefineForClassFields: false,
+            types: [],
+        },
+        angularCompilerOptions: {
+            strictTemplates: true,
+            strictInjectionParameters: true,
+            strictInputAccessModifiers: true,
+        },
+        include: ["src"],
+    };
+    writeFileSync(
+        join(dir, "tsconfig.json"),
+        `${JSON.stringify(tsconfig, null, 4)}\n`,
+    );
+    mkdirSync(join(dir, "src"));
+    writeFileSync(join(dir, "src/main.ts"), ANGULAR_SMOKE_MAIN);
+}
+
+/**
+ * The Angular smoke test: the scratch Vite + Angular app installs the Angular tarball, typechecks
+ * (ngc, strict templates), builds and loads its dev server.
+ */
+async function angularSmoke(
+    app: string,
+    tarballs: { core: string; adapter: string },
+): Promise<void> {
+    writeAngularSmokeApp(app, tarballs.core, tarballs.adapter);
+    run("pnpm", ["install", "--no-frozen-lockfile"], app);
+    run("pnpm", ["exec", "ngc", "-p", "tsconfig.json", "--noEmit"], app);
+    run("pnpm", ["exec", "vite", "build"], app);
+    await loadThroughDevServer(app, "/src/main.ts");
+}
+
 /** Every adapter, one per package under packages/ but the core (`unlistedPackages` checks it). */
 export const ADAPTERS: readonly AdapterCheck[] = [
     { dir: "react", framework: "react", smoke: reactSmoke },
     { dir: "vue", framework: "vue", smoke: vueSmoke },
+    { dir: "angular", framework: "angular", smoke: angularSmoke },
 ];
 
 /** The packages/ directories that are neither the core nor an adapter of `adapters`. */

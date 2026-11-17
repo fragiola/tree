@@ -394,6 +394,69 @@ describe("the Vue reference", () => {
     });
 });
 
+describe("the Angular reference", () => {
+    const NG_SRC = join(ROOT, "packages/angular/src");
+    const publicApi = read(join(NG_SRC, "public-api.ts"));
+    const DIRECTIVES = join(NG_SRC, "lib/directives");
+    const directives = readdirSync(DIRECTIVES)
+        .filter((file) => file.endsWith(".directive.ts"))
+        .map((file) => read(join(DIRECTIVES, file)))
+        .flatMap((source) =>
+            [
+                ...source.matchAll(
+                    /selector: "([^"]+)",\n\s+exportAs: "(\w+)",[\s\S]*?export class (\w+)/g,
+                ),
+            ].map(([, selector = "", exportAs = "", name = ""]) => ({
+                selector,
+                exportAs,
+                name,
+            })),
+        );
+    const mdx = page("angular");
+
+    it("re-exports the core", () => {
+        expect(publicApi).toMatch(/^export \* from "@fragiola\/tree";$/m);
+    });
+
+    it("mentions every named export on api/angular.mdx", () => {
+        const names = namedExports(publicApi).map((entry) => entry.name);
+        expect(names.length).toBeGreaterThan(0);
+        expect(names.filter((name) => !mentions(mdx, name))).toEqual([]);
+    });
+
+    it("lists every directive with its selector and exportAs, and TREE holds them all", () => {
+        expect(directives.length).toBe(10);
+        for (const { selector, exportAs, name } of directives) {
+            expect(mdx, name).toMatch(
+                new RegExp(
+                    `^\\| \`${name}\` \\| \`${selector.replace(/[[\]]/g, "\\$&")}\` \\| \`${exportAs}\` \\|`,
+                    "m",
+                ),
+            );
+        }
+        const tree = read(join(NG_SRC, "lib/tree.ts"));
+        expect(
+            [...tree.matchAll(/^ {4}(\w+Directive),$/gm)]
+                .map((match) => match[1])
+                .sort(),
+        ).toEqual(directives.map((entry) => entry.name).sort());
+    });
+
+    it("lists every input and output of the root", () => {
+        const root = read(join(DIRECTIVES, "root.directive.ts"));
+        const fields = [
+            ...root.matchAll(/^ {4}readonly (\w+) = (?:input|output)\b/gm),
+        ].map((match) => match[1] ?? "");
+        expect(fields.length).toBeGreaterThan(15);
+        const row = mdx
+            .split("\n")
+            .find((line) => line.startsWith("| `TreeRootDirective` |"));
+        for (const field of fields) {
+            expect(row, field).toContain(`\`${field}\``);
+        }
+    });
+});
+
 describe("the concept pages", () => {
     const componentSources = readdirSync(join(REACT_SRC, "components"))
         .map((file) => read(join(REACT_SRC, "components", file)))

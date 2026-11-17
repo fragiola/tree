@@ -21,6 +21,8 @@ type Types = {
 
 `ItemOf<Types>` is a union discriminated by `kind`, so `data` narrows:
 
+<Framework name="react">
+
 ```tsx
 function Meta({ item }: { item: ItemOf<Types> }) {
     switch (item.kind) {
@@ -33,6 +35,51 @@ function Meta({ item }: { item: ItemOf<Types> }) {
     }
 }
 ```
+
+</Framework>
+
+<Framework name="vue">
+
+```vue title="meta.vue"
+<script setup lang="ts">
+import type { ItemOf } from "@fragiola/tree-vue";
+import type { Types } from "./tree";
+
+defineProps<{ item: ItemOf<Types> }>();
+const host = (url: string) => new URL(url).host;
+</script>
+
+<template>
+    <!-- item.data is { size: number; modified: string } -->
+    <small v-if="item.kind === 'file'">{{ item.data.size }} B</small>
+    <small v-else-if="item.kind === 'link'">{{ host(item.data.url) }}</small>
+    <!-- a folder: item.data is undefined -->
+</template>
+```
+
+</Framework>
+
+<Framework name="angular">
+
+In the item template, `@if` narrows `item.data` on `item.kind`:
+
+```html
+<ng-template [treeItems]="model" let-item>
+    <div [treeItem]="item">
+        <div treeItemContent>
+            {{ item.label }}
+            @if (item.kind === "file") {
+                <small>{{ item.data.size }} B</small>
+            } @else if (item.kind === "link") {
+                <small>{{ host(item.data.url) }}</small>
+            }
+        </div>
+        <div treeGroup></div>
+    </div>
+</ng-template>
+```
+
+</Framework>
 
 `KindOf<Types>` is the union of kinds and `DataOf<Types, "file">` one kind's data type. With no
 registry, `AnyTypes` accepts any kind with `unknown` data.
@@ -63,6 +110,8 @@ item in JSON (as `loadChildren` returns them).
 
 ## Passing the registry along
 
+<Framework name="react">
+
 `createTreeModel<Types>(json)` types the model, and `<Tree.Root<Types>>` the root. A part that
 hands you items through a function (`Tree.Items`, `Tree.Group`) cannot infer the registry through
 React context: pass it as their type argument. The hooks take it the same way:
@@ -74,6 +123,53 @@ React context: pass it as their type argument. The hooks take it the same way:
 const { model } = useTree<Types>();
 const tree = useTreeRef<Types>();
 ```
+
+</Framework>
+
+<Framework name="vue">
+
+`createTreeModel<Types>(json)` types the model. A template cannot pass a type argument, so take
+the parts from `typedTree<Types>()`, once, in a module: its `Tree.Root` takes a
+`TreeModel<Types>`, and `Tree.Items` and `Tree.Group` hand you items of your registry. The
+composables take it as their type argument:
+
+```ts title="tree.ts"
+import { typedTree } from "@fragiola/tree-vue";
+
+export const Tree = typedTree<Types>();
+// <Tree.Items v-slot="{ item }">: item is an ItemOf<Types>
+```
+
+```ts
+// in a component's setup
+const { model } = useTree<Types>();
+const tree = useTreeRef<Types>();
+```
+
+</Framework>
+
+<Framework name="angular">
+
+`createTreeModel<Types>(json)` types the model. A template cannot pass a type argument: give the
+model (or the document) to the directives instead. `[treeRoot]="model"` types the root, and
+`[treeItems]="model"` its template's `item`. The injection functions take the registry as their
+type argument:
+
+```html
+<div [treeRoot]="model" aria-label="Files">
+    <ng-template [treeItems]="model" let-item>
+        <!-- item is an ItemOf<Types> -->
+    </ng-template>
+</div>
+```
+
+```ts
+// in a component inside the root
+readonly tree = injectTree<Types>();
+readonly count = injectTreeState<Types, number>((state) => state.selectedItemIds.length);
+```
+
+</Framework>
 
 ## Checking data at run time
 

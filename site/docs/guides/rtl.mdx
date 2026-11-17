@@ -23,6 +23,8 @@ styles you write with logical properties mirror on their own.
 
 Put `dir` on the page (`<html dir="rtl" lang="ar">`) or on any ancestor of the tree:
 
+<Framework name="react">
+
 ```tsx
 <div dir="rtl" lang="ar">
     <Tree.Root<Types> defaultTree={json} aria-label="المستندات">
@@ -30,6 +32,37 @@ Put `dir` on the page (`<html dir="rtl" lang="ar">`) or on any ancestor of the t
     </Tree.Root>
 </div>
 ```
+
+</Framework>
+
+<Framework name="vue">
+
+```vue
+<div dir="rtl" lang="ar">
+    <Tree.Root :default-tree="json" aria-label="المستندات">
+        <Tree.Items v-slot="{ item }"><Item :item="item" /></Tree.Items>
+    </Tree.Root>
+</div>
+```
+
+</Framework>
+
+<Framework name="angular">
+
+```html
+<div dir="rtl" lang="ar">
+    <div treeRoot [defaultTree]="json" aria-label="المستندات">
+        <ng-template [treeItems]="json" let-item>
+            <div [treeItem]="item">
+                <div treeItemContent>{{ item.label }}</div>
+                <div treeGroup></div>
+            </div>
+        </ng-template>
+    </div>
+</div>
+```
+
+</Framework>
 
 ## Styles that mirror
 

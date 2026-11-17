@@ -9,6 +9,8 @@ ordinary CSS.
 
 ## A complete stylesheet
 
+<Framework name="react">
+
 ```tsx
 function FileItem({ item }: { item: ItemOf<Types> }) {
     return (
@@ -24,6 +26,54 @@ function FileItem({ item }: { item: ItemOf<Types> }) {
     );
 }
 ```
+
+</Framework>
+
+<Framework name="vue">
+
+```vue title="file-item.vue"
+<script setup lang="ts">
+import type { ItemOf } from "@fragiola/tree-vue";
+import { ChevronRight } from "@lucide/vue";
+import { Tree, type Types } from "./tree";
+
+defineProps<{ item: ItemOf<Types> }>();
+</script>
+
+<template>
+    <Tree.Item :item="item" class="tree-item">
+        <Tree.ItemContent class="tree-row">
+            <Tree.Toggle class="tree-toggle">
+                <ChevronRight aria-hidden="true" />
+            </Tree.Toggle>
+            <span class="tree-label">{{ item.label }}</span>
+        </Tree.ItemContent>
+        <Tree.Group v-slot="{ item: child }">
+            <FileItem :item="child" />
+        </Tree.Group>
+    </Tree.Item>
+</template>
+```
+
+</Framework>
+
+<Framework name="angular">
+
+```html
+<ng-template [treeItems]="model" let-item>
+    <div [treeItem]="item" class="tree-item">
+        <div treeItemContent class="tree-row">
+            <span treeToggle class="tree-toggle">
+                <svg lucideChevronRight aria-hidden="true"></svg>
+            </span>
+            <span class="tree-label">{{ item.label }}</span>
+        </div>
+        <div treeGroup></div>
+    </div>
+</ng-template>
+```
+
+</Framework>
 
 ```css title="tree.css"
 .tree {
@@ -111,7 +161,8 @@ The full list is on [State attributes](/docs/concepts/state-attributes).
 
 ## Motion
 
-A group is unmounted while its item is collapsed. To animate the opening, keep it mounted with
+A group is unmounted while its item is collapsed (in Angular, its element stays, empty and
+hidden with `display: none`). To animate the opening, keep it mounted with
 `keepMounted` (it is then hidden with `display: none` when collapsed), or animate its entry with
 `@starting-style`:
 

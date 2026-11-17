@@ -66,7 +66,10 @@ model.run("tree.clear-selection", {});
 ## Reading the selection
 
 `model.get("selected-items")` returns the selected items themselves. In a component,
-`useTreeState` re-renders only when the selection changes:
+`useTreeState` re-renders only when the selection changes (in Vue, a read-only ref that changes
+only then; in Angular, `injectTreeState`, a signal):
+
+<Framework name="react">
 
 ```tsx
 import { useTree, useTreeState } from "@fragiola/tree-react";
@@ -89,8 +92,67 @@ function SelectionBar() {
 }
 ```
 
+</Framework>
+
+<Framework name="vue">
+
+```vue title="selection-bar.vue"
+<script setup lang="ts">
+import { useTree, useTreeState } from "@fragiola/tree-vue";
+import type { Types } from "./tree";
+
+const { model } = useTree<Types>();
+const selected = useTreeState<Types, readonly string[]>((state) => state.selectedItemIds);
+</script>
+
+<template>
+    <div v-if="selected.length > 0" role="toolbar" aria-label="Selection">
+        <span>{{ selected.length }} selected</span>
+        <button type="button" @click="model.run('item.remove', { itemIds: [...selected] })">
+            Delete
+        </button>
+        <button type="button" @click="model.run('tree.clear-selection', {})">Clear</button>
+    </div>
+</template>
+```
+
+</Framework>
+
+<Framework name="angular">
+
+```ts title="selection-bar.ts"
+import { Component } from "@angular/core";
+import { injectTree, injectTreeState } from "@fragiola/tree-angular";
+import type { Types } from "./tree";
+
+@Component({
+    selector: "app-selection-bar",
+    template: `
+        @if (selected().length > 0) {
+            <div role="toolbar" aria-label="Selection">
+                <span>{{ selected().length }} selected</span>
+                <button type="button" (click)="remove()">Delete</button>
+                <button type="button" (click)="model().run('tree.clear-selection', {})">Clear</button>
+            </div>
+        }
+    `,
+})
+export class SelectionBar {
+    protected readonly model = injectTree<Types>().model;
+    protected readonly selected = injectTreeState<Types, readonly string[]>(
+        (state) => state.selectedItemIds,
+    );
+
+    protected remove(): void {
+        this.model().run("item.remove", { itemIds: [...this.selected()] });
+    }
+}
+```
+
+</Framework>
+
 Render it inside `Tree.Root` (a child of the root renders next to the items), or outside with a
-tree ref. To own the selection in React state instead, see
+tree ref. To own the selection in your app's state instead, see
 [Controlled state](/docs/guides/controlled-state).
 
 ## Styling it

@@ -1,8 +1,8 @@
 # Releasing
 
 Releasing is a merge. [Changesets](https://changesets.dev) versions every package under
-`packages/` (`@fragiola/tree` today; `@fragiola/tree-react`, `-vue` and `-angular` as their Epics
-land) together (one `fixed` group, `@fragiola/*`, so they always share a version) and writes their
+`packages/` (`@fragiola/tree`, `@fragiola/tree-react`, `@fragiola/tree-vue` and
+`@fragiola/tree-angular`) together (one `fixed` group, `@fragiola/*`, so they always share a version) and writes their
 changelogs. The release workflow, [`.github/workflows/release.yml`](../.github/workflows/release.yml),
 publishes them with pnpm through npm **trusted publishing** (OIDC, with provenance): there is no
 npm token anywhere. It is copied from Dockable (`fragiola/dockable`, `docs/releasing.md`).
@@ -38,7 +38,12 @@ When the npm account is back, the maintainer does these steps, in order, once:
    pnpm build && pnpm --filter "./packages/*" publish --access public
    ```
 
-   This covers `@fragiola/tree` and every adapter already merged. An adapter merged later gets its
+   This covers `@fragiola/tree` and every adapter already merged. `pnpm build` comes first for
+   every package, and is required for `@fragiola/tree-angular`: it is **published from its build
+   output** (`publishConfig.directory` is `dist`, which ng-packagr builds in the Angular Package
+   Format, with the published manifest written there by `packages/angular/scripts/publish-manifest.ts`),
+   so pnpm packs and publishes `packages/angular/dist`, not the package folder. The release workflow
+   builds before it packs too. An adapter merged later gets its
    own stub before its PR merges ("Adding a package" below). The four names are `@fragiola/tree`,
    `@fragiola/tree-react`, `@fragiola/tree-vue` and `@fragiola/tree-angular`.
 5. **The trusted publishers.** With npm 11.15 or later and 2FA, for each published package:
@@ -80,7 +85,7 @@ On every push to `main`, once enabled, the workflow does one of three things:
 - otherwise nothing.
 
 Packing and publishing always go through pnpm: it applies `publishConfig` (the dist-only
-`exports`), npm does not. Never publish with `npm publish`.
+`exports`, and the Angular package's `directory`), npm does not. Never publish with `npm publish`.
 
 ## Later releases
 
@@ -117,7 +122,7 @@ package is versioned with the others from its first release. What it does need:
    publish the new package once by hand at `0.0.0`, as in step 4 of *Status*, but for
    that package only (`pnpm --filter @fragiola/tree-vue publish --access public`, from a clean
    checkout of the PR's branch, with 2FA). A package published from its build output
-   (Dockable's Angular package: `publishConfig.directory` is `dist`) is built first: pnpm
+   (`@fragiola/tree-angular`: `publishConfig.directory` is `dist`) is built first: pnpm
    publishes that directory, with the manifest its build writes there.
 3. **Its trusted publisher,** as in step 5: `npm trust github @fragiola/tree-vue --file
    release.yml --repo fragiola/tree --environment npm --allow-publish`.

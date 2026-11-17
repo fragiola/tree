@@ -9,12 +9,45 @@ root: for `before` and `after`, a zero-height line at the target's level (starti
 sets only its geometry, from `engine.get("drop-indicator")`; draw the line or the box yourself. It
 is hidden from assistive technology: the live region announces the drag.
 
+<Framework name="react">
+
 ```tsx
 <Tree.Root<Types> defaultTree={json} aria-label="Files">
     <Tree.Items<Types>>{(item) => <FileItem item={item} />}</Tree.Items>
     <Tree.DropIndicator className="drop-indicator" />
 </Tree.Root>
 ```
+
+</Framework>
+
+<Framework name="vue">
+
+```vue
+<Tree.Root :default-tree="json" aria-label="Files">
+    <Tree.Items v-slot="{ item }"><FileItem :item="item" /></Tree.Items>
+    <Tree.DropIndicator class="drop-indicator" />
+</Tree.Root>
+```
+
+</Framework>
+
+<Framework name="angular">
+
+```html
+<div treeRoot [defaultTree]="json" aria-label="Files">
+    <ng-template [treeItems]="json" let-item>
+        <div [treeItem]="item">
+            <div treeItemContent>{{ item.label }}</div>
+            <div treeGroup></div>
+        </div>
+    </ng-template>
+    <div treeDropIndicator class="drop-indicator"></div>
+</div>
+```
+
+In Angular, the element stays while there is no drop target, hidden (`display: none`).
+
+</Framework>
 
 ```css
 .drop-indicator[data-drop-position="before"],

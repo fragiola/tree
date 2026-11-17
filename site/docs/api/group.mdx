@@ -7,6 +7,8 @@ description: The children of an item (role group), rendered only while the item 
 tree view. It renders only while its item is expanded, and calls its children function with each
 child, in order, keyed by its id. Its state is its item's.
 
+<Framework name="react">
+
 ```tsx
 function FileItem({ item }: { item: ItemOf<Types> }) {
     return (
@@ -17,6 +19,45 @@ function FileItem({ item }: { item: ItemOf<Types> }) {
     );
 }
 ```
+
+</Framework>
+
+<Framework name="vue">
+
+```vue title="file-item.vue"
+<script setup lang="ts">
+import type { ItemOf } from "@fragiola/tree-vue";
+import { Tree, type Types } from "./tree";
+
+defineProps<{ item: ItemOf<Types> }>();
+</script>
+
+<template>
+    <Tree.Item :item="item">
+        <Tree.ItemContent>{{ item.label }}</Tree.ItemContent>
+        <Tree.Group class="group" v-slot="{ item: child }"><FileItem :item="child" /></Tree.Group>
+    </Tree.Item>
+</template>
+```
+
+</Framework>
+
+<Framework name="angular">
+
+```html
+<ng-template [treeItems]="model" let-item>
+    <div [treeItem]="item">
+        <div treeItemContent>{{ item.label }}</div>
+        <div treeGroup class="group"></div>
+    </div>
+</ng-template>
+```
+
+In Angular, a `treeGroup` with no template of its own renders each child with the enclosing
+`treeItems` template. While its item is collapsed, its element stays, empty and hidden
+(`display: none`); `keepMounted` keeps the children rendered.
+
+</Framework>
 
 Pass the registry as the type argument (`<Tree.Group<Types>>`): a function cannot infer it
 through context.

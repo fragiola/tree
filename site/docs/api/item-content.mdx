@@ -8,6 +8,8 @@ Ctrl/Cmd toggles; with the root's `expandOnClick`, a parent also expands or coll
 starts from it (Pointer Events, after `dragThreshold` pixels), and a drag hit-tests its
 rectangle to find the drop position. It has no role of its own: the item is the `treeitem`.
 
+<Framework name="react">
+
 ```tsx
 <Tree.Item item={item}>
     <Tree.ItemContent className="row">
@@ -21,6 +23,40 @@ rectangle to find the drop position. It has no role of its own: the item is the 
     <Tree.Group<Types>>{(child) => <FileItem item={child} />}</Tree.Group>
 </Tree.Item>
 ```
+
+</Framework>
+
+<Framework name="vue">
+
+```vue
+<Tree.Item :item="item">
+    <Tree.ItemContent class="row">
+        <Tree.Toggle class="toggle">▸</Tree.Toggle>
+        <FileIcon aria-hidden="true" />
+        <span>{{ item.label }}</span>
+        <button type="button" :aria-label="`Delete ${item.label}`" @click="remove(item.id)">×</button>
+    </Tree.ItemContent>
+    <Tree.Group v-slot="{ item: child }"><FileItem :item="child" /></Tree.Group>
+</Tree.Item>
+```
+
+</Framework>
+
+<Framework name="angular">
+
+```html
+<div [treeItem]="item">
+    <div treeItemContent class="row">
+        <span treeToggle class="toggle">▸</span>
+        <svg lucideFile aria-hidden="true"></svg>
+        <span>{{ item.label }}</span>
+        <button type="button" [attr.aria-label]="'Delete ' + item.label" (click)="remove(item.id)">×</button>
+    </div>
+    <div treeGroup></div>
+</div>
+```
+
+</Framework>
 
 A press on a control inside it (a button, a link, an input, `Tree.Toggle`, `Tree.Checkbox`,
 `Tree.RenameInput`, an element with `data-tree-no-drag`) is the control's: it neither selects nor

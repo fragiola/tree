@@ -1,0 +1,68 @@
+import { cn } from "#/lib/cn";
+
+// How keyboard looks: one class string per part, read by the component. Colours come from the
+// palette roles and sizes from the theme's --tr-* tokens, so it works in every theme.
+
+export const frame =
+    "flex min-h-0 flex-1 flex-col gap-3 overflow-auto p-4 font-(family-name:--tr-font) text-(length:--tr-size) sm:flex-row sm:overflow-hidden";
+
+export const treeColumn = "flex min-h-48 min-w-0 flex-1 flex-col";
+
+export const root =
+    "palette-raised flex min-h-0 flex-1 flex-col overflow-auto rounded-(--tr-radius) border border-palette-line bg-palette-base p-1 text-palette-contrast shadow-(--tr-shadow)";
+
+export const item = "outline-none";
+
+export const row = cn(
+    "flex h-(--tr-row-height) cursor-default select-none items-center gap-(--tr-gap) rounded-(--tr-radius) pe-1",
+    "ps-[calc(var(--tree-depth)*var(--tr-indent)+0.25rem)] hover:bg-(--tr-hover-bg)",
+    "[:focus-visible>&]:ring-2 [:focus-visible>&]:ring-palette-ring [:focus-visible>&]:ring-inset",
+    "data-selected:bg-(--tr-selected-bg) data-selected:text-(--tr-selected-fg)",
+    "data-dragging:opacity-45",
+);
+
+export const toggle = cn(
+    "flex size-4 shrink-0 items-center justify-center text-palette-accent/85 transition-[rotate] duration-(--tr-motion) data-leaf:invisible [&_svg]:size-3.5",
+    "data-expanded:rotate-90 rtl:-scale-x-100 rtl:data-expanded:-rotate-90",
+);
+
+export const folderIcon = "palette-blue size-4 shrink-0 text-palette-accent";
+
+export const fileIcon = "size-4 shrink-0 text-palette-accent/85";
+
+export const label = "min-w-0 truncate [[data-renaming]>&]:hidden";
+
+export const input =
+    "h-[calc(var(--tr-row-height)-6px)] min-w-0 flex-1 rounded-[4px] border border-palette-line bg-palette-base px-1.5 text-palette-contrast outline-none focus:border-palette-ring";
+
+/** A line before or after a row, the row's box inside a folder. */
+/** The line starts at the icon, past the toggle (the package places it at the level's start). */
+export const dropIndicator = cn(
+    "pointer-events-none z-10 ms-7 data-[drop-position=inside]:ms-0",
+    "data-[drop-position=before]:-mt-px data-[drop-position=before]:border-t-2 data-[drop-position=before]:border-(--tr-indicator)",
+    "data-[drop-position=after]:-mt-px data-[drop-position=after]:border-t-2 data-[drop-position=after]:border-(--tr-indicator)",
+    "data-[drop-position=inside]:rounded-(--tr-radius) data-[drop-position=inside]:border-2 data-[drop-position=inside]:border-(--tr-indicator)",
+);
+
+/** The live region, shown at the bottom of the tree while it has something to say. */
+export const liveRegion =
+    "sticky bottom-0 mt-auto rounded-(--tr-radius) border border-palette-line bg-palette-soft px-2 py-1.5 text-palette-accent text-xs empty:hidden";
+
+export const legend =
+    "palette-raised flex shrink-0 flex-col gap-2 overflow-auto rounded-(--tr-radius) border border-palette-line bg-palette-base p-3 text-palette-contrast sm:w-80";
+
+export const legendTitle =
+    "font-medium text-palette-accent/85 text-xs uppercase tracking-wide";
+
+export const keyList = "flex flex-col gap-1.5";
+
+export const keyRow = "flex items-baseline gap-2";
+
+export const keys = "flex w-32 shrink-0 flex-wrap items-center gap-0.5";
+
+export const kbd =
+    "min-w-5 rounded-[4px] border border-palette-line border-b-2 bg-palette-soft px-1 text-center font-mono text-palette-contrast text-xs";
+
+export const plus = "text-palette-accent/85 text-xs";
+
+export const does = "text-palette-accent/85 text-xs";

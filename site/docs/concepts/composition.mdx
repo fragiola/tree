@@ -5,7 +5,8 @@ description: You own the recursion. The primitives hand you items through childr
 
 Most tree components take a data structure and render it for you, with a slot or two to
 customize. Here **you write the recursion**: `Tree.Items` calls your function with each root
-item, and `Tree.Group`, inside your item, calls it with each child. Whatever your item component
+item, and `Tree.Group`, inside your item, calls it with each child (in Angular, one
+`<ng-template treeItems>` that `treeGroup` renders again). Whatever your item component
 renders, the primitives give it the roles, the state and the behaviour.
 
 ## The shape of an item
@@ -55,6 +56,27 @@ defineProps<{ item: ItemOf<Types> }>();
         </Tree.Group>
     </Tree.Item>
 </template>
+```
+
+</Framework>
+
+<Framework name="angular">
+
+In Angular the recursion is one template: `treeItems` renders it with each root item, and a
+`treeGroup` with no template of its own renders it with each child.
+
+```html
+<ng-template [treeItems]="model" let-item>
+    <div [treeItem]="item">
+        <!-- the row: what is pressed, selected and dragged -->
+        <div treeItemContent>
+            <span treeToggle>▸</span>
+            {{ item.label }}
+        </div>
+        <!-- the children, rendered with this same template -->
+        <div treeGroup></div>
+    </div>
+</ng-template>
 ```
 
 </Framework>
@@ -121,6 +143,30 @@ function Node({ item }: { item: ItemOf<Types> }) {
 
 </Framework>
 
+<Framework name="angular">
+
+```html
+<ng-template [treeItems]="model" let-item>
+    <div [treeItem]="item">
+        <div treeItemContent class="row">
+            @if (item.kind === "folder") {
+                <span treeToggle>▸</span>
+                <svg lucideFolder aria-hidden="true"></svg>
+            } @else {
+                <svg lucideFile aria-hidden="true"></svg>
+            }
+            <span>{{ item.label }}</span>
+            @if (item.kind === "file") {
+                <small>{{ formatSize(item.data.size) }}</small>
+            }
+        </div>
+        <div treeGroup></div>
+    </div>
+</ng-template>
+```
+
+</Framework>
+
 ## Controls in a row
 
 A button, a link or an input inside `Tree.ItemContent` keeps its own presses and keys: a press on
@@ -149,6 +195,17 @@ trigger), give it the `data-tree-no-drag` attribute (`NO_DRAG_ATTRIBUTE`); the f
     <span>{{ item.label }}</span>
     <button type="button" :aria-label="`Delete ${item.label}`" @click="remove(item.id)">×</button>
 </Tree.ItemContent>
+```
+
+</Framework>
+
+<Framework name="angular">
+
+```html
+<div treeItemContent>
+    <span>{{ item.label }}</span>
+    <button type="button" [attr.aria-label]="'Delete ' + item.label" (click)="remove(item.id)">×</button>
+</div>
 ```
 
 </Framework>
@@ -199,6 +256,28 @@ an item's state and the props of its element, to build one on anything
 
 </Framework>
 
+<Framework name="angular">
+
+A directive goes on an element you write, so the element is yours: no `render`, no `as`, never
+`asChild`. For a list markup:
+
+```html
+<ul [treeRoot]="model" aria-label="Files">
+    <ng-template [treeItems]="model" let-item>
+        <li [treeItem]="item">
+            <div treeItemContent>{{ item.label }}</div>
+            <ul treeGroup></ul>
+        </li>
+    </ng-template>
+</ul>
+```
+
+An item's state is a signal through `exportAs`: `#node="treeItem"`, then `node.state().expanded`
+anywhere inside it. A component inside an item reads it with `injectTreeItem()`
+([Angular primitives](/docs/api/angular)).
+
+</Framework>
+
 ## Reaching the tree from inside
 
 <Framework name="react">
@@ -237,5 +316,28 @@ const count = useTreeState<Types, number>((state) => state.selectedItemIds.lengt
 
 From outside the root (a toolbar beside it), use a tree ref: `useTreeRef<Types>()`, passed as
 the root's `tree-ref`, read as `tree.value`.
+
+</Framework>
+
+<Framework name="angular">
+
+Any component inside `[treeRoot]` reads the model and the engine with `injectTree<Types>()`, and
+a value of the state with `injectTreeState`, a signal:
+
+```ts
+@Component({
+    selector: "app-selection-count",
+    template: `<p>{{ count() }} selected</p>`,
+})
+export class SelectionCount {
+    protected readonly count = injectTreeState<Types, number>(
+        (state) => state.selectedItemIds.length,
+    );
+}
+```
+
+From outside the root (a toolbar beside it), use a template reference: `#tree="treeRoot"` gives
+its `model()` and its `engine` to the rest of the template, and `viewChild(TreeRootDirective)` to
+the component's class.
 
 </Framework>

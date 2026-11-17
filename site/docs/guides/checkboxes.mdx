@@ -9,6 +9,8 @@ check instead of its selection. What a check means (a scope to grant, a filter t
 
 ## Turning them on
 
+<Framework name="react">
+
 ```tsx
 import { type ItemOf, Tree } from "@fragiola/tree-react";
 
@@ -36,6 +38,86 @@ export function Permissions() {
     );
 }
 ```
+
+</Framework>
+
+<Framework name="vue">
+
+```vue title="permission-item.vue"
+<script setup lang="ts">
+import type { ItemOf } from "@fragiola/tree-vue";
+import { Tree, type Types } from "./tree";
+
+defineProps<{ item: ItemOf<Types> }>();
+</script>
+
+<template>
+    <Tree.Item :item="item">
+        <Tree.ItemContent class="row">
+            <Tree.Toggle>▸</Tree.Toggle>
+            <Tree.Checkbox class="box">
+                <CheckIcon class="check" aria-hidden="true" />
+                <MinusIcon class="dash" aria-hidden="true" />
+            </Tree.Checkbox>
+            <span>{{ item.label }}</span>
+        </Tree.ItemContent>
+        <Tree.Group v-slot="{ item: child }">
+            <PermissionItem :item="child" />
+        </Tree.Group>
+    </Tree.Item>
+</template>
+```
+
+```vue title="permissions.vue"
+<script setup lang="ts">
+import PermissionItem from "./permission-item.vue";
+import { json, Tree } from "./tree";
+</script>
+
+<template>
+    <Tree.Root :default-tree="json" checkboxes aria-label="Permissions">
+        <Tree.Items v-slot="{ item }"><PermissionItem :item="item" /></Tree.Items>
+    </Tree.Root>
+</template>
+```
+
+</Framework>
+
+<Framework name="angular">
+
+```ts title="permissions.ts"
+import { Component } from "@angular/core";
+import { TREE } from "@fragiola/tree-angular";
+import { LucideCheck, LucideMinus } from "@lucide/angular";
+import { json } from "./tree";
+
+@Component({
+    selector: "app-permissions",
+    imports: [TREE, LucideCheck, LucideMinus],
+    template: `
+        <div treeRoot [defaultTree]="json" checkboxes aria-label="Permissions">
+            <ng-template [treeItems]="json" let-item>
+                <div [treeItem]="item">
+                    <div treeItemContent class="row">
+                        <span treeToggle>▸</span>
+                        <span treeCheckbox class="box">
+                            <svg lucideCheck class="check" aria-hidden="true"></svg>
+                            <svg lucideMinus class="dash" aria-hidden="true"></svg>
+                        </span>
+                        <span>{{ item.label }}</span>
+                    </div>
+                    <div treeGroup></div>
+                </div>
+            </ng-template>
+        </div>
+    `,
+})
+export class Permissions {
+    protected readonly json = json;
+}
+```
+
+</Framework>
 
 ```css
 .box .check,
@@ -85,6 +167,8 @@ A disabled item cannot be checked or unchecked.
 In cascade mode, `checkedItemIds` lists parents and their children alike. Keep what your app
 saves, here the leaves' data:
 
+<Framework name="react">
+
 ```tsx
 const scopes = useTreeState<Types, string>(
     (state) =>
@@ -98,6 +182,45 @@ const scopes = useTreeState<Types, string>(
 );
 ```
 
+</Framework>
+
+<Framework name="vue">
+
+```ts
+const scopes = useTreeState<Types, string>(
+    (state) =>
+        state.checkedItemIds
+            .flatMap((itemId) => {
+                const item = state.items[itemId];
+                return item?.kind === "permission" ? [item.data.scope] : [];
+            })
+            .join(" "),
+    { model },
+);
+// scopes.value: a read-only ref
+```
+
+</Framework>
+
+<Framework name="angular">
+
+```ts
+// a field of the component that owns the model: a signal
+readonly scopes = injectTreeState<Types, string>(
+    (state) =>
+        state.checkedItemIds
+            .flatMap((itemId) => {
+                const item = state.items[itemId];
+                return item?.kind === "permission" ? [item.data.scope] : [];
+            })
+            .join(" "),
+    { model: this.model },
+);
+```
+
+</Framework>
+
 The selector returns a string so that `Object.is` sees an unchanged selection as equal; pass
-`isEqual` to compare arrays instead. To keep the checks in React state, use `checkedItemIds` and
-`onCheckedItemIdsChange` on the root ([Controlled state](/docs/guides/controlled-state)).
+`isEqual` to compare arrays instead. To keep the checks in your app's state, control
+`checkedItemIds` on the root (with `onCheckedItemIdsChange` in React, `v-model:checked-item-ids`
+in Vue, `[(checkedItemIds)]` in Angular: [Controlled state](/docs/guides/controlled-state)).

@@ -28,13 +28,13 @@ export function persistTree<T extends TreeTypes>(model: TreeModel<T>, key: strin
 ```
 
 It returns the listener's remover, ready for an effect: `useEffect(() => persistTree(model,
-"files"), [model])`. To save less often, debounce the write, or save only some commands (a
+"files"), [model])` in React, or `onMounted` and `onUnmounted` in Vue, `DestroyRef.onDestroy` in Angular (below). To save less often, debounce the write, or save only some commands (a
 selection change may not be worth a write).
 
 ## Restoring at load
 
-```tsx
-function restoreTree<T extends TreeTypes>(key: string): TreeJson<T> | undefined {
+```ts
+export function restoreTree<T extends TreeTypes>(key: string): TreeJson<T> | undefined {
     try {
         const text = localStorage.getItem(key);
         return text ? (JSON.parse(text) as TreeJson<T>) : undefined;
@@ -42,7 +42,11 @@ function restoreTree<T extends TreeTypes>(key: string): TreeJson<T> | undefined 
         return undefined;
     }
 }
+```
 
+<Framework name="react">
+
+```tsx
 export function Files() {
     const [model] = useState(() => createTreeModel<Types>(restoreTree<Types>("files") ?? json));
     useEffect(() => persistTree(model, "files"), [model]);
@@ -53,6 +57,69 @@ export function Files() {
     );
 }
 ```
+
+</Framework>
+
+<Framework name="vue">
+
+```vue title="files.vue"
+<script setup lang="ts">
+import { createTreeModel } from "@fragiola/tree-vue";
+import { onMounted, onUnmounted } from "vue";
+import FileItem from "./file-item.vue";
+import { persistTree, restoreTree } from "./persist";
+import { json, Tree, type Types } from "./tree";
+
+// created once, outside Vue's reactivity
+const model = createTreeModel<Types>(restoreTree<Types>("files") ?? json);
+let stop: (() => void) | undefined;
+onMounted(() => {
+    stop = persistTree(model, "files");
+});
+onUnmounted(() => stop?.());
+</script>
+
+<template>
+    <Tree.Root :model="model" aria-label="Files">
+        <Tree.Items v-slot="{ item }"><FileItem :item="item" /></Tree.Items>
+    </Tree.Root>
+</template>
+```
+
+</Framework>
+
+<Framework name="angular">
+
+```ts title="files.ts"
+import { Component, DestroyRef, inject } from "@angular/core";
+import { createTreeModel, TREE } from "@fragiola/tree-angular";
+import { persistTree, restoreTree } from "./persist";
+import { json, type Types } from "./tree";
+
+@Component({
+    selector: "app-files",
+    imports: [TREE],
+    template: `
+        <div [treeRoot]="model" aria-label="Files">
+            <ng-template [treeItems]="model" let-item>
+                <div [treeItem]="item">
+                    <div treeItemContent>{{ item.label }}</div>
+                    <div treeGroup></div>
+                </div>
+            </ng-template>
+        </div>
+    `,
+})
+export class Files {
+    protected readonly model = createTreeModel<Types>(restoreTree<Types>("files") ?? json);
+
+    constructor() {
+        inject(DestroyRef).onDestroy(persistTree(this.model, "files"));
+    }
+}
+```
+
+</Framework>
 
 `createTreeModel` validates the document and throws a `TreeValidationError` when it is invalid
 (an old format, a hand edit). Check it first with `validateTree(json)`, which returns the issues

@@ -7,11 +7,43 @@ description: The root items, handed to your function one by one in order. It ren
 renders no element of its own and takes no common props: the root's element is the tree, and
 each item is your component.
 
+<Framework name="react">
+
 ```tsx
 <Tree.Root<Types> defaultTree={json} aria-label="Files">
     <Tree.Items<Types>>{(item) => <FileItem item={item} />}</Tree.Items>
 </Tree.Root>
 ```
+
+</Framework>
+
+<Framework name="vue">
+
+```vue
+<Tree.Root :default-tree="json" aria-label="Files">
+    <Tree.Items v-slot="{ item }"><FileItem :item="item" /></Tree.Items>
+</Tree.Root>
+```
+
+</Framework>
+
+<Framework name="angular">
+
+```html
+<div treeRoot [defaultTree]="json" aria-label="Files">
+    <ng-template [treeItems]="json" let-item>
+        <div [treeItem]="item">
+            <div treeItemContent>{{ item.label }}</div>
+            <div treeGroup></div>
+        </div>
+    </ng-template>
+</div>
+```
+
+In Angular, `<ng-template treeItems let-item>` renders its template for each root item (inside a
+`treeGroup`, for each of its children); `[treeItems]="json"` (or the model) types `item`.
+
+</Framework>
 
 The item it passes is the model's, plain and immutable (`ItemOf<T>`): `item.id`, `item.kind`,
 `item.label`, `item.data`, `item.childItemIds`, `item.childrenStatus` and the flags. Pass the

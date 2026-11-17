@@ -4,8 +4,8 @@ description: Build a working, typed tree step by step, from the document to the 
 ---
 
 A tree is three things you write: a **registry** (each kind of item and the type of its data), a
-**document** (the items, in JSON), and an **item component** that renders one row and then its
-children. The package brings the roles, the keyboard, the selection and the focus.
+**document** (the items, in JSON), and an **item component** (an item template, in Angular) that
+renders one row and then its children. The package brings the roles, the keyboard, the selection and the focus.
 
 ## The registry and the document
 
@@ -14,7 +14,7 @@ document lists the root items, then every item by its id; a parent lists its chi
 `childItemIds`.
 
 ```ts title="files.ts"
-// in a Vue app, from "@fragiola/tree-vue"
+// in a Vue or an Angular app, from "@fragiola/tree-vue" or "@fragiola/tree-angular"
 import type { TreeJson } from "@fragiola/tree-react";
 
 export type Types = { items: { folder: undefined; file: { size: number } } };
@@ -102,9 +102,50 @@ defineProps<{ item: ItemOf<Types> }>();
 
 </Framework>
 
+<Framework name="angular">
+
+You own the recursion. In Angular it is one template: `<ng-template treeItems let-item>` renders
+an item (`[treeItem]`), its row (`treeItemContent`), then its group (`treeGroup`), and a group
+with no template of its own renders each child with that same template, so it renders every
+level. A template cannot pass a type argument: given the document (or the model),
+`[treeItems]="json"` types its `item` by your registry.
+
+```ts title="file-tree.ts"
+import { Component } from "@angular/core";
+import { TREE } from "@fragiola/tree-angular";
+import { json } from "./files";
+
+@Component({
+    selector: "app-file-tree",
+    imports: [TREE],
+    template: `
+        <div treeRoot [defaultTree]="json" aria-label="Project files" class="tree">
+            <ng-template [treeItems]="json" let-item>
+                <div [treeItem]="item" class="item">
+                    <div treeItemContent class="row">
+                        <span treeToggle class="toggle">▸</span>
+                        <span>{{ item.label }}</span>
+                        @if (item.kind === "file") {
+                            <small>{{ item.data.size }} B</small>
+                        }
+                    </div>
+                    <div treeGroup></div>
+                </div>
+            </ng-template>
+        </div>
+    `,
+})
+export class FileTree {
+    protected readonly json = json;
+}
+```
+
+</Framework>
+
 `item.data` narrows on `item.kind`: inside `item.kind === "file"`, `item.data.size` is a
 `number`. `Tree.Toggle` expands and collapses on a press; the keyboard uses the arrows on the item.
-`Tree.Group` renders nothing while its item is collapsed.
+`Tree.Group` renders nothing while its item is collapsed (in Angular, the `treeGroup` element stays,
+empty and hidden).
 
 ## The root
 
@@ -154,6 +195,16 @@ import { Tree } from "./tree";
 ```
 
 `Tree` from `typedTree<Types>()` types the slots: `item` is an item of your registry.
+
+</Framework>
+
+<Framework name="angular">
+
+`treeRoot` makes its element the `role="tree"` element. Given `[defaultTree]`, it creates the model
+and keeps it; directly inside it, `treeItems` renders its template with each root item. The
+accessible name is yours: the `aria-label` of the component above.
+
+The items are typed by what `[treeItems]` is given: `item` is an item of your registry.
 
 </Framework>
 
@@ -252,6 +303,45 @@ const addFile = () =>
         </Tree.Items>
     </Tree.Root>
 </template>
+```
+
+</Framework>
+
+<Framework name="angular">
+
+Every change is a command on the model. Create the model yourself (once, in a field) to reach it
+from outside the tree, and give it to the root as `[treeRoot]`:
+
+```ts title="file-tree.ts"
+import { Component } from "@angular/core";
+import { createTreeModel, TREE } from "@fragiola/tree-angular";
+import { json, type Types } from "./files";
+
+@Component({
+    selector: "app-file-tree",
+    imports: [TREE],
+    template: `
+        <button type="button" (click)="addFile()">New file in src</button>
+        <div [treeRoot]="model" aria-label="Project files">
+            <ng-template [treeItems]="model" let-item>
+                <div [treeItem]="item">
+                    <div treeItemContent>{{ item.label }}</div>
+                    <div treeGroup></div>
+                </div>
+            </ng-template>
+        </div>
+    `,
+})
+export class FileTree {
+    protected readonly model = createTreeModel<Types>(json);
+
+    protected addFile(): void {
+        this.model.run("item.add", {
+            item: { kind: "file", label: "notes.md", data: { size: 0 } },
+            to: { parentItemId: "src" },
+        });
+    }
+}
 ```
 
 </Framework>

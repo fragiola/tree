@@ -35,6 +35,22 @@ Each list is independent: control the selection and leave the expansion to the m
 
 </Framework>
 
+<Framework name="angular">
+
+By default the model owns its state, and you read it with `injectTreeState`. When your app wants
+to own a list (to sync it with the URL, a store or another view), bind it both ways on the root:
+the tree reports every change it would make through the list's `…Change` output.
+
+| binding | output |
+| --- | --- |
+| `[(expandedItemIds)]` | `expandedItemIdsChange` |
+| `[(selectedItemIds)]` | `selectedItemIdsChange` |
+| `[(checkedItemIds)]` | `checkedItemIdsChange` |
+
+Each list is independent: control the selection and leave the expansion to the model.
+
+</Framework>
+
 ## Controlling the expansion
 
 <Framework name="react">
@@ -90,6 +106,36 @@ const expandedItemIds = ref<string[]>(["src"]);
 
 </Framework>
 
+<Framework name="angular">
+
+```ts title="outline.ts"
+import { Component, signal } from "@angular/core";
+import { TREE } from "@fragiola/tree-angular";
+import { json } from "./tree";
+
+@Component({
+    selector: "app-outline",
+    imports: [TREE],
+    template: `
+        <button type="button" (click)="expandedItemIds.set([])">Collapse all</button>
+        <div treeRoot [defaultTree]="json" [(expandedItemIds)]="expandedItemIds" aria-label="Outline">
+            <ng-template [treeItems]="json" let-item>
+                <div [treeItem]="item">
+                    <div treeItemContent>{{ item.label }}</div>
+                    <div treeGroup></div>
+                </div>
+            </ng-template>
+        </div>
+    `,
+})
+export class Outline {
+    protected readonly json = json;
+    protected readonly expandedItemIds = signal<string[]>(["src"]);
+}
+```
+
+</Framework>
+
 ## Deciding what a change becomes
 
 <Framework name="react">
@@ -140,6 +186,45 @@ const change = (itemIds: string[]) => {
 
 </Framework>
 
+<Framework name="angular">
+
+The output carries the list the tree would have; the input decides what it has. Split the
+two-way binding into the input and the output to decide: a change the app does not accept is
+reverted, here a pinned folder stays open.
+
+```ts
+@Component({
+    selector: "app-outline",
+    imports: [TREE],
+    template: `
+        <div
+            treeRoot
+            [defaultTree]="json"
+            [expandedItemIds]="expandedItemIds()"
+            (expandedItemIdsChange)="change($event)"
+            aria-label="Outline"
+        >
+            <ng-template [treeItems]="json" let-item>
+                <div [treeItem]="item">
+                    <div treeItemContent>{{ item.label }}</div>
+                    <div treeGroup></div>
+                </div>
+            </ng-template>
+        </div>
+    `,
+})
+export class Outline {
+    protected readonly json = json;
+    protected readonly expandedItemIds = signal<string[]>(["src"]);
+
+    protected change(itemIds: string[]): void {
+        this.expandedItemIds.set(itemIds.includes("src") ? itemIds : ["src", ...itemIds]);
+    }
+}
+```
+
+</Framework>
+
 <Example id="controlled" />
 
 ## How it works
@@ -147,9 +232,10 @@ const change = (itemIds: string[]) => {
 Controlled props are commands too. When a prop differs from the model, the root runs the commands
 that bring the model to it (`item.expand`, `item.collapse`, `tree.select`, `item.check`), as one
 batch, before the tree shows it (before paint in React, before mount and after each change of the
-prop in Vue), with `meta.source` set to `"controlled"`; those commits report no change. Every other
-commit that changes a list reports the new list (`onExpandedItemIdsChange` and the other callbacks
-in React, the `update:*` events in Vue). So:
+prop in Vue, whenever the input changes in Angular), with `meta.source` set to `"controlled"`;
+those commits report no change. Every other commit that changes a list reports the new list
+(`onExpandedItemIdsChange` and the other callbacks in React, the `update:*` events in Vue, the
+`…Change` outputs in Angular). So:
 
 - your middleware sees the controlled changes too, and can tell them apart by their `meta`;
 - an id the tree does not have is skipped rather than failing the rest (an expansion or a check
@@ -159,6 +245,7 @@ in React, the `update:*` events in Vue). So:
 
 ## When not to control
 
-Controlled props are for state the app shares. To read the state, `useTreeState` is enough; to
+Controlled props are for state the app shares. To read the state, `useTreeState` (`injectTreeState`
+in Angular) is enough; to
 change it from a button, run a command (`model.run("tree.collapse-all", {})`); to save it, the
 document holds all of it ([Saving and restoring](/docs/guides/persistence)).

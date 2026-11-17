@@ -9,6 +9,8 @@ the toggle is `aria-hidden` and never takes focus, as the WAI-ARIA APG tree view
 renders a `span` with what you give it (a chevron) and no icon of its own, on a leaf too, with
 `data-leaf`.
 
+<Framework name="react">
+
 ```tsx
 <Tree.ItemContent className="row">
     <Tree.Toggle className="toggle">
@@ -17,6 +19,34 @@ renders a `span` with what you give it (a chevron) and no icon of its own, on a 
     <span>{item.label}</span>
 </Tree.ItemContent>
 ```
+
+</Framework>
+
+<Framework name="vue">
+
+```vue
+<Tree.ItemContent class="row">
+    <Tree.Toggle class="toggle">
+        <ChevronRight aria-hidden="true" />
+    </Tree.Toggle>
+    <span>{{ item.label }}</span>
+</Tree.ItemContent>
+```
+
+</Framework>
+
+<Framework name="angular">
+
+```html
+<div treeItemContent class="row">
+    <span treeToggle class="toggle">
+        <svg lucideChevronRight aria-hidden="true"></svg>
+    </span>
+    <span>{{ item.label }}</span>
+</div>
+```
+
+</Framework>
 
 ```css
 .toggle[data-leaf] {

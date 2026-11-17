@@ -9,6 +9,7 @@ export default defineConfig({
             "examples/shared",
             "examples/react",
             "examples/vue",
+            "examples/angular",
             "site",
         ],
     },

@@ -1,0 +1,161 @@
+---
+title: Angular primitives
+description: The same primitives and hooks for Angular 22, from @fragiola/tree-angular, and how each React prop maps onto directives, inputs, outputs and templates.
+---
+
+`@fragiola/tree-angular` has every primitive of the React package, as a standalone attribute
+directive on an element you write, and every hook as an injection function, over the same core
+(re-exported whole). The behaviour, the ARIA, the `data-*` attributes, `data-tree-part` and
+`data-tree-path` of every element are the same: the React pages of this reference describe each
+part, and this page says how its React API is written in Angular.
+
+```ts
+import { Component } from "@angular/core";
+import {
+    createTreeModel,
+    injectTree,
+    injectTreeState,
+    TREE,
+    type TreeJson,
+} from "@fragiola/tree-angular";
+
+@Component({ imports: [TREE], template: `…` })
+export class Files {}
+```
+
+`TREE` lists every directive, for a standalone component's `imports`. The package is standalone
+only (no NgModule) and built on signals and `host` bindings: it needs no zone.js (zoneless is
+Angular's default). It needs `@angular/core` **^22**.
+
+## The element is yours
+
+A directive goes on the element you choose: `<li [treeItem]="item" class="…">`. It adds the
+part's role, its ARIA, its `data-*` state, its listeners and its structural inline style
+(`--tree-depth`, the drop indicator's geometry, `display: none` on what is not shown); your
+`class`, your other attributes and your listeners stay as they are (the directive's own listener
+runs first). The structural style keys win over a static `style` you write on the element; a
+`[style.x]` binding of yours on a structural key would fight the part, so leave those keys to it.
+
+Each directive's state is a signal, through `exportAs`:
+
+```html
+<div [treeItem]="item" #node="treeItem">
+    <div treeItemContent [class.font-semibold]="node.state().level === 1">{{ item.label }}</div>
+</div>
+```
+
+## The recursion: one template
+
+React's children functions are one `<ng-template treeItems let-item>`. Directly inside
+`[treeRoot]`, it renders with each root item; a `[treeGroup]` with no template of its own renders
+each of its children with that same template, so one template renders every level. A group may
+hold an `<ng-template treeItems>` of its own, for children that look different.
+
+```html
+<div [treeRoot]="model" aria-label="Files">
+    <ng-template [treeItems]="model" let-item>
+        <div [treeItem]="item">
+            <div treeItemContent>
+                <span treeToggle>▸</span>
+                {{ item.label }}
+            </div>
+            <div treeGroup></div>
+        </div>
+    </ng-template>
+</div>
+```
+
+| template directive | inside | context (`let-…`) |
+| --- | --- | --- |
+| `TreeItemsDirective` (`ng-template[treeItems]`) | `[treeRoot]`, or a `[treeGroup]` | `$implicit` and `item`: the item, a `TreeItemsContext<T>` |
+
+**Typing by your registry.** A template cannot pass a type argument. Give the template directive
+the model or the document instead (`[treeItems]="model"`, `[treeItems]="json"`; `TypedBy<T>` is
+what it takes): its `item` is then typed by the registry, and `item.data` narrows on `item.kind`
+under `strictTemplates`. A bare `treeItems` types it by `AnyTypes`. `[treeRoot]="model"` types the
+root (`TreeRootDirective<T>`).
+
+## How React's props map
+
+| React | Angular |
+| --- | --- |
+| `<Tree.Root model={model}>` | `<div [treeRoot]="model">`; `<Tree.Root defaultTree={json}>` is `<div treeRoot [defaultTree]="json">` |
+| `<Tree.Item item={item}>` | `<div [treeItem]="item">`: the directive's main input is its item |
+| `render={<li />}` | the element you put the directive on |
+| `render={(props, state) => …}` | the directive's `state()` through `exportAs` (`#node="treeItem"`) |
+| `className`, `style` | your `class` and `style`, untouched; structural keys win. `className={(state) => …}` is a `[class.x]` binding on the state, or a `data-*` selector |
+| `onClick`, `onKeyDown`, … | your listeners (`(click)`, `(keydown)`), run after the part's own |
+| `ref` | the element is yours: a template reference or `viewChild` |
+| children functions (`Tree.Items`, `Tree.Group`) | `<ng-template treeItems let-item>`, and `[treeGroup]` with no template of its own |
+| `expandedItemIds` + `onExpandedItemIdsChange` | `[(expandedItemIds)]` (or `[expandedItemIds]` with `(expandedItemIdsChange)`) |
+| `selectedItemIds` + `onSelectedItemIdsChange` | `[(selectedItemIds)]` |
+| `checkedItemIds` + `onCheckedItemIdsChange` | `[(checkedItemIds)]` |
+| `onRenameError` (`Tree.RenameInput`) | the output `(renameError)` |
+| `treeRef={tree}` | `#tree="treeRoot"` in the template, `viewChild(TreeRootDirective)` in the class: `model()` and `engine` |
+| `defaultTree`, `expandOnClick`, `keyMap`, … | the same inputs (`[defaultTree]`, `expandOnClick`, `[keyMap]`); a boolean input takes a bare attribute (`checkboxes`) |
+| `<Tree.Items<Types>>` and the other type arguments | `[treeItems]="model"` (or the document) |
+| a part that renders nothing (`Tree.Group` while collapsed, `Tree.RenameInput` while not renaming, `Tree.DropIndicator` with no target) | the element stays, hidden (`display: none`); a collapsed group is also empty |
+
+A controlled list the app does not update reverts the change: a one-way `[expandedItemIds]`
+whose output is not handled keeps the tree on the input.
+
+## Directives
+
+| directive | selector | `exportAs` | inputs | outputs |
+| --- | --- | --- | --- | --- |
+| `TreeRootDirective` | `[treeRoot]` | `treeRoot` | `treeRoot` (the model), `defaultTree`, `expandedItemIds`, `selectedItemIds`, `checkedItemIds`, `loadChildren`, `announce`, `keyMap`, `expandOnClick`, `checkboxes`, `dragThreshold`, `autoExpandDelay`, `indentation`, `typeAheadTimeout` | `expandedItemIdsChange`, `selectedItemIdsChange`, `checkedItemIdsChange` |
+| `TreeItemsDirective` | `ng-template[treeItems]` | `treeItems` | `treeItems` (typing: the model or the document) | none |
+| `TreeItemDirective` | `[treeItem]` | `treeItem` | `treeItem` (the item) | none |
+| `TreeItemContentDirective` | `[treeItemContent]` | `treeItemContent` | none | none |
+| `TreeGroupDirective` | `[treeGroup]` | `treeGroup` | `keepMounted` | none |
+| `TreeToggleDirective` | `[treeToggle]` | `treeToggle` | none | none |
+| `TreeCheckboxDirective` | `[treeCheckbox]` | `treeCheckbox` | none | none |
+| `TreeRenameInputDirective` | `input[treeRenameInput]` | `treeRenameInput` | none | `renameError` |
+| `TreeDropIndicatorDirective` | `[treeDropIndicator]` | `treeDropIndicator` | none | none |
+| `TreeLiveRegionDirective` | `[treeLiveRegion]` | `treeLiveRegion` | none | none |
+
+The classes end in `Directive` because the core, re-exported, already has a `TreeItem` type.
+Another model, or another engine option (`keyMap`, `checkboxes`, …), makes another engine.
+Create the model once, in a field (`readonly model = createTreeModel<Types>(json)`).
+
+Through `exportAs`, every directive has `state()`: `RootState` on the root (with `model()`,
+`engine` and the root's `context`), `TreeItemState` on the parts of an item, `RenameInputState`
+(`invalid`, `error`) on the rename input, `DropIndicatorState | null` on the drop indicator and
+`LiveRegionState` (`announcement`) on the live region. A group also has `children()`, the items it
+renders. Drop the indicator from the DOM while there is no drag with
+`@if (tree.state().dragging)` around it.
+
+## Injection functions
+
+The hooks of [the React reference](/docs/api/hooks), as injection functions. Call them in an
+injection context (a field initializer or a constructor) of a component inside the root.
+
+| function | returns |
+| --- | --- |
+| `injectTree<T>()` | `{ model, engine }`, an `InjectTreeResult<T>`: `model` is a signal (`model()`), `engine` the tree on screen |
+| `injectTreeItem<T>()` | `{ item, state }`, an `InjectTreeItemResult<T>`: the enclosing `[treeItem]`'s item and `TreeItemState`, as signals |
+| `injectTreeState(selector, options?)` | a signal of the selection, changed only when `isEqual` says it changed (`InjectTreeStateOptions`: `model`, a model or a signal of one, and `isEqual`); it selects again when a signal the selector reads changes |
+
+A tree ref is a template reference (`#tree="treeRoot"`) or `viewChild(TreeRootDirective)`: its
+`model()` and its `engine` reach the tree from outside it.
+
+A server render outputs the tree's markup, never subscribes to the model and never runs a command
+on it: the engine starts after the root's first render in the browser (`afterNextRender`).
+
+## Types
+
+`RootState`, `TreeItemState`, `RenameInputState`, `DropIndicatorState`, `LiveRegionState`,
+`InjectTreeResult`, `InjectTreeItemResult`, `InjectTreeStateOptions`, and:
+
+| type | description |
+| --- | --- |
+| `TreeItemsContext<T>` | the context of `<ng-template treeItems>`: `$implicit` and `item` |
+| `TypedBy<T>` | what `[treeItems]` takes to type its template: a model, a document, or nothing |
+
+## Examples
+
+Every example of the gallery exists in Angular, with the same behaviour: pick Angular in the
+framework switch to see its code. The [file explorer](/examples/file-explorer) shows the recursion
+with one template, [controlled](/examples/controlled) the two-way lists and
+[undo and redo](/examples/undo-redo) an app store read through a signal kept in step with its
+`subscribe`.

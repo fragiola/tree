@@ -14,12 +14,46 @@ Render `Tree.DropIndicator` inside the root. It exists only while there is a dro
 absolutely positioned in the root: a zero-height line for `before` and `after`, the row's box for
 `inside`. Draw it with `data-drop-position`:
 
+<Framework name="react">
+
 ```tsx
 <Tree.Root<Types> defaultTree={json} aria-label="Project files">
     <Tree.Items<Types>>{(item) => <FileItem item={item} />}</Tree.Items>
     <Tree.DropIndicator className="drop-indicator" />
 </Tree.Root>
 ```
+
+</Framework>
+
+<Framework name="vue">
+
+```vue
+<Tree.Root :default-tree="json" aria-label="Project files">
+    <Tree.Items v-slot="{ item }"><FileItem :item="item" /></Tree.Items>
+    <Tree.DropIndicator class="drop-indicator" />
+</Tree.Root>
+```
+
+</Framework>
+
+<Framework name="angular">
+
+```html
+<div treeRoot [defaultTree]="json" aria-label="Project files">
+    <ng-template [treeItems]="json" let-item>
+        <div [treeItem]="item">
+            <div treeItemContent>{{ item.label }}</div>
+            <div treeGroup></div>
+        </div>
+    </ng-template>
+    <div treeDropIndicator class="drop-indicator"></div>
+</div>
+```
+
+The indicator's element stays while there is no target, hidden (`display: none`). To take it out
+of the DOM, wrap it in `@if (tree.state().dragging)`, with `#tree="treeRoot"` on the root.
+
+</Framework>
 
 ```css
 .drop-indicator[data-drop-position="before"],
@@ -92,6 +126,8 @@ ArrowUp step through the targets the model accepts, Enter drops and Escape cance
 from code with `engine.run("start-keyboard-drag", { itemIds })`, from a "Move" menu item for
 example:
 
+<Framework name="react">
+
 ```tsx
 function MoveButton({ itemId }: { itemId: string }) {
     const { engine } = useTree<Types>();
@@ -103,13 +139,58 @@ function MoveButton({ itemId }: { itemId: string }) {
 }
 ```
 
+</Framework>
+
+<Framework name="vue">
+
+```vue title="move-button.vue"
+<script setup lang="ts">
+import { useTree } from "@fragiola/tree-vue";
+import type { Types } from "./tree";
+
+defineProps<{ itemId: string }>();
+const { engine } = useTree<Types>();
+</script>
+
+<template>
+    <button type="button" @click="engine.run('start-keyboard-drag', { itemIds: [itemId] })">
+        Move
+    </button>
+</template>
+```
+
+</Framework>
+
+<Framework name="angular">
+
+```ts title="move-button.ts"
+import { Component, input } from "@angular/core";
+import { injectTree } from "@fragiola/tree-angular";
+import type { Types } from "./tree";
+
+@Component({
+    selector: "app-move-button",
+    template: `<button type="button" (click)="move()">Move</button>`,
+})
+export class MoveButton {
+    readonly itemId = input.required<string>();
+    private readonly engine = injectTree<Types>().engine;
+
+    protected move(): void {
+        this.engine.run("start-keyboard-drag", { itemIds: [this.itemId()] });
+    }
+}
+```
+
+</Framework>
+
 ## Announcing the drag
 
 `announce` returns the live region's text for each event: `drag-start`, `drag-over` (with the
 `target`, or `null` when there is no valid one), `drop` and `drag-cancel`. Render
 `Tree.LiveRegion`, visually hidden:
 
-```tsx
+```ts
 import type { AnnounceEvent, DropTarget, TreeModel } from "@fragiola/tree-react";
 
 function announcer(model: TreeModel<Types>) {
