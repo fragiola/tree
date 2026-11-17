@@ -19,6 +19,7 @@ export type {
     LiveRegionState,
 } from "./components/live-region";
 export type {
+    RootBaseProps,
     RootEmits,
     RootProps,
     RootSlots,

@@ -15,14 +15,16 @@ framework-free core.
 ## What it gives you
 
 - **The WAI-ARIA tree view pattern.** `role="tree"`, `role="treeitem"` and `role="group"`, with
-  `aria-level`, `aria-posinset`, `aria-setsize`, `aria-expanded`, `aria-selected`, `aria-checked`,
+  `aria-level`, `aria-posinset`, `aria-setsize`, `aria-expanded`, `aria-selected` (with the
+  selection feature), `aria-checked`,
   `aria-disabled` and `aria-busy`, and a roving tab stop: the tree is one stop in the page's tab
   order.
 - **The keyboard.** Arrows, Home and End, type-ahead, Enter and Space, Shift to extend a
   selection, `*` to expand siblings, F2 to rename and a keyboard drag, all overridable
   ([Keyboard and type-ahead](/docs/guides/keyboard)).
-- **Selection and checkboxes.** `none`, `single` or `multiple` selection, and checkboxes that
-  cascade (a parent is checked, unchecked or mixed) or stay independent.
+- **Selection and checkboxes.** `none`, `single` or `multiple` selection (an opt-in feature:
+  [Features](/docs/concepts/features)), and checkboxes that cascade (a parent is checked,
+  unchecked or mixed) or stay independent.
 - **Editing.** Inline rename with validation, and drag and drop with Pointer Events (mouse, touch
   and pen alike), auto-expanding folders, auto-scroll and a drop indicator.
 - **Async children.** A parent's children can come from your loader, called the first time it is

@@ -166,7 +166,9 @@ type argument:
 ```ts
 // in a component inside the root
 readonly tree = injectTree<Types>();
-readonly count = injectTreeState<Types, number>((state) => state.selectedItemIds.length);
+readonly count = injectTreeState<Types, number, typeof features>(
+    (state) => state.selectedItemIds.length,
+);
 ```
 
 </Framework>

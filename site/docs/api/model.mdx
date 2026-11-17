@@ -173,7 +173,11 @@ fields (`FeatureDocument`, `FeatureDocumentContext`), its commands and keys on a
 its reactions to removed, disabled and reconfigured items, and its part of each engine
 (`FeatureEngine`, given a `FeatureEngineHost` with a `FeatureModel`, a key action's
 `FeatureKeyContext`, and a `FeatureViewport` for virtualization). `TreeRootProp` is a controlled
-root prop a feature ships, and `TreeFeatureInfo` what `"features"` lists of it.
+root prop a feature ships, and `TreeFeatureInfo` what `"features"` lists of it. The core's own
+controlled lists (`expandedItemIds`, `checkedItemIds`) are `TREE_ROOT_PROPS`, so an adapter maps
+every list the same way; `FEATURE_ROOT_PROPS` names every feature's root prop with its feature,
+and `FeatureRootPropsOf<F>` types the root props of the features `F`. The concept is on
+[Features](/docs/concepts/features).
 
 The types follow the list: `TreeFeatures` is a list of features (`AnyFeatures` any of them),
 `TreeStateOf<T, F>` the state with their fields (`FeatureStateOf<F>` alone), and

@@ -166,7 +166,7 @@ engine.get("virtual-window"); // the rows to render
 | `spaceBefore` | `VirtualRow` | the space (px) between the previous rendered row (or the top) and this one: the spacer before it |
 
 A virtualized tree is flat: render each row as an item with no group, between spacers of
-`spaceBefore` and, after the last one, `spaceAfter` (what `Tree.VirtualItems` does). The rows
+`spaceBefore` and, after the last one, `spaceAfter` (what `VirtualItems` does). The rows
 start at the top of the root's content box. With estimated sizes, the engine keeps the view in
 place when a row above it is measured, so it sets `overflow-anchor: none` on the scroll element
 while attached (the browser's own anchoring would move the view a second time). PageDown and

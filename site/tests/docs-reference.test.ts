@@ -217,7 +217,6 @@ describe("the React reference", () => {
                 "LiveRegion",
                 "Root",
                 "Toggle",
-                "VirtualItems",
             ].sort(),
         );
         for (const { name, module } of partExports) {
@@ -245,8 +244,10 @@ describe("the React reference", () => {
             const source = sourceOf(module);
             const slug = MODULE_PAGES[module] ?? "";
             const mdx = page(slug);
-            const props = interfaceFields(source, `${name}Props`);
-            expect(props, `${name}Props in ${module}`).toBeDefined();
+            // the root's own props: `RootProps<T, F>` adds the features' (## Feature props)
+            const propsName = name === "Root" ? "RootBaseProps" : `${name}Props`;
+            const props = interfaceFields(source, propsName);
+            expect(props, `${propsName} in ${module}`).toBeDefined();
             const table = section(mdx, "Props");
             expect(table, `## Props on api/${slug}.mdx`).toBeDefined();
             expect(
@@ -315,7 +316,6 @@ describe("the React reference", () => {
                 "useTreeItemRename",
                 "useTreeRef",
                 "useTreeState",
-                "useTreeVirtualWindow",
             ].sort(),
         );
         for (const { name } of hooks) {
@@ -345,6 +345,37 @@ describe("the React reference", () => {
                 `\`data-tree-part="${value}"\``,
             );
         }
+    });
+});
+
+describe("the React feature entries", () => {
+    const entry = (name: string) =>
+        namedExports(read(join(REACT_SRC, name, "index.ts")));
+
+    it("re-export the core's feature, and document what renders it", () => {
+        for (const name of ["selection", "virtualization"]) {
+            expect(read(join(REACT_SRC, name, "index.ts"))).toMatch(
+                new RegExp(`^export \\* from "@fragiola/tree/${name}";$`, "m"),
+            );
+        }
+        const virtual = entry("virtualization");
+        expect(virtual.map(({ name }) => name).sort()).toEqual(
+            ["VirtualItems", "VirtualItemsProps", "useTreeVirtualWindow"].sort(),
+        );
+        const mdx = page("virtual-items");
+        for (const { name } of virtual) {
+            expect(mentions(mdx, name), `${name} on api/virtual-items.mdx`).toBe(
+                true,
+            );
+        }
+        const props = interfaceFields(
+            read(join(REACT_SRC, "virtualization/virtual-items.tsx")),
+            "VirtualItemsProps",
+        );
+        expect([...tableRowNames(section(mdx, "Props") ?? "")].sort()).toEqual(
+            [...(props?.fields ?? [])].sort(),
+        );
+        expect(page("hooks")).toMatch(/^## `useTreeVirtualWindow`/m);
     });
 });
 
@@ -378,7 +409,7 @@ describe("the Vue reference", () => {
 
     it("lists every prop of Tree.Root and every event", () => {
         const root = read(join(VUE_SRC, "components/root.ts"));
-        const fields = interfaceFields(root, "RootProps")?.fields ?? [];
+        const fields = interfaceFields(root, "RootBaseProps")?.fields ?? [];
         expect(fields.length).toBeGreaterThan(10);
         const row = mdx
             .split("\n")
@@ -421,13 +452,20 @@ describe("the Angular reference", () => {
     });
 
     it("mentions every named export on api/angular.mdx", () => {
-        const names = namedExports(publicApi).map((entry) => entry.name);
+        // `ɵ` names are what the feature entries build on, not an app's API
+        const names = namedExports(publicApi)
+            .map((entry) => entry.name)
+            .filter((name) => !name.startsWith("ɵ"));
         expect(names.length).toBeGreaterThan(0);
         expect(names.filter((name) => !mentions(mdx, name))).toEqual([]);
+        const virtual = namedExports(
+            read(join(ROOT, "packages/angular/virtualization/public-api.ts")),
+        ).map((entry) => entry.name);
+        expect(virtual.filter((name) => !mentions(mdx, name))).toEqual([]);
     });
 
     it("lists every directive with its selector and exportAs, and TREE holds them all", () => {
-        expect(directives.length).toBe(10);
+        expect(directives.length).toBe(9);
         for (const { selector, exportAs, name } of directives) {
             expect(mdx, name).toMatch(
                 new RegExp(
@@ -462,7 +500,8 @@ describe("the Angular reference", () => {
 describe("the concept pages", () => {
     const componentSources = readdirSync(join(REACT_SRC, "components"))
         .map((file) => read(join(REACT_SRC, "components", file)))
-        .concat(read(join(REACT_SRC, "hooks/use-tree-item.ts")));
+        .concat(read(join(REACT_SRC, "hooks/use-tree-item.ts")))
+        .concat(read(join(REACT_SRC, "virtualization/virtual-items.tsx")));
 
     it("list every part name", () => {
         const names = new Set(

@@ -13,7 +13,11 @@ export type {
     LiveRegionProps,
     LiveRegionState,
 } from "./components/live-region";
-export type { RootProps, RootState } from "./components/root";
+export type {
+    RootBaseProps,
+    RootProps,
+    RootState,
+} from "./components/root";
 export type { ToggleProps } from "./components/toggle";
 export {
     createTreeRef,

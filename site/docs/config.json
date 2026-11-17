@@ -38,6 +38,10 @@
                     "path": "concepts/model-and-engine"
                 },
                 {
+                    "label": "Features",
+                    "path": "concepts/features"
+                },
+                {
                     "label": "Composition",
                     "path": "concepts/composition"
                 },
@@ -146,7 +150,7 @@
                     "path": "api/items"
                 },
                 {
-                    "label": "Tree.VirtualItems",
+                    "label": "VirtualItems",
                     "path": "api/virtual-items"
                 },
                 {

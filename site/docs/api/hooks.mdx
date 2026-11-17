@@ -10,11 +10,12 @@ engine; a tree ref reaches them from outside.
 ## `useTree`
 
 ```ts
-function useTree<T extends TreeTypes = AnyTypes>(): UseTreeResult<T>;
+function useTree<T extends TreeTypes = AnyTypes, F extends TreeFeatures = readonly []>(): UseTreeResult<T, F>;
 ```
 
-The model and the engine of the enclosing `Tree.Root`. Pass the registry as the type argument
-(`useTree<Types>()`): a child cannot infer it through context. Outside a root, it throws.
+The model and the engine of the enclosing `Tree.Root`. Pass the registry, and the features when
+you use theirs, as the type arguments (`useTree<Types, typeof features>()`): a child cannot infer
+them through context. Outside a root, it throws.
 
 <Framework name="react">
 
@@ -82,20 +83,23 @@ In Angular, `injectTree<Types>()` gives `model` as a signal (`model()`) and the 
 ## `useTreeState`
 
 ```ts
-function useTreeState<T extends TreeTypes = AnyTypes, S = unknown>(
-    selector: (state: TreeState<T>, model: TreeModel<T>) => S,
-    options?: UseTreeStateOptions<T, S>,
+function useTreeState<T extends TreeTypes = AnyTypes, S = unknown, F extends TreeFeatures = readonly []>(
+    selector: (state: TreeStateOf<T, F>, model: TreeModel<T, F>) => S,
+    options?: UseTreeStateOptions<T, S, F>,
 ): S;
 ```
 
 A value selected from the model's state, re-rendering the component only when the selection
 changes (`Object.is` by default). The selector runs once per state; keep it pure. Inside a
-`Tree.Root` it reads the root's model; pass `model` to read one anywhere.
+`Tree.Root` it reads the root's model; pass `model` to read one anywhere. The state has the
+features' fields: given a `model`, the hook infers them; inside a root, pass them
+(`useTreeState<Types, number, typeof features>(…)`).
 
 <Framework name="react">
 
 ```tsx
-const count = useTreeState<Types, number>((state) => state.selectedItemIds.length);
+// a model with `selection()`: the selector's state has `selectedItemIds`
+const count = useTreeState((state) => state.selectedItemIds.length, { model });
 const status = useTreeState<Types, string | undefined>((_state, model) =>
     model.get("children-status-by", { itemId: item.id }),
 );
@@ -108,7 +112,7 @@ const visible = useTreeState((_state, model) => model.get("visible-items").lengt
 
 ```ts
 // read-only refs: count.value, status.value, visible.value
-const count = useTreeState<Types, number>((state) => state.selectedItemIds.length);
+const count = useTreeState((state) => state.selectedItemIds.length, { model });
 const status = useTreeState<Types, string | undefined>((_state, model) =>
     model.get("children-status-by", { itemId: props.item.id }),
 );
@@ -124,7 +128,9 @@ selector reads (`props.item`) changes.
 
 ```ts
 // fields of a component: signals, count(), status(), visible()
-readonly count = injectTreeState<Types, number>((state) => state.selectedItemIds.length);
+readonly count = injectTreeState((state) => state.selectedItemIds.length, {
+    model: this.model,
+});
 readonly status = injectTreeState<Types, string | undefined>((_state, model) =>
     model.get("children-status-by", { itemId: this.itemId() }),
 );
@@ -138,11 +144,11 @@ reads (`this.itemId()`) changes.
 
 </Framework>
 
-`UseTreeStateOptions<T, S>`:
+`UseTreeStateOptions<T, S, F>`:
 
 | field | type | description |
 | --- | --- | --- |
-| `model` | `TreeModel<T>` | the model to read; default: the enclosing `Tree.Root`'s (then the hook needs one) |
+| `model` | `TreeModel<T, F>` | the model to read; default: the enclosing `Tree.Root`'s (then the hook needs one) |
 | `isEqual` | `(a: S, b: S) => boolean` | whether two selections are the same, so the component does not re-render (default `Object.is`) |
 
 ## `useTreeItem`
@@ -223,7 +229,7 @@ functions):
 | `posinset` | `number` | its 1-based position among its siblings (`aria-posinset`) |
 | `setsize` | `number` | how many siblings it has, itself included (`aria-setsize`) |
 | `expanded` | `boolean` | its children are shown |
-| `selected` | `boolean` | it is part of the selection |
+| `selected` | `boolean` | it is part of the selection (`selection()`) |
 | `focused` | `boolean` | it is the focused item (model data: the roving tab stop as stored) |
 | `tabStop` | `boolean` | it is the roving tab stop: the one item with `tabindex` 0 |
 | `checkState` | `CheckState`: `"checked" \| "unchecked" \| "mixed"` | its check (`mixed` only when the root has `checkboxes`); your check control reads it |
@@ -237,6 +243,7 @@ functions):
 | `dragging` | `boolean` | it is being dragged |
 | `dropTarget` | `boolean` | the drop target of the drag under way is relative to it |
 | `dropPosition` | `DropPosition \| undefined` | while it is the drop target: `before`, `after` or `inside` |
+| `attributes` | `Readonly<Record<string, string \| undefined>>` | the ARIA and `data-*` the installed features give it (`selection()`: `aria-selected`, `data-selected`): its element gets them all, every other part of it the `data-*` (`engine.adapter.itemAttributes`) |
 
 ## `useTreeItemRename`
 
@@ -332,7 +339,7 @@ item, rendered with `@if`. It gives `state()` through `exportAs: "treeItemRename
 ## `useTreeRef`
 
 ```ts
-function useTreeRef<T extends TreeTypes = AnyTypes>(): TreeRef<T>;
+function useTreeRef<T extends TreeTypes = AnyTypes, F extends TreeFeatures = readonly []>(): TreeRef<T, F>;
 ```
 
 A tree ref kept by the component, which re-renders when the `Tree.Root` it is given to mounts or
@@ -405,35 +412,39 @@ In Angular, a template reference is the tree ref: `#tree="treeRoot"` gives the r
 ## `createTreeRef`
 
 ```ts
-function createTreeRef<T extends TreeTypes = AnyTypes>(): TreeRef<T>;
+function createTreeRef<T extends TreeTypes = AnyTypes, F extends TreeFeatures = readonly []>(): TreeRef<T, F>;
 ```
 
 Creates a tree ref outside React: in a module, or in a test. It does not re-render anything when
 it attaches; in a component, `useTreeRef` does.
 
-`TreeRef<T>`:
+`TreeRef<T, F>` (`F`: the model's features, which type the engine's keys: `"virtual-window"` with
+`virtualization()`):
 
 | field | type | description |
 | --- | --- | --- |
-| `current` | `TreeHandle<T> \| null` | the root's model and engine while it is mounted, `null` otherwise |
+| `current` | `TreeHandle<T, F> \| null` | the root's model and engine while it is mounted, `null` otherwise |
 
-`TreeHandle<T>`:
+`TreeHandle<T, F>`:
 
 | field | type | description |
 | --- | --- | --- |
-| `model` | `TreeModel<T>` | the root's model |
-| `engine` | `TreeEngine<T>` | the root's engine |
+| `model` | `TreeModel<T, F>` | the root's model |
+| `engine` | `TreeEngine<T, F>` | the root's engine |
 
 ## `useTreeVirtualWindow`
 
 ```ts
+import { useTreeVirtualWindow } from "@fragiola/tree-react/virtualization";
+
 function useTreeVirtualWindow(): VirtualWindow | null;
 ```
 
-The rows the enclosing `Tree.Root` renders when it is virtualized (its `virtual` prop):
-`engine.get("virtual-window")`, read again whenever it changes (a scroll, a measured row, a
-change of the tree). `null` before the root is mounted, and without `virtual`.
-[`Tree.VirtualItems`](/docs/api/virtual-items) renders it; read it to render the rows your own
+The rows the enclosing `Tree.Root` renders when its model has the virtualization feature
+(`virtualization(options)`): `engine.get("virtual-window")`, read again whenever it changes (a
+scroll, a measured row, a change of the tree). `null` before the root is mounted, and without the
+feature. It comes with the feature's entry (`@fragiola/tree-react/virtualization`), as
+[`VirtualItems`](/docs/api/virtual-items), which renders it; read it to render the rows your own
 way, or to show how many are rendered. Each `VirtualRow` has its `offset`, `size` and the
 `spaceBefore` to keep empty above it; `spaceAfter` follows the last one
 ([the engine's reference](/docs/api/engine#virtualization)).

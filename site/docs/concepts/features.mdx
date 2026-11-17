@@ -1,0 +1,117 @@
+---
+title: Features
+description: A minimal core and opt-in features - selection, virtualization - each from its own entry, so a tree ships only what it installs.
+---
+
+The tree is a **minimal core** and **opt-in features**. With no feature, a tree renders, expands
+and collapses, moves one roving tab stop with the WAI-ARIA keys, drags and renames: it is a
+complete, accessible tree. A feature adds one capability, its state, commands, keys and ARIA,
+and comes from **its own entry**: an app that never imports it does not ship it.
+
+| feature | entry | adds |
+| --- | --- | --- |
+| `selection(options?)` | `@fragiola/tree-react/selection` | the selected items, the selection mode (`single` by default, `multiple`, `none`), `item.select` and the other selection commands, the keys and clicks that select, `aria-selected`, `data-selected`, `aria-multiselectable`, and the `selectedItemIds` prop |
+| `virtualization(options?)` | `@fragiola/tree-react/virtualization` | a window of the visible items in view, rendered by `VirtualItems`, for trees of hundreds of thousands of rows ([Virtualization](/docs/guides/virtualization)) |
+
+Each framework's package has the same entries (`@fragiola/tree-vue/selection`,
+`@fragiola/tree-angular/virtualization`, …), and the core's are `@fragiola/tree/<feature>`.
+
+## Installing
+
+The model takes its features once, when it is created, and keeps them: a later change of a
+root's `features` prop is ignored, with a warning.
+
+<Framework name="react">
+
+```tsx
+import { createTreeModel, Tree } from "@fragiola/tree-react";
+import { selection } from "@fragiola/tree-react/selection";
+
+const features = [selection({ mode: "multiple" })] as const;
+
+export function Files() {
+    const [model] = useState(() => createTreeModel<Types, typeof features>(json, { features }));
+    const count = useTreeState((state) => state.selectedItemIds.length, { model });
+    return (
+        <Tree.Root model={model} aria-label="Files">
+            <Tree.Items<Types>>{(item) => <FileItem item={item} />}</Tree.Items>
+        </Tree.Root>
+    );
+}
+
+// or a root that creates its own model
+<Tree.Root<Types, typeof features> defaultTree={json} features={features} aria-label="Files">
+```
+
+</Framework>
+
+<Framework name="vue">
+
+```ts title="tree.ts"
+import { typedTree } from "@fragiola/tree-vue";
+import { selection } from "@fragiola/tree-vue/selection";
+
+export const features = [selection({ mode: "multiple" })] as const;
+// the primitives typed by the registry and the features: `v-model:selected-item-ids` compiles
+export const Tree = typedTree<Types, typeof features>();
+```
+
+```vue
+<script setup lang="ts">
+import { createTreeModel } from "@fragiola/tree-vue";
+import { features, Tree } from "./tree";
+
+const model = createTreeModel<Types, typeof features>(json, { features });
+</script>
+
+<template>
+    <Tree.Root :model="model" aria-label="Files">…</Tree.Root>
+</template>
+```
+
+</Framework>
+
+<Framework name="angular">
+
+```ts
+import { createTreeModel, TREE } from "@fragiola/tree-angular";
+import { selection } from "@fragiola/tree-angular/selection";
+
+const features = [selection({ mode: "multiple" })] as const;
+
+@Component({ imports: [TREE], template: `<div [treeRoot]="model" aria-label="Files">…</div>` })
+export class Files {
+    readonly model = createTreeModel<Types, typeof features>(json, { features });
+}
+```
+
+</Framework>
+
+## Typed by the features
+
+The features type the model, the engine and everything around them. `model.run("item.select", …)`
+compiles only with `selection()`; `model.state.selectedItemIds` and `engine.get("virtual-window")`
+exist only with their feature; a root's `selectedItemIds` prop compiles only when its model has
+the selection. At runtime, a command of a feature that is not installed returns `not_found`, its
+`get` key reads `undefined` and its `is` key answers `false`: nothing throws.
+
+TypeScript infers the features from `createTreeModel(json, { features })` when it infers the
+registry too. When you give the registry (`createTreeModel<Types>(…)`), give the features as
+well (`createTreeModel<Types, typeof features>(…)`, with `const features = [...] as const`), and
+in the same way to `Tree.Root`, `useTree`, `useTreeRef`, `useTreeState` and `typedTree`. Given a
+`model`, `useTreeState` infers them.
+
+## Documents
+
+A document is the same JSON with or without features ([The JSON model](/docs/api/json-model)), and
+a field belongs to its feature: `selectedItemIds`, `selectionAnchorItemId` and
+`settings.selectionMode` load only into a model with `selection()`. Elsewhere they are a
+validation issue (`requires the selection feature`), never dropped silently, and
+`model.get("tree-json")` writes only the installed features' fields. Check a saved document
+against the model's features with `validateTree(json, { features })`.
+
+## What stays outside
+
+As everywhere in the tree: no styles, no rendered menus, no text. A feature gives behaviour, state,
+ARIA and `data-*`; what its state looks like is your CSS (`[data-selected]`). The bundle of each
+package is checked by `pnpm build`: no main entry contains a feature's code.

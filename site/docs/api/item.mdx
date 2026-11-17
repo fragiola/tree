@@ -4,8 +4,8 @@ description: An item of the tree (role treeitem) with its level, position, state
 ---
 
 `Tree.Item` is the `role="treeitem"` element of the WAI-ARIA APG tree view: it carries
-`aria-level`, `aria-posinset`, `aria-setsize`, `aria-expanded` (a parent), `aria-selected` (a tree
-that selects), `aria-checked` (a root with `checkboxes`), `aria-disabled` and `aria-busy` (while
+`aria-level`, `aria-posinset`, `aria-setsize`, `aria-expanded` (a parent), `aria-selected` (with the
+`selection()` feature), `aria-checked` (a root with `checkboxes`), `aria-disabled` and `aria-busy` (while
 its children load), and the roving `tabindex` (`0` on the one tab stop, `-1` elsewhere). It is the
 element DOM focus goes to, and it provides its item to the parts inside it.
 
@@ -86,7 +86,7 @@ state (`expanded`, `selected`, `focused`, `tabStop`, `checkState`, `checked`, `i
 | `role="treeitem"` | always |
 | `aria-level`, `aria-posinset`, `aria-setsize` | always: 1 for a root item; its position among its siblings, from 1; how many siblings it has |
 | `aria-expanded` | a parent: `true` or `false` |
-| `aria-selected` | the selection mode is not `none` |
+| `aria-selected` | the `selection()` feature, in a mode other than `none` (the features' ARIA and `data-*` come from `engine.adapter.itemAttributes`) |
 | `aria-checked` | the root has `checkboxes`: `true`, `false` or `"mixed"` |
 | `aria-disabled` | the item is disabled |
 | `aria-busy` | its children are loading |

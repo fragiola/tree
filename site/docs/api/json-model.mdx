@@ -41,9 +41,9 @@ Its type is `TreeJson<T>`, typed by your registry `T`; its `settings` are a `Tre
 | `rootItemIds` | `string[]` | yes | the root items, in order |
 | `items` | object | yes | every item, keyed by its id |
 | `expandedItemIds` | `string[]` | no | the expanded items |
-| `selectedItemIds` | `string[]` | no | the selection, in the order it was made |
+| `selectedItemIds` | `string[]` | no | `selection()`: the selection, in the order it was made |
 | `checkedItemIds` | `string[]` | no | the checked items |
-| `selectionAnchorItemId` | `string \| null` | no | where a range selection starts |
+| `selectionAnchorItemId` | `string \| null` | no | `selection()`: where a range selection starts |
 | `focusedItemId` | `string \| null` | no | the roving tab stop |
 | `renamingItemId` | `string \| null` | no | the item whose label is being edited |
 
@@ -51,7 +51,7 @@ Its type is `TreeJson<T>`, typed by your registry `T`; its `settings` are a `Tre
 
 | field | values | default |
 | --- | --- | --- |
-| `selectionMode` | `"none"`, `"single"`, `"multiple"` | `"single"` |
+| `selectionMode` | `"none"`, `"single"`, `"multiple"` (`selection()`) | the feature's `mode` option, `"single"` by default |
 | `checkMode` | `"cascade"`, `"independent"` | `"cascade"` |
 | `movable` | boolean: the default of an item's `movable` | `true` |
 | `renamable` | boolean: the default of an item's `renamable` | `true` |
@@ -90,6 +90,9 @@ waits for `loadChildren`, `loaded` with its `childItemIds`, `error` when the loa
 - `expandedItemIds`, `selectedItemIds`, `checkedItemIds` and the single ids name items; no list
   repeats an id.
 - `selectionMode: "none"` holds no selection, `"single"` at most one item.
+- A field of a feature (the ones marked `selection()`) loads only into a model with that feature:
+  elsewhere it is an issue, `requires the selection feature` ([Features](/docs/concepts/features)).
+  `model.get("tree-json")` writes only the installed features' fields.
 - With `dataSchemas` (a JSON Schema per kind, an option of `createTreeModel`), each item's `data`
   is validated against its kind's schema.
 

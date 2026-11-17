@@ -15,16 +15,25 @@ import {
     createTreeModel,
     injectTree,
     injectTreeState,
-    injectTreeVirtualWindow,
     TREE,
     type TreeJson,
 } from "@fragiola/tree-angular";
+// each feature from its own entry (an Angular secondary entry point)
+import { selection } from "@fragiola/tree-angular/selection";
+import {
+    injectTreeVirtualWindow,
+    TreeVirtualItemsDirective,
+    virtualization,
+} from "@fragiola/tree-angular/virtualization";
 
 @Component({ imports: [TREE], template: `…` })
 export class Files {}
 ```
 
-`TREE` lists every directive, for a standalone component's `imports`. The package is standalone
+`TREE` lists every directive of the main entry, for a standalone component's `imports`; a
+feature's directives come with its entry (`TreeVirtualItemsDirective`, in `imports` next to
+`TREE`), so a tree that does not import the feature does not ship them
+([Features](/docs/concepts/features)). The package is standalone
 only (no NgModule) and built on signals and `host` bindings: it needs no zone.js (zoneless is
 Angular's default). It needs `@angular/core` **^22**.
 
@@ -69,7 +78,7 @@ hold an `<ng-template treeItems>` of its own, for children that look different.
 | template directive | inside | context (`let-…`) |
 | --- | --- | --- |
 | `TreeItemsDirective` (`ng-template[treeItems]`) | `[treeRoot]`, or a `[treeGroup]` | `$implicit` and `item`: the item, a `TreeItemsContext<T>` |
-| `TreeVirtualItemsDirective` (`ng-template[treeVirtualItems]`) | a `[treeRoot]` whose model has the `virtualization()` feature | `$implicit` and `item`: the item, and `row`, its `VirtualRow`: a `TreeVirtualItemsContext<T>` |
+| `TreeVirtualItemsDirective` (`ng-template[treeVirtualItems]`, from `@fragiola/tree-angular/virtualization`) | a `[treeRoot]` whose model has the `virtualization()` feature | `$implicit` and `item`: the item, and `row`, its `VirtualRow`: a `TreeVirtualItemsContext<T>` |
 
 **Typing by your registry.** A template cannot pass a type argument. Give the template directive
 the model or the document instead (`[treeItems]="model"`, `[treeItems]="json"`; `TypedBy<T>` is
@@ -134,13 +143,16 @@ injection context (a field initializer or a constructor) of a component inside t
 
 | function | returns |
 | --- | --- |
-| `injectTree<T>()` | `{ model, engine }`, an `InjectTreeResult<T>`: `model` is a signal (`model()`), `engine` the tree on screen |
+| `injectTree<T, F>()` | `{ model, engine }`, an `InjectTreeResult<T, F>` (`F`: the model's features, which type its commands and keys): `model` is a signal (`model()`), `engine` the tree on screen |
 | `injectTreeItem<T>()` | `{ item, state }`, an `InjectTreeItemResult<T>`: the enclosing `[treeItem]`'s item and `TreeItemState`, as signals |
-| `injectTreeVirtualWindow()` | a signal of the root's `VirtualWindow` (the rows a virtualized tree renders), `null` before the root created its engine and without the `virtualization()` feature |
+| `injectTreeVirtualWindow()` (from `@fragiola/tree-angular/virtualization`) | a signal of the root's `VirtualWindow` (the rows a virtualized tree renders), `null` before the root created its engine and without the `virtualization()` feature |
 | `injectTreeState(selector, options?)` | a signal of the selection, changed only when `isEqual` says it changed (`InjectTreeStateOptions`: `model`, a model or a signal of one, and `isEqual`); it selects again when a signal the selector reads changes |
 
 A tree ref is a template reference (`#tree="treeRoot"`) or `viewChild(TreeRootDirective)`: its
-`model()` and its `engine` reach the tree from outside it.
+`model()` and its `engine` reach the tree from outside it. `TreeRootDirective<T, F>` is typed by the
+model it is given; `viewChild.required<TreeRootDirective<Types, typeof features>>(TreeRootDirective)`
+types it from outside. A feature's controlled list (`[(selectedItemIds)]`) is an input of every root
+(an input is declared on the class): without its feature it is ignored, with a warning.
 
 A server render outputs the tree's markup, never subscribes to the model and never runs a command
 on it: the engine starts after the root's first render in the browser (`afterNextRender`).
@@ -153,7 +165,7 @@ on it: the engine starts after the root's first render in the browser (`afterNex
 | type | description |
 | --- | --- |
 | `TreeItemsContext<T>` | the context of `<ng-template treeItems>`: `$implicit` and `item` |
-| `TreeVirtualItemsContext<T>` | the context of `<ng-template treeVirtualItems>`: `$implicit`, `item` and `row` |
+| `TreeVirtualItemsContext<T>` | the context of `<ng-template treeVirtualItems>`: `$implicit`, `item` and `row` (from `@fragiola/tree-angular/virtualization`) |
 | `TypedBy<T>` | what `[treeItems]` takes to type its template: a model, a document, or nothing |
 
 ## Examples

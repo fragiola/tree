@@ -5,8 +5,8 @@ description: The tree element (role tree) - it owns the engine of its model, for
 
 `Tree.Root` is the `role="tree"` element of the WAI-ARIA APG
 [tree view pattern](https://www.w3.org/WAI/ARIA/apg/patterns/treeview/): one tab stop for the
-whole tree, the keys handled on it, and `aria-multiselectable` when the selection mode is
-`multiple`. It takes a `model`, or a `defaultTree` it creates one from, creates the engine for it
+whole tree, the keys handled on it, and the ARIA of the installed features
+(`aria-multiselectable` with `selection()` in `multiple` mode). It takes a `model`, or a `defaultTree` it creates one from, creates the engine for it
 once mounted, and renders only its children. No provider is needed above it.
 
 <Framework name="react">
@@ -94,17 +94,18 @@ or vetoes every command the tree runs, and a listener (`model.subscribe`) every 
 
 ## Props
 
-`RootProps<T>` extends the [common primitive props](/docs/api/root#common-props) (on a `div`).
+`RootProps<T, F>` is `RootBaseProps<T, F>` (every tree's props, below, which extend the
+[common primitive props](/docs/api/root#common-props) on a `div`) and the props the features `F`
+ship ([Feature props](#feature-props)). `F` comes from the `model` (`TreeModel<T, F>`) or the
+`features` prop; with an explicit registry, pass both: `<Tree.Root<Types, typeof features>>`.
 
 | prop | type | default | description |
 | --- | --- | --- | --- |
-| `model` | `TreeModel<T>` | none | the tree model. Its middleware sees every command the tree runs, and its listeners every change. A new model identity creates a new engine. Give either `model` or `defaultTree` |
+| `model` | `TreeModel<T, F>` | none | the tree model. Its middleware sees every command the tree runs, and its listeners every change. A new model identity creates a new engine. Give either `model` or `defaultTree` |
 | `defaultTree` | `TreeJson<T>` | an empty tree | the document of a model the root creates and keeps, read once at mount |
-| `features` | `TreeFeatures` | none | the opt-in features of the model the root creates from `defaultTree` (`[selection()]`, from `@fragiola/tree-react/selection`), read once at mount; a `model` has its own |
+| `features` | `F` (`TreeFeatures`) | none | the opt-in features of the model the root creates from `defaultTree` (`[selection()]`, from `@fragiola/tree-react/selection`), read once at mount: a later change is ignored, with a warning. A `model` has its own ([Features](/docs/concepts/features)) |
 | `expandedItemIds` | `readonly string[]` | uncontrolled | controlled expansion ([Controlled state](/docs/guides/controlled-state)) |
 | `onExpandedItemIdsChange` | `(itemIds: string[]) => void` | none | called with the expanded items after every command that changes them |
-| `selectedItemIds` | `readonly string[]` | uncontrolled | controlled selection |
-| `onSelectedItemIdsChange` | `(itemIds: string[]) => void` | none | called with the selection after every command that changes it |
 | `checkedItemIds` | `readonly string[]` | uncontrolled | controlled checks |
 | `onCheckedItemIdsChange` | `(itemIds: string[]) => void` | none | called with the checked items after every command that changes them |
 | `loadChildren` | `LoadChildren<T>`: `(item, { signal }) => Promise<readonly TreeItemJson<T>[]>` | none | your loader of the children of an item with a `childrenStatus` ([Async loading](/docs/guides/async-loading)) |
@@ -121,11 +122,22 @@ or vetoes every command the tree runs, and a listener (`model.subscribe`) every 
 | `transfer` | `TransferHandler` | the default transfer | what a drop from a tree of another model does here: run your commands (copy, convert kinds) and return `false` to refuse; asked first with `dryRun` for each target. Default: the target model adds the dragged subtrees, the source model removes them |
 | `foreignDrop` | `TreeForeignDrop<T>` | none | takes files, links and text dragged on the tree from the desktop or another window (`createTreeForeignDrop(options)`, [Foreign content](/docs/guides/drag-and-drop#foreign-content)): the target shows as for a tree drag, and its `onDrop` runs your commands. Create it once: another one creates another engine |
 | `dropOutside` | `TreeDropOutside<T>` | none | hands its `onDrop` the items of a pointer drag released outside every tree of the group (`createTreeDropOutside(options)`, [Dropping outside](/docs/guides/drag-and-drop#dropping-outside)), for your own targets. Create it once: another one creates another engine |
-| `treeRef` | `TreeRef<T>` | none | access to the model and the engine from outside the root (`useTreeRef`, `createTreeRef`) |
+| `treeRef` | `TreeRef<T, F>` | none | access to the model and the engine from outside the root (`useTreeRef`, `createTreeRef`) |
 | `children` | `ReactNode` | none | the tree: `Tree.Items`, `Tree.DropIndicator`, `Tree.LiveRegion`, and anything else |
 
 The root names nothing: give it `aria-label` or `aria-labelledby`
 ([Accessible names](/docs/getting-started/accessible-names)).
+
+## Feature props
+
+A feature ships its controlled list and its change callback; they compile only when the feature is
+installed, and the root maps them as it maps `expandedItemIds`. Given without the feature, a prop is
+ignored with a warning.
+
+| prop | feature | description |
+| --- | --- | --- |
+| `selectedItemIds` | `selection()` | controlled selection: the selected items ([Controlled state](/docs/guides/controlled-state)) |
+| `onSelectedItemIdsChange` | `selection()` | called with the selection after every command that changes it |
 
 ## State
 
@@ -133,7 +145,7 @@ The root names nothing: give it `aria-label` or `aria-labelledby`
 
 | field | type | description |
 | --- | --- | --- |
-| `multiselectable` | `boolean` | the selection mode is `multiple` (`aria-multiselectable`) |
+| `multiselectable` | `boolean` | the selection mode is `multiple` (`aria-multiselectable`, with `selection()`) |
 | `dragging` | `boolean` | a drag is under way (pointer or keyboard) |
 | `keyboardDragging` | `boolean` | a keyboard drag is under way |
 | `draggingFromOtherTree` | `boolean` | a drag from another tree of the drag group is under way (`dragGroup`) |
@@ -144,7 +156,7 @@ The root names nothing: give it `aria-label` or `aria-labelledby`
 | attribute | when |
 | --- | --- |
 | `role="tree"` | always |
-| `aria-multiselectable` | the selection mode is `multiple` |
+| `aria-multiselectable` | `selection()` in `multiple` mode (the features' ARIA and `data-*` come from `engine.adapter.rootAttributes()`) |
 | `data-tree-part="root"` | always |
 | `data-dragging` | a drag is under way, or foreign content (`foreignDrop`) is dragged over the tree |
 | `data-keyboard-dragging` | a keyboard drag is under way |

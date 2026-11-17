@@ -5,7 +5,8 @@ description: Build a working, typed tree step by step, from the document to the 
 
 A tree is three things you write: a **registry** (each kind of item and the type of its data), a
 **document** (the items, in JSON), and an **item component** (an item template, in Angular) that
-renders one row and then its children. The package brings the roles, the keyboard, the selection and the focus.
+renders one row and then its children. The package brings the roles, the keyboard and the focus;
+the selection is a feature you add in one line ([Selecting](#selecting)).
 
 ## The registry and the document
 
@@ -220,9 +221,6 @@ Nothing is styled. Indent each row by its depth, which every part carries as `--
     gap: 0.25rem;
     padding-inline-start: calc(var(--tree-depth) * 1rem + 0.25rem);
 }
-.row[data-selected] {
-    background: #dbeafe;
-}
 .toggle[data-leaf] {
     visibility: hidden; /* a leaf keeps the room, so labels line up */
 }
@@ -238,6 +236,60 @@ The item is the element that takes DOM focus, so its focus ring is drawn on its 
 [Styling the depth](/docs/getting-started/depth) and [State attributes](/docs/concepts/state-attributes).
 
 <Example id="hello-tree" />
+
+## Selecting
+
+The tree above focuses and expands; it selects nothing. Selection is a feature: give the root
+`selection()` in its `features` (and the type argument for them), and a click or Enter selects,
+with `aria-selected` and `data-selected` to style ([Selection](/docs/guides/selection)).
+
+<Framework name="react">
+
+```tsx
+import { selection } from "@fragiola/tree-react/selection";
+
+const features = [selection()] as const;
+
+<Tree.Root<Types, typeof features> defaultTree={json} features={features} aria-label="Project files" className="tree">
+```
+
+</Framework>
+
+<Framework name="vue">
+
+```ts title="tree.ts"
+import { typedTree } from "@fragiola/tree-vue";
+import { selection } from "@fragiola/tree-vue/selection";
+
+export const features = [selection()] as const;
+// typed by the registry and the features
+export const Tree = typedTree<Types, typeof features>();
+```
+
+```vue
+<template>
+    <Tree.Root :default-tree="json" :features="features" aria-label="Project files" class="tree">…</Tree.Root>
+</template>
+```
+
+</Framework>
+
+<Framework name="angular">
+
+```ts
+import { selection } from "@fragiola/tree-angular/selection";
+
+// a field of the component: [features]="features" on the root
+protected readonly features = [selection()];
+```
+
+</Framework>
+
+```css
+.row[data-selected] {
+    background: #dbeafe;
+}
+```
 
 ## Changing the tree
 
