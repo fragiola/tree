@@ -3,10 +3,10 @@ import { type ItemOf, useTree, useTreeItem } from "@fragiola/tree-vue";
 import { Check, ChevronRight, Minus } from "@lucide/vue";
 import type { PermissionTypes } from "../_kit/data";
 import * as styles from "./styles";
-import { Tree } from "./tree";
+import { type features, Tree } from "./tree";
 
 const props = defineProps<{ item: ItemOf<PermissionTypes> }>();
-const { model } = useTree<PermissionTypes>();
+const { model } = useTree<PermissionTypes, typeof features>();
 const { state } = useTreeItem(() => props.item);
 // a press toggles the item's check (`item.toggle-check`, with the cascade)
 const toggleCheck = () =>

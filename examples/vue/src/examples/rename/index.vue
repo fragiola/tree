@@ -5,16 +5,18 @@ import { type FileTypes, fileSystem } from "../_kit/data";
 import FileItem from "./file-item.vue";
 import { namingRules } from "./naming-rules";
 import * as styles from "./styles";
-import { Tree } from "./tree";
+import { features, Tree } from "./tree";
 
-const model = createTreeModel<FileTypes>(fileSystem());
+const model = createTreeModel<FileTypes, typeof features>(fileSystem(), {
+    features,
+});
 // the reason the last rename was refused, until the label changes or the rename ends
 const error = ref<string>();
 const errorId = useId();
 onScopeDispose(namingRules(model));
 onScopeDispose(
-    model.subscribe((event) => {
-        if (event.after.renamingItemId === null) error.value = undefined;
+    model.subscribe(() => {
+        if (model.state.renamingItemId === null) error.value = undefined;
     }),
 );
 </script>

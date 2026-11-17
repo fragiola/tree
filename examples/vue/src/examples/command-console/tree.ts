@@ -1,9 +1,9 @@
 import { typedTree } from "@fragiola/tree-vue";
+import { rename } from "@fragiola/tree-vue/rename";
 import { selection } from "@fragiola/tree-vue/selection";
 import type { FileTypes } from "../_kit/data";
 
-/** The opt-in features of the model: the selection. */
-export const features = [selection()] as const;
+/** The opt-in features of the model: the selection and the rename (`item.rename`). */
+export const features = [selection(), rename()] as const;
 
-// The primitives typed by the kit's file system: `item` in a slot is one of its items.
 export const Tree = typedTree<FileTypes, typeof features>();

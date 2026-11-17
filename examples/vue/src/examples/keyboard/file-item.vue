@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { type ItemOf, useTreeItemRename } from "@fragiola/tree-vue";
+import type { ItemOf } from "@fragiola/tree-vue";
+import { useTreeItemRename } from "@fragiola/tree-vue/rename";
 import { ChevronRight, File, Folder } from "@lucide/vue";
 import type { FileTypes } from "../_kit/data";
 import * as styles from "./styles";
