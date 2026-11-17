@@ -7,10 +7,12 @@
 // one `item.move`. In a drag group the pointer also reaches the other trees: the capture stays on
 // the source, the tree under the pointer is found by its root's rect, and that tree evaluates,
 // shows, expands and scrolls its target; a drop there lands as transfer.ts says.
+
 import { isDragExempt } from "../dom/owner";
 import type { EngineHost } from "../engine/host";
 import { rectOf } from "../geometry/rect";
 import { GroupDrag, treeOf } from "./drag-group";
+import { dragSetOf } from "./drag-set";
 import type { DropTarget } from "./drop-evaluation";
 import { overRoot, rowAt, targetAt } from "./drop-target";
 import { type DragModifiers, modifiersOf, NO_MODIFIERS } from "./transfer";
@@ -147,10 +149,7 @@ export class PointerDrag {
     /** Turns the press into a drag; false when its items cannot move. */
     private start(press: Press): boolean {
         const { model } = this.host;
-        const selected = model.state.selectedItemIds;
-        const itemIds = selected.includes(press.itemId)
-            ? [...selected]
-            : [press.itemId];
+        const itemIds = dragSetOf(model, press.itemId);
         if (!itemIds.every((itemId) => model.is("item-movable", { itemId }))) {
             return false;
         }

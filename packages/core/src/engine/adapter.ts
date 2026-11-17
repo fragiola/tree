@@ -37,7 +37,10 @@ export interface TreeEngineAdapter<T extends TreeTypes = AnyTypes> {
     handleKeyDown(event: KeyEventInput): boolean;
     /** a pointer pressed an item's content: it may become a drag */
     handlePointerDown(itemId: string, event: PointerEvent): void;
-    /** a click on an item's content: focus, select (Shift extends, Ctrl/Cmd toggles), and expand with `expandOnClick` */
+    /**
+     * a click on an item's content: focus, the features' clicks (`selection()`: select, Shift
+     * extends, Ctrl/Cmd toggles), and expand with `expandOnClick`
+     */
     handleClick(itemId: string, event: PressInput): void;
     /** a press on an item's toggle (`Tree.Toggle`): expand or collapse */
     handleToggleClick(itemId: string): void;
@@ -48,6 +51,16 @@ export interface TreeEngineAdapter<T extends TreeTypes = AnyTypes> {
      * content with the `foreignDrop` option, ignored without it
      */
     handleDragEvent(event: DragEvent): void;
+
+    /**
+     * the ARIA and `data-*` the installed features give an item (`aria-selected`, …): each value a
+     * string, `undefined` for an absent attribute. Adapters spread it on `Tree.Item`
+     */
+    itemAttributes(
+        itemId: string,
+    ): Readonly<Record<string, string | undefined>>;
+    /** the ARIA and `data-*` the installed features give the root (`aria-multiselectable`, …) */
+    rootAttributes(): Readonly<Record<string, string | undefined>>;
 
     /** calls `listener` when adapters should re-render (a commit, a drag step, an announcement); returns its remover */
     subscribe(listener: () => void): () => void;

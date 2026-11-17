@@ -5,6 +5,7 @@
 import { fail, ok } from "../commands/define";
 import type { CommandResult, NoPayload } from "../commands/types";
 import { type DragGroup, joinDragGroup } from "../dnd/drag-group";
+import { dragSetOf } from "../dnd/drag-set";
 import type {
     DropOutsideController,
     TreeDropOutside,
@@ -25,6 +26,19 @@ import {
     schedulerOf,
     windowOf,
 } from "../dom/owner";
+import type { OwnedBy } from "../features/keys";
+import { featuresOf, requiresFeature } from "../features/registry";
+import type {
+    EngineActionKeyOf,
+    EngineGetKeyOf,
+    EngineIsKeyOf,
+    FeatureEngine,
+    FeatureEngineHost,
+    FeatureKeyContext,
+    FeatureModel,
+    FeatureViewport,
+    TreeFeatures,
+} from "../features/types";
 import {
     actionOf,
     directional,
@@ -39,10 +53,6 @@ import type { QueryArgs } from "../state/queries";
 import type { AnyTypes, TreeTypes } from "../state/types";
 import { visibleIndex } from "../state/visible-items";
 import type { ScrollAlign } from "../virtual/scroll-target";
-import type {
-    TreeVirtualizer,
-    VirtualController,
-} from "../virtual/virtualizer";
 import type { KeyEventInput, PressInput, TreeEngineAdapter } from "./adapter";
 import { ChildrenLoader, type LoadChildren } from "./children-loader";
 import type {
@@ -58,7 +68,6 @@ import type {
     EngineGetKey,
     EngineGetPayload,
     EngineGetResult,
-    EngineIsKey,
     EngineIsPayload,
 } from "./verbs";
 
@@ -101,12 +110,6 @@ export interface TreeEngineOptions<T extends TreeTypes = AnyTypes> {
      */
     resetLoadsOnDestroy?: boolean | undefined;
     /**
-     * renders only the visible items in view (`createTreeVirtualizer(options)`): the engine keeps
-     * their window (`get("virtual-window")`), scrolls to an item before focusing it, and drags over
-     * the rows on screen. Without it, every visible item is rendered
-     */
-    virtual?: TreeVirtualizer | undefined;
-    /**
      * joins the trees of the same document with the same group name: items drag between them, by
      * pointer and keyboard. Over one model a drop is one `item.move`; over two it is a transfer
      * (`transfer`). Without it, a drag stays in its tree
@@ -139,24 +142,27 @@ export interface TreeEngineOptions<T extends TreeTypes = AnyTypes> {
  * engine's own state (a drag, an announcement); `destroy` releases it. `adapter` is what only an
  * adapter calls.
  */
-export interface TreeEngine<T extends TreeTypes = AnyTypes> {
-    run<K extends EngineActionKey>(
+export interface TreeEngine<
+    T extends TreeTypes = AnyTypes,
+    F extends TreeFeatures = readonly [],
+> {
+    run<K extends EngineActionKeyOf<F>>(
         action: K,
         ...payload: QueryArgs<EngineActionPayload<K>>
     ): CommandResult<EngineActionResult<K>>;
-    can<K extends EngineActionKey>(
+    can<K extends EngineActionKeyOf<F>>(
         action: K,
         ...payload: QueryArgs<EngineActionPayload<K>>
     ): boolean;
-    check<K extends EngineActionKey>(
+    check<K extends EngineActionKeyOf<F>>(
         action: K,
         ...payload: QueryArgs<EngineActionPayload<K>>
     ): CommandResult<EngineActionResult<K>>;
-    get<K extends EngineGetKey>(
+    get<K extends EngineGetKeyOf<F>>(
         key: K,
         ...payload: QueryArgs<EngineGetPayload<K>>
     ): EngineGetResult<K>;
-    is<K extends EngineIsKey>(
+    is<K extends EngineIsKeyOf<F>>(
         key: K,
         ...payload: QueryArgs<EngineIsPayload<K>>
     ): boolean;
@@ -173,7 +179,9 @@ type ActionHandler = (
     dryRun: boolean,
 ) => CommandResult<unknown>;
 
-class Engine<T extends TreeTypes> implements TreeEngine<T>, EngineHost {
+class Engine<T extends TreeTypes, F extends TreeFeatures>
+    implements TreeEngine<T, F>, EngineHost
+{
     readonly model: TreeModel;
     readonly options: ResolvedEngineOptions;
     readonly adapter: TreeEngineAdapter<T>;
@@ -196,7 +204,9 @@ class Engine<T extends TreeTypes> implements TreeEngine<T>, EngineHost {
     private readonly typeAhead: TypeAhead;
     private readonly unsubscribeModel: () => void;
     private readonly actions: Record<EngineActionKey, ActionHandler>;
-    private readonly virtual: VirtualController | undefined;
+    /** what the model's features add to this engine */
+    private readonly contributions: readonly FeatureEngine[];
+    private readonly virtual: FeatureViewport | undefined;
     /** a virtualized tree focuses this item once its row is rendered */
     private pendingFocus: string | undefined;
     /** the renaming item as of the last model change, to find its editor once the rename ends */
@@ -206,7 +216,7 @@ class Engine<T extends TreeTypes> implements TreeEngine<T>, EngineHost {
     private readonly foreign: ForeignDropController | undefined;
     private readonly outside: DropOutsideController | undefined;
 
-    constructor(model: TreeModel<T>, options: TreeEngineOptions<T>) {
+    constructor(model: TreeModel<T, F>, options: TreeEngineOptions<T>) {
         this.model = model as unknown as TreeModel;
         this.settings = options;
         this.options = {
@@ -221,10 +231,32 @@ class Engine<T extends TreeTypes> implements TreeEngine<T>, EngineHost {
             typeAheadTimeout: options.typeAheadTimeout ?? 500,
             transfer: options.transfer,
         };
+        const host: FeatureEngineHost = {
+            model: this.model as unknown as FeatureModel,
+            root: () => this.rootElement,
+            contentOf: (itemId) => this.contents.get(itemId),
+            visible: () => this.model.get("visible-items"),
+            visibleIndex: () => visibleIndex(this.model.state),
+            pinnedItemIds: () => [
+                this.current(),
+                this.model.state.renamingItemId,
+                this.pendingFocus,
+                this.pointerDrag.pressedItemId,
+            ],
+            changed: () => this.changed(),
+            focus: (itemId) => this.focus({ itemId }, false).ok,
+        };
+        this.contributions = featuresOf(model).list.flatMap((feature) => {
+            const contribution = feature.engine?.(host);
+            return contribution ? [contribution] : [];
+        });
+        this.virtual = this.contributions.find(
+            (contribution) => contribution.viewport,
+        )?.viewport;
         // the page keys are a virtualized tree's: elsewhere PageDown and PageUp stay the
         // browser's, and an app's own binding of them keeps working
         this.keyMap = resolveKeyMap(
-            options.virtual
+            this.virtual
                 ? options.keyMap
                 : {
                       "focus-page-down": [],
@@ -266,20 +298,7 @@ class Engine<T extends TreeTypes> implements TreeEngine<T>, EngineHost {
                     dryRun,
                 ),
         };
-        this.adapter = this.createAdapter(model);
-        this.virtual = options.virtual?.connect({
-            root: () => this.rootElement,
-            visible: () => this.model.get("visible-items"),
-            visibleIndex: () => visibleIndex(this.model.state),
-            contentOf: (itemId) => this.contents.get(itemId),
-            pinnedItemIds: () => [
-                this.current(),
-                this.model.state.renamingItemId,
-                this.pendingFocus,
-                this.pointerDrag.pressedItemId,
-            ],
-            changed: () => this.changed(),
-        });
+        this.adapter = this.createAdapter(model as unknown as TreeModel<T>);
         this.foreign = options.foreignDrop?.connect(this);
         this.outside = options.dropOutside?.connect(this, () => this.changed());
         this.renamingItemId = this.model.state.renamingItemId;
@@ -292,7 +311,7 @@ class Engine<T extends TreeTypes> implements TreeEngine<T>, EngineHost {
     // the verbs
     // ---------------------------------------------------------------------------------------------
 
-    run<K extends EngineActionKey>(
+    run<K extends EngineActionKeyOf<F>>(
         action: K,
         ...payload: QueryArgs<EngineActionPayload<K>>
     ): CommandResult<EngineActionResult<K>> {
@@ -301,14 +320,14 @@ class Engine<T extends TreeTypes> implements TreeEngine<T>, EngineHost {
         >;
     }
 
-    can<K extends EngineActionKey>(
+    can<K extends EngineActionKeyOf<F>>(
         action: K,
         ...payload: QueryArgs<EngineActionPayload<K>>
     ): boolean {
         return this.perform(action, payload[0], true).ok;
     }
 
-    check<K extends EngineActionKey>(
+    check<K extends EngineActionKeyOf<F>>(
         action: K,
         ...payload: QueryArgs<EngineActionPayload<K>>
     ): CommandResult<EngineActionResult<K>> {
@@ -325,18 +344,35 @@ class Engine<T extends TreeTypes> implements TreeEngine<T>, EngineHost {
         if (this.destroyed) return fail("refused", "the engine was destroyed");
         const handler = Object.hasOwn(this.actions, action)
             ? this.actions[action as EngineActionKey]
-            : undefined;
-        if (!handler)
-            return fail("unknown_command", `unknown action "${action}"`);
+            : this.contributed("run", action);
+        if (!handler) {
+            const owner = featuresOf(this.model).missing("engineRun", action);
+            return owner !== undefined
+                ? fail("not_found", `"${action}" ${requiresFeature(owner)}`)
+                : fail("unknown_command", `unknown action "${action}"`);
+        }
         return handler(payload ?? {}, dryRun);
     }
 
-    get<K extends EngineGetKey>(
+    /** A feature's engine verb for `key`, if an installed feature has one. */
+    private contributed<V extends "run" | "get" | "is">(
+        verb: V,
+        key: string,
+    ): NonNullable<FeatureEngine[V]>[string] | undefined {
+        for (const contribution of this.contributions) {
+            const table = contribution[verb];
+            if (table && Object.hasOwn(table, key))
+                return table[key] as NonNullable<FeatureEngine[V]>[string];
+        }
+        return undefined;
+    }
+
+    get<K extends EngineGetKeyOf<F>>(
         key: K,
         ...payload: QueryArgs<EngineGetPayload<K>>
     ): EngineGetResult<K> {
         void payload;
-        const values: { [G in EngineGetKey]: () => EngineGetResult<G> } = {
+        const values = {
             "drop-target": () => this.dragState?.target ?? null,
             "dragging-item-ids": () => this.dragState?.itemIds ?? [],
             "drop-indicator": () => {
@@ -345,15 +381,22 @@ class Engine<T extends TreeTypes> implements TreeEngine<T>, EngineHost {
             },
             announcement: () => this.announcement,
             direction: () => this.direction(),
-            "virtual-window": () => this.virtual?.currentWindow() ?? null,
             "drop-outside-element": () => this.outside?.element() ?? null,
+        } satisfies {
+            [G in Exclude<
+                EngineGetKey,
+                OwnedBy<"engineGet">
+            >]: () => EngineGetResult<G>;
         };
-        return (
-            Object.hasOwn(values, key) ? values[key]() : undefined
-        ) as EngineGetResult<K>;
+        if (Object.hasOwn(values, key))
+            return values[key as keyof typeof values]() as EngineGetResult<K>;
+        return this.contributed(
+            "get",
+            key,
+        )?.(payload[0] ?? {}) as EngineGetResult<K>;
     }
 
-    is<K extends EngineIsKey>(
+    is<K extends EngineIsKeyOf<F>>(
         key: K,
         ...payload: QueryArgs<EngineIsPayload<K>>
     ): boolean {
@@ -376,7 +419,7 @@ class Engine<T extends TreeTypes> implements TreeEngine<T>, EngineHost {
                     this.dragState?.target?.itemId === itemId
                 );
             default:
-                return false;
+                return this.contributed("is", key)?.(payload[0] ?? {}) ?? false;
         }
     }
 
@@ -396,7 +439,7 @@ class Engine<T extends TreeTypes> implements TreeEngine<T>, EngineHost {
         this.leaveGroup();
         this.destroyed = true;
         this.loader.destroy(this.settings.resetLoadsOnDestroy === true);
-        this.virtual?.destroy();
+        for (const contribution of this.contributions) contribution.destroy?.();
         this.pendingFocus = undefined;
         this.typeAhead.reset();
         this.unsubscribeModel();
@@ -812,6 +855,8 @@ class Engine<T extends TreeTypes> implements TreeEngine<T>, EngineHost {
             handleDragEvent: (event) => {
                 if (!this.destroyed) this.foreign?.handle(event);
             },
+            itemAttributes: (itemId) => this.attributes("item", itemId),
+            rootAttributes: () => this.attributes("root"),
             subscribe: (listener) => {
                 const wrapper = () => listener();
                 this.adapterListeners.add(wrapper);
@@ -823,6 +868,25 @@ class Engine<T extends TreeTypes> implements TreeEngine<T>, EngineHost {
         };
     }
 
+    /** The features' attributes of an item or the root, merged (none: one shared empty object). */
+    private attributes(
+        part: "item" | "root",
+        itemId = "",
+    ): Readonly<Record<string, string | undefined>> {
+        let merged: Record<string, string | undefined> | undefined;
+        let only: Readonly<Record<string, string | undefined>> | undefined;
+        for (const contribution of this.contributions) {
+            const attributes =
+                part === "item"
+                    ? contribution.itemAttributes?.(itemId)
+                    : contribution.rootAttributes?.();
+            if (!attributes) continue;
+            if (only === undefined) only = attributes;
+            else merged = { ...(merged ?? only), ...attributes };
+        }
+        return merged ?? only ?? NO_ATTRIBUTES;
+    }
+
     // ---------------------------------------------------------------------------------------------
     // pointer and keyboard
     // ---------------------------------------------------------------------------------------------
@@ -832,14 +896,8 @@ class Engine<T extends TreeTypes> implements TreeEngine<T>, EngineHost {
         const { model } = this;
         if (model.state.renamingItemId === itemId) return;
         this.focus({ itemId }, false);
-        if (model.state.settings.selectionMode !== "none") {
-            const mode = event.shiftKey
-                ? "extend"
-                : event.ctrlKey || event.metaKey
-                  ? "toggle"
-                  : "replace";
-            model.run("item.select", { itemId, mode });
-        }
+        for (const contribution of this.contributions)
+            contribution.click?.(itemId, event);
         if (
             this.settings.expandOnClick === true &&
             !model.is("item-leaf", { itemId })
@@ -926,20 +984,6 @@ class Engine<T extends TreeTypes> implements TreeEngine<T>, EngineHost {
         if (current === undefined) return false;
         const visible = model.get("visible-items");
         const at = visibleIndex(model.state).get(current) ?? -1;
-        const multiple = model.state.settings.selectionMode === "multiple";
-        const select = (
-            itemId: string,
-            mode: "replace" | "toggle" | "extend",
-        ) =>
-            model.state.settings.selectionMode !== "none" &&
-            model.run("item.select", { itemId, mode }).ok;
-        const extendTo = (itemId: string | undefined) => {
-            if (itemId === undefined || !multiple) return false;
-            // extend from the anchor (or the item focused now) before the focus moves
-            model.run("item.select", { itemId, mode: "extend" });
-            this.focus({ itemId }, false);
-            return true;
-        };
         switch (action) {
             case "focus-next":
                 return this.focusAt(visible[at + 1]?.itemId);
@@ -984,44 +1028,40 @@ class Engine<T extends TreeTypes> implements TreeEngine<T>, EngineHost {
             case "expand-siblings":
                 return model.run("item.expand-siblings", { itemId: current })
                     .ok;
-            case "select":
-                return select(current, "replace");
             case "toggle":
                 if (this.settings.checkboxes === true) {
                     return model.run("item.toggle-check", { itemId: current })
                         .ok;
                 }
-                return select(current, multiple ? "toggle" : "replace");
-            case "toggle-selection":
-                return select(current, "toggle");
-            case "extend-next":
-                return extendTo(visible[at + 1]?.itemId);
-            case "extend-previous":
-                return extendTo(visible[at - 1]?.itemId);
-            case "extend-to-focused":
-                return multiple && select(current, "extend");
-            case "extend-to-first":
-                return extendTo(visible[0]?.itemId);
-            case "extend-to-last":
-                return extendTo(visible.at(-1)?.itemId);
-            case "select-all":
-                return model.run("tree.select-all", {}).ok;
+                return this.featureKey(action, { current, visible, at });
             case "rename":
                 return model.run("item.start-rename", { itemId: current }).ok;
-            case "start-drag": {
-                const selected = model.state.selectedItemIds;
-                const itemIds = selected.includes(current)
-                    ? [...selected]
-                    : [current];
-                return this.startKeyboardDrag({ itemIds }, false).ok;
-            }
+            case "start-drag":
+                return this.startKeyboardDrag(
+                    { itemIds: dragSetOf(model, current) },
+                    false,
+                ).ok;
+            default:
+                return this.featureKey(action, { current, visible, at });
         }
+    }
+
+    /** A key's action the core does not handle: the first installed feature that does. */
+    private featureKey(action: KeyAction, context: FeatureKeyContext): boolean {
+        for (const contribution of this.contributions) {
+            const handled = contribution.keyAction?.(action, context);
+            if (handled !== undefined) return handled;
+        }
+        return false;
     }
 
     private focusAt(itemId: string | undefined): boolean {
         return itemId !== undefined && this.focus({ itemId }, false).ok;
     }
 }
+
+const NO_ATTRIBUTES: Readonly<Record<string, string | undefined>> =
+    Object.freeze({});
 
 /** The nearest scroll container of the root (the root itself when it scrolls). */
 function scrollParent(root: HTMLElement): HTMLElement | undefined {
@@ -1048,11 +1088,14 @@ function pick(event: KeyEventInput) {
  * attach it later (`engine.adapter.attachRoot`, what an adapter does); call `destroy()` when the
  * tree leaves the screen.
  */
-export function createTreeEngine<T extends TreeTypes = AnyTypes>(
-    model: TreeModel<T>,
+export function createTreeEngine<
+    T extends TreeTypes = AnyTypes,
+    F extends TreeFeatures = readonly [],
+>(
+    model: TreeModel<T, F>,
     options: TreeEngineOptions<T> = {},
-): TreeEngine<T> {
-    const engine = new Engine<T>(model, options);
+): TreeEngine<T, F> {
+    const engine = new Engine<T, F>(model, options);
     // the engine's surface is exactly its verbs, `subscribe`, `destroy` and `adapter`, each bound:
     // `const { run } = engine` works, and the machinery the drags share stays inside
     return Object.freeze({

@@ -1,12 +1,17 @@
 import { describe, expect, it } from "vitest";
+import { selection } from "../../src/selection/selection";
 import { TreeValidationError, validateTree } from "../../src/state/load";
 import { createTreeModel } from "../../src/state/model";
 import { DEFAULT_SETTINGS } from "../../src/state/types";
 import { files, filesModel } from "../fixture";
 
-/** The issues of a document that should not load, as `path: message`. */
-function issues(json: unknown): string[] {
-    return validateTree(json).map((issue) => `${issue.path}: ${issue.message}`);
+const features = [selection()] as const;
+
+/** The issues of a document that should not load (with the selection feature), as `path: message`. */
+function issues(json: unknown, withFeatures = true): string[] {
+    return validateTree(json, withFeatures ? { features } : {}).map(
+        (issue) => `${issue.path}: ${issue.message}`,
+    );
 }
 
 describe("loading a document", () => {
@@ -24,8 +29,14 @@ describe("loading a document", () => {
 
     it("fills in the defaults", () => {
         const model = filesModel();
-        expect(model.state.settings).toEqual(DEFAULT_SETTINGS);
+        expect(model.state.settings).toEqual({
+            ...DEFAULT_SETTINGS,
+            selectionMode: "single",
+        });
         expect(model.state.selectedItemIds).toEqual([]);
+        expect(filesModel({}, { features: [] }).state.settings).toEqual(
+            DEFAULT_SETTINGS,
+        );
         expect(model.state.focusedItemId).toBeNull();
         expect(model.state.renamingItemId).toBeNull();
         expect(createTreeModel().state.rootItemIds).toEqual([]);
@@ -48,8 +59,8 @@ describe("loading a document", () => {
             checkedItemIds: ["utils"],
             focusedItemId: "app",
         });
-        const first = createTreeModel(json).get("tree-json");
-        const second = createTreeModel(first).get("tree-json");
+        const first = createTreeModel(json, { features }).get("tree-json");
+        const second = createTreeModel(first, { features }).get("tree-json");
         expect(second).toEqual(first);
         expect(first.settings).toEqual({
             ...DEFAULT_SETTINGS,
@@ -63,10 +74,9 @@ describe("loading a document", () => {
         });
         // a copy: changing it changes nothing in the model
         first.rootItemIds.push("x");
-        expect(createTreeModel(json).get("tree-json").rootItemIds).toEqual([
-            "src",
-            "readme",
-        ]);
+        expect(
+            createTreeModel(json, { features }).get("tree-json").rootItemIds,
+        ).toEqual(["src", "readme"]);
     });
 
     it("makes the cascade checks consistent: a checked parent checks its descendants, a parent follows its children", () => {
@@ -185,8 +195,9 @@ describe("an invalid document", () => {
             "/items/orphan: is not in the tree: no parent and not a root item",
             "/items/x: is inside a cycle: it is not reachable from the root",
             "/items/y: is inside a cycle: it is not reachable from the root",
-            '/selectedItemIds/0: "nope" is not an item',
             '/focusedItemId: "nope" is not an item',
+            // an installed feature's rules come after the core's
+            '/selectedItemIds/0: "nope" is not an item',
         ]);
     });
 
@@ -209,6 +220,28 @@ describe("an invalid document", () => {
             "/items/a/childItemIds: must be empty while the children are unloaded",
             '/items/a/childItemIds/0: "b" is already a child of the root',
         ]);
+    });
+
+    it("refuses the fields and settings of a feature that is not installed", () => {
+        const json = files({
+            settings: { selectionMode: "multiple" },
+            selectedItemIds: ["app"],
+            selectionAnchorItemId: "app",
+        });
+        expect(issues(json, false)).toEqual([
+            "/selectedItemIds: requires the selection feature (`@fragiola/tree/selection`)",
+            "/selectionAnchorItemId: requires the selection feature (`@fragiola/tree/selection`)",
+            "/settings/selectionMode: requires the selection feature (`@fragiola/tree/selection`)",
+        ]);
+        expect(() => createTreeModel(json)).toThrow(TreeValidationError);
+        expect(issues(json)).toEqual([]);
+    });
+
+    it("writes only the installed features' fields", () => {
+        const bare = createTreeModel(files()).get("tree-json");
+        expect("selectedItemIds" in bare).toBe(false);
+        expect("selectionAnchorItemId" in bare).toBe(false);
+        expect(bare.settings).toEqual(DEFAULT_SETTINGS);
     });
 
     it("refuses a selection the selection mode does not allow", () => {

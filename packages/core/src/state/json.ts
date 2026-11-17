@@ -1,3 +1,5 @@
+import { type ComposedFeatures, NO_FEATURES } from "../features/registry";
+import type { FeatureState } from "../features/types";
 import type {
     AnyTypes,
     CheckMode,
@@ -45,7 +47,10 @@ export interface TreeSettingsJson {
     droppable?: boolean;
 }
 
-/** A tree document, version 1: what `createTreeModel` loads and `get("tree-json")` writes. */
+/**
+ * A tree document, version 1: what `createTreeModel` loads and `get("tree-json")` writes. A field
+ * of a feature (`selectedItemIds`: `selection()`) loads only into a model with that feature.
+ */
 export interface TreeJson<T extends TreeTypes = AnyTypes> {
     version: 1;
     settings?: TreeSettingsJson;
@@ -90,6 +95,7 @@ export function itemToJson(item: TreeItem): TreeItemInit {
 /** The document of a state: every field written, so a round trip is stable. */
 export function stateToJson<T extends TreeTypes>(
     state: TreeState<T>,
+    features: ComposedFeatures = NO_FEATURES,
 ): TreeJson<T> {
     const items: Record<string, TreeItemInit> = {};
     for (const [id, item] of Object.entries(state.items)) {
@@ -101,10 +107,9 @@ export function stateToJson<T extends TreeTypes>(
         rootItemIds: [...state.rootItemIds],
         items: items as Record<string, TreeItemJson<T>>,
         expandedItemIds: [...state.expandedItemIds],
-        selectedItemIds: [...state.selectedItemIds],
         checkedItemIds: [...state.checkedItemIds],
-        selectionAnchorItemId: state.selectionAnchorItemId,
         focusedItemId: state.focusedItemId,
         renamingItemId: state.renamingItemId,
+        ...features.toJson(state as unknown as FeatureState),
     };
 }

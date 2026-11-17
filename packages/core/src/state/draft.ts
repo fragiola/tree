@@ -1,6 +1,7 @@
 // The working copy one command (or one batch) changes. It copies the items map once, on the first
 // write, and replaces only what changes, so the committed state shares every untouched item with
 // the one before (`before.items.x === after.items.x`).
+import type { ComposedFeatures } from "../features/registry";
 import type { IdSource } from "./ids";
 import { itemOf } from "./structure";
 import type { TreeItem, TreeSettings, TreeState } from "./types";
@@ -16,10 +17,13 @@ export class Draft {
     private items: Record<string, TreeItem> | undefined;
     private snapshot: TreeState | undefined;
     readonly ids: IdSource;
+    /** the model's features: the core's reducers call their reactions (`features.forget`, …) */
+    readonly features: ComposedFeatures;
 
-    constructor(base: TreeState, ids: IdSource) {
+    constructor(base: TreeState, ids: IdSource, features: ComposedFeatures) {
         this.base = base;
         this.ids = ids;
+        this.features = features;
     }
 
     /**
@@ -83,6 +87,18 @@ export class Draft {
     set<K extends StateField>(field: K, value: TreeState[K]): void {
         if (this.state[field] === value) return;
         (this.fields as Record<string, unknown>)[field] = value;
+        this.snapshot = undefined;
+    }
+
+    /** A feature's field of the state (`selectedItemIds`). */
+    field<V>(name: string): V {
+        return (this.state as unknown as Record<string, V>)[name] as V;
+    }
+
+    /** Replaces a feature's field of the state. */
+    setField(name: string, value: unknown): void {
+        if (this.field(name) === value) return;
+        (this.fields as Record<string, unknown>)[name] = value;
         this.snapshot = undefined;
     }
 

@@ -56,9 +56,11 @@ export interface ItemFlags {
     droppable?: boolean;
 }
 
-/** The tree's settings: its modes, and the defaults of the item flags. */
+/**
+ * The tree's settings: its modes, and the defaults of the item flags. An installed feature adds its
+ * own (`selection()`: `selectionMode`).
+ */
 export interface TreeSettings {
-    readonly selectionMode: SelectionMode;
     readonly checkMode: CheckMode;
     readonly movable: boolean;
     readonly renamable: boolean;
@@ -67,7 +69,6 @@ export interface TreeSettings {
 
 /** The settings of a tree whose document gives none. */
 export const DEFAULT_SETTINGS: TreeSettings = Object.freeze({
-    selectionMode: "single",
     checkMode: "cascade",
     movable: true,
     renamable: true,
@@ -96,7 +97,8 @@ export type ItemOf<T extends TreeTypes> = {
 }[KindOf<T>];
 
 /**
- * The state of a tree: plain, frozen, JSON-shaped data. A command produces a new state that
+ * The state of a tree: plain, frozen, JSON-shaped data. An installed feature adds its own fields
+ * (`selection()`: `selectedItemIds`, `selectionAnchorItemId`). A command produces a new state that
  * shares every item it did not touch; `before === after` means nothing changed.
  */
 export interface TreeState<T extends TreeTypes = AnyTypes> {
@@ -106,15 +108,11 @@ export interface TreeState<T extends TreeTypes = AnyTypes> {
     /** every item, by id */
     readonly items: { readonly [id: string]: ItemOf<T> };
     readonly expandedItemIds: readonly string[];
-    /** the selection, in the order it was made */
-    readonly selectedItemIds: readonly string[];
     /**
      * the checked items; in `cascade` mode a parent with children is in it exactly when all its
      * children are
      */
     readonly checkedItemIds: readonly string[];
-    /** where a range selection (`item.select` with `extend`) starts */
-    readonly selectionAnchorItemId: string | null;
     /** the roving tab stop: the item that takes focus when the tree does (always visible) */
     readonly focusedItemId: string | null;
     /** the item whose label is being edited */

@@ -168,7 +168,8 @@ export interface CommandMap<T extends TreeTypes = AnyTypes> {
     };
     "tree.configure": {
         payload: { settings: TreeSettingsPatch };
-        result: { settings: TreeSettings };
+        /** the settings: the core's, and `selectionMode` with the selection feature */
+        result: { settings: TreeSettings & { selectionMode?: SelectionMode } };
     };
     "tree.load": {
         payload: { json: TreeJson<T> };

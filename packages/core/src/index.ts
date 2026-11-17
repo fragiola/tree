@@ -86,6 +86,31 @@ export type {
     EngineIsMap,
     EngineIsPayload,
 } from "./engine/verbs";
+export type { FeatureName } from "./features/keys";
+export type {
+    AnyFeatures,
+    AnyTreeFeature,
+    CommandNameOf,
+    EngineActionKeyOf,
+    EngineGetKeyOf,
+    EngineIsKeyOf,
+    FeatureDocument,
+    FeatureDocumentContext,
+    FeatureEngine,
+    FeatureEngineHost,
+    FeatureKeyContext,
+    FeatureModel,
+    FeatureState,
+    FeatureStateOf,
+    FeatureViewport,
+    ModelGetKeyOf,
+    ModelIsKeyOf,
+    TreeFeature,
+    TreeFeatureInfo,
+    TreeFeatures,
+    TreeRootProp,
+    TreeStateOf,
+} from "./features/types";
 export {
     DEFAULT_KEY_MAP,
     type KeyAction,
@@ -143,11 +168,9 @@ export {
     type VisibleItem,
 } from "./state/types";
 export type { ScrollAlign } from "./virtual/scroll-target";
-export {
-    createTreeVirtualizer,
-    type RowSize,
-    type TreeVirtualizer,
-    type TreeVirtualizerOptions,
-    type VirtualRow,
-    type VirtualWindow,
+export type {
+    RowSize,
+    TreeVirtualizerOptions,
+    VirtualRow,
+    VirtualWindow,
 } from "./virtual/virtualizer";

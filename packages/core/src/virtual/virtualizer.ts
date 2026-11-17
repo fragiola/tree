@@ -1,8 +1,8 @@
-// The virtualizer: an opt-in part of the engine that renders a window of the visible items instead
-// of all of them. `createTreeVirtualizer(options)` describes it; the engine connects it when its
-// `virtual` option holds one, so a tree without it never reaches this file (and a bundle that
-// never imports `createTreeVirtualizer` leaves it out). Like Data Grid's (fragiola/data-grid,
-// packages/core/src/viewport), it is the core's own: no library.
+// The virtualizer: the engine part of the virtualization feature (`virtualization(options)`,
+// `@fragiola/tree/virtualization`), which renders a window of the visible items instead of all of
+// them. Each engine on a model with the feature connects its own; a bundle that never imports the
+// feature leaves this file out. Like Data Grid's (fragiola/data-grid, packages/core/src/viewport), it
+// is the core's own: no library.
 //
 // A virtualized tree is flat: the rendered rows are siblings in `role="tree"`, each with its
 // `aria-level`, `aria-posinset` and `aria-setsize` (the WAI-ARIA tree pattern allows it), with
@@ -30,7 +30,7 @@ export type { ScrollAlign } from "./scroll-target";
 /** A row's size in pixels: one for all, or one per row. */
 export type RowSize = number | ((row: VisibleItem) => number);
 
-/** Options of {@link createTreeVirtualizer}. */
+/** Options of `virtualization(options)`. */
 export interface TreeVirtualizerOptions {
     /**
      * every row's exact size (px), or one per row: rows are never measured (the fastest; your CSS
@@ -126,35 +126,12 @@ export interface VirtualController {
     destroy(): void;
 }
 
-/**
- * A virtualizer, for the engine's `virtual` option: `createTreeEngine(model, { virtual })`, or
- * the `virtual` prop of a root. It holds options only, so one serves every tree that uses it:
- * create it once (at module level, or memoized), not on every render.
- */
-export interface TreeVirtualizer {
-    readonly options: Readonly<TreeVirtualizerOptions>;
-    /** called by the engine: this virtualizer's state for one engine */
-    connect(host: VirtualHost): VirtualController;
-}
-
-/**
- * Describes a virtualizer: the engine renders only the visible items in view (plus `overscan`),
- * so a tree of hundreds of thousands of visible items scrolls, navigates and drags like a small
- * one. Render its window with `Tree.VirtualItems` (or `engine.get("virtual-window")`).
- *
- * ```ts
- * const virtual = createTreeVirtualizer({ rowSize: 28 });
- * const engine = createTreeEngine(model, { root, virtual });
- * ```
- */
-export function createTreeVirtualizer(
-    options: TreeVirtualizerOptions = {},
-): TreeVirtualizer {
-    const frozen = Object.freeze({ ...options });
-    return Object.freeze({
-        options: frozen,
-        connect: (host: VirtualHost) => new Virtualizer(host, frozen),
-    });
+/** One engine's virtualizer, connected to it. */
+export function connectVirtualizer(
+    host: VirtualHost,
+    options: Readonly<TreeVirtualizerOptions>,
+): VirtualController {
+    return new Virtualizer(host, options);
 }
 
 const DEFAULT_ESTIMATE = 32;

@@ -2,7 +2,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createTreeForeignDrop } from "../../src/dnd/foreign-drop";
 import { createTreeEngine } from "../../src/engine/tree-engine";
-import { createTreeVirtualizer } from "../../src/virtual/virtualizer";
+import { virtualization } from "../../src/virtual/virtualization";
 import { dataTransfer, mount, nativeDrag, pointer, wait } from "../engine/dom";
 import { filesModel } from "../fixture";
 import { flatModel, mountVirtual, type VirtualMounted } from "./dom";
@@ -15,19 +15,22 @@ afterEach(() => {
 });
 
 const ROW = 20;
-const fixed = createTreeVirtualizer({ rowSize: ROW, overscan: 4 });
+const fixed = { rowSize: ROW, overscan: 4 };
 
 describe("the virtualizer", () => {
-    it("is off without the option: no window, every row rendered as before", () => {
+    it("is off without the feature: no window, every row rendered as before", () => {
         const engine = createTreeEngine(filesModel());
-        expect(engine.get("virtual-window")).toBeNull();
+        // @ts-expect-error the virtualization feature is not installed
+        expect(engine.get("virtual-window")).toBeUndefined();
         engine.destroy();
     });
 
-    it("holds one options object for every tree that uses it", () => {
-        const virtual = createTreeVirtualizer({ rowSize: 24 });
-        expect(Object.isFrozen(virtual)).toBe(true);
-        expect(virtual.options).toEqual({ rowSize: 24 });
+    it("is a frozen feature holding its options, adding nothing to the model", () => {
+        const feature = virtualization({ rowSize: 24 });
+        expect(Object.isFrozen(feature)).toBe(true);
+        expect(feature.name).toBe("virtualization");
+        expect(feature.commands).toBeUndefined();
+        expect(feature.load).toBeUndefined();
     });
 
     it("renders only the rows in view plus the overscan, with aria from the visible items", () => {
@@ -96,7 +99,7 @@ describe("the virtualizer", () => {
         const model = flatModel(200_000);
         mounted = mountVirtual(
             model,
-            createTreeVirtualizer({ estimateRowSize: 24 }),
+            { estimateRowSize: 24 },
             {
                 viewport: 600,
             },
@@ -229,10 +232,10 @@ describe("the virtualizer", () => {
                 disconnect() {}
             },
         );
-        mounted = mountVirtual(
-            flatModel(1000),
-            createTreeVirtualizer({ estimateRowSize: () => 20, overscan: 2 }),
-        );
+        mounted = mountVirtual(flatModel(1000), {
+            estimateRowSize: () => 20,
+            overscan: 2,
+        });
         expect(mounted.root.style.overflowAnchor).toBe("none");
         mounted.scroll(2000);
         const rows = observers.at(-1);

@@ -206,13 +206,9 @@ export function forgetItems(
         return kept.length === ids.length ? ids : kept;
     };
     draft.set("expandedItemIds", keep(draft.state.expandedItemIds));
-    draft.set("selectedItemIds", keep(draft.state.selectedItemIds));
     draft.set("checkedItemIds", keep(draft.state.checkedItemIds));
-    const { selectionAnchorItemId, focusedItemId, renamingItemId } =
-        draft.state;
-    if (selectionAnchorItemId !== null && removed.has(selectionAnchorItemId)) {
-        draft.set("selectionAnchorItemId", null);
-    }
+    draft.features.forget(draft, removed);
+    const { focusedItemId, renamingItemId } = draft.state;
     if (renamingItemId !== null && removed.has(renamingItemId)) {
         draft.set("renamingItemId", null);
     }

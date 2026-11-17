@@ -73,7 +73,8 @@ describe("model.get", () => {
             "src",
             "readme",
         ]);
-        expect(model.get("settings").selectionMode).toBe("single");
+        expect(model.state.settings.selectionMode).toBe("single");
+        expect(model.get("settings")).toBe(model.state.settings);
     });
 
     it("item-path-by: the index at each level, from the root", () => {

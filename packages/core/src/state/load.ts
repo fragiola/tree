@@ -1,5 +1,13 @@
 // Loading a document: its JSON Schema, then the rules a schema cannot say (references, one parent
-// per item, no cycle, the selection mode), then the normalized state.
+// per item, no cycle, the fields of features that are not installed, each installed feature's
+// rules), then the normalized state.
+import {
+    type ComposedFeatures,
+    composeFeatures,
+    NO_FEATURES,
+    requiresFeature,
+} from "../features/registry";
+import type { FeatureDocument, TreeFeatures } from "../features/types";
 import { treeSchema } from "../schema/tree";
 import type { JsonSchema, ValidationIssue } from "../schema/types";
 import { joinPointer, jsonIssues, validate } from "../schema/validator";
@@ -49,6 +57,32 @@ export function dataIssues(
     if (notJson.length > 0) return notJson;
     const schema = dataSchemas?.[kind];
     return schema ? validate(schema, data, path) : [];
+}
+
+/** The document's fields (and settings) that belong to a feature that is not installed. */
+function featureFieldIssues(
+    json: DocumentInput,
+    features: ComposedFeatures,
+    prefix: string,
+): ValidationIssue[] {
+    const issues: ValidationIssue[] = [];
+    for (const key of Object.keys(json)) {
+        const owner = features.missing("fields", key);
+        if (owner !== undefined)
+            issues.push({
+                path: `${prefix}/${key}`,
+                message: requiresFeature(owner),
+            });
+    }
+    for (const key of Object.keys(json.settings ?? {})) {
+        const owner = features.missing("settings", key);
+        if (owner !== undefined)
+            issues.push({
+                path: `${prefix}/settings/${key}`,
+                message: requiresFeature(owner),
+            });
+    }
+    return issues;
 }
 
 /** The rules of a document past its schema (the document is known to match it). */
@@ -123,11 +157,7 @@ function structureIssues(
             });
         }
     }
-    const lists = [
-        "expandedItemIds",
-        "selectedItemIds",
-        "checkedItemIds",
-    ] as const;
+    const lists = ["expandedItemIds", "checkedItemIds"] as const;
     for (const list of lists) {
         json[list]?.forEach((id, i) => {
             if (!has(id)) {
@@ -138,11 +168,7 @@ function structureIssues(
             }
         });
     }
-    const singles = [
-        "selectionAnchorItemId",
-        "focusedItemId",
-        "renamingItemId",
-    ] as const;
+    const singles = ["focusedItemId", "renamingItemId"] as const;
     for (const single of singles) {
         const id = json[single];
         if (typeof id === "string" && !has(id)) {
@@ -151,21 +177,6 @@ function structureIssues(
                 message: `"${id}" is not an item`,
             });
         }
-    }
-    const mode = json.settings?.selectionMode ?? DEFAULT_SETTINGS.selectionMode;
-    const selected = json.selectedItemIds?.length ?? 0;
-    if (mode === "none" && selected > 0) {
-        issues.push({
-            path: at("/selectedItemIds"),
-            message: 'must be empty when the selection mode is "none"',
-        });
-    }
-    if (mode === "single" && selected > 1) {
-        issues.push({
-            path: at("/selectedItemIds"),
-            message:
-                'must hold at most one item when the selection mode is "single"',
-        });
     }
     return issues;
 }
@@ -185,9 +196,7 @@ interface DocumentInput {
         } & Readonly<Record<string, unknown>>;
     };
     readonly expandedItemIds?: readonly string[];
-    readonly selectedItemIds?: readonly string[];
     readonly checkedItemIds?: readonly string[];
-    readonly selectionAnchorItemId?: string | null;
     readonly focusedItemId?: string | null;
     readonly renamingItemId?: string | null;
 }
@@ -225,13 +234,27 @@ export function itemFromJson(id: string, json: object): TreeItem {
  */
 export function buildState(
     json: unknown,
-    options: { dataSchemas?: DataSchemas | undefined; freeze: boolean },
+    options: {
+        dataSchemas?: DataSchemas | undefined;
+        freeze: boolean;
+        features?: ComposedFeatures | undefined;
+    },
     prefix = "",
 ): BuiltState {
+    const features = options.features ?? NO_FEATURES;
     const schemaIssues = validate(treeSchema as JsonSchema, json, prefix);
     if (schemaIssues.length > 0) return { ok: false, issues: schemaIssues };
     const input = json as DocumentInput;
+    const featureInput = input as unknown as FeatureDocument;
+    const unowned = featureFieldIssues(input, features, prefix);
+    if (unowned.length > 0) return { ok: false, issues: unowned };
     const issues = structureIssues(input, prefix);
+    issues.push(
+        ...features.issues(featureInput, {
+            at: (path) => `${prefix}${path}`,
+            has: (id) => Object.hasOwn(input.items, id),
+        }),
+    );
     for (const [key, item] of Object.entries(input.items)) {
         issues.push(
             ...dataIssues(
@@ -255,6 +278,7 @@ export function buildState(
     }
     const settings: TreeSettings = {
         ...DEFAULT_SETTINGS,
+        ...features.settings,
         ...(cloneJson(input.settings) ?? {}),
     };
     const base: TreeState = {
@@ -266,21 +290,22 @@ export function buildState(
             const item = items[id];
             return item !== undefined && !isLeaf(item);
         }),
-        // a disabled item is never selected nor renamed
-        selectedItemIds: (input.selectedItemIds ?? []).filter(
-            (id) => items[id]?.disabled !== true,
-        ),
         checkedItemIds: [...(input.checkedItemIds ?? [])],
-        selectionAnchorItemId: input.selectionAnchorItemId ?? null,
         focusedItemId: input.focusedItemId ?? null,
+        // a disabled item is never renamed
         renamingItemId:
             input.renamingItemId != null &&
             items[input.renamingItemId]?.disabled !== true
                 ? input.renamingItemId
                 : null,
+        ...features.load(
+            featureInput,
+            items,
+            settings as TreeSettings & Readonly<Record<string, unknown>>,
+        ),
     };
     // loading draws no id: a document's ids are its keys
-    const draft = new Draft(base, new IdSource());
+    const draft = new Draft(base, new IdSource(), features);
     normalizeChecks(draft);
     const focused = draft.state.focusedItemId;
     if (focused !== null) {
@@ -296,11 +321,16 @@ export function buildState(
 /** The problems of a document, each with its JSON path; empty when `createTreeModel` would load it. */
 export function validateTree(
     json: unknown,
-    options: { dataSchemas?: DataSchemas | undefined } = {},
+    options: {
+        dataSchemas?: DataSchemas | undefined;
+        /** the features the document is loaded with: their fields are allowed and checked */
+        features?: TreeFeatures | undefined;
+    } = {},
 ): readonly ValidationIssue[] {
     const built = buildState(json, {
         dataSchemas: options.dataSchemas,
         freeze: false,
+        features: composeFeatures(options.features),
     });
     return built.ok ? [] : built.issues;
 }

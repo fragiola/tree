@@ -1,7 +1,12 @@
 // The tree model and its command bus. From Dockable (fragiola/dockable,
 // packages/core/src/state/model.ts), same author and licence.
 import { COMMAND_DEFINITIONS } from "../commands/catalogue";
-import { fail, invalid, type ReduceContext } from "../commands/define";
+import {
+    type CommandDefinition,
+    fail,
+    invalid,
+    type ReduceContext,
+} from "../commands/define";
 import type {
     BatchStep,
     CommandContext,
@@ -15,6 +20,19 @@ import type {
     ResultOf,
     RunOptions,
 } from "../commands/types";
+import {
+    type ComposedFeatures,
+    composeFeatures,
+    registerFeatures,
+    requiresFeature,
+} from "../features/registry";
+import type {
+    CommandNameOf,
+    ModelGetKeyOf,
+    ModelIsKeyOf,
+    TreeFeatures,
+    TreeStateOf,
+} from "../features/types";
 import type { JsonSchema } from "../schema/types";
 import { isObject, validate } from "../schema/validator";
 import { Draft } from "./draft";
@@ -27,20 +45,26 @@ import {
     TreeValidationError,
 } from "./load";
 import {
-    type ModelGetKey,
+    createQueries,
     type ModelGetPayload,
     type ModelGetResult,
-    type ModelIsKey,
     type ModelIsPayload,
+    type Queries,
     type QueryArgs,
-    queryGet,
-    queryIs,
 } from "./queries";
 import { itemOf, parentOf } from "./structure";
 import type { AnyTypes, KindOf, TreeState, TreeTypes } from "./types";
 
 /** Options of {@link createTreeModel}. */
-export interface TreeModelOptions<T extends TreeTypes = AnyTypes> {
+export interface TreeModelOptions<
+    T extends TreeTypes = AnyTypes,
+    F extends TreeFeatures = readonly [],
+> {
+    /**
+     * the opt-in features (`[selection(), virtualization({ rowSize: 28 })]`), each from its own entry
+     * (`@fragiola/tree/<feature>`): fixed for the model's life. Without them, a minimal tree
+     */
+    features?: F | undefined;
     /** generates the id of an item created without one; default `` `item-${n}` `` */
     createId?: CreateId | undefined;
     /** a JSON Schema per item kind: the document, `item.add`, `item.set-data` and `item.set-children` validate `data` */
@@ -70,12 +94,18 @@ export interface DispatchOptions {
  *
  * Every method is bound: it can be passed around on its own.
  */
-export interface TreeModel<T extends TreeTypes = AnyTypes> {
-    /** the current state (immutable; a new object after every change) */
-    readonly state: TreeState<T>;
+export interface TreeModel<
+    T extends TreeTypes = AnyTypes,
+    F extends TreeFeatures = readonly [],
+> {
+    /** the current state (immutable; a new object after every change), with the features' fields */
+    readonly state: TreeStateOf<T, F>;
 
-    /** changes the tree: runs a command (typed) through the middleware chain; never throws on bad input */
-    run<C extends CommandName>(
+    /**
+     * changes the tree: runs a command (typed) through the middleware chain; never throws on bad
+     * input. A command of a feature that is not installed returns `not_found`
+     */
+    run<C extends CommandNameOf<F>>(
         command: C,
         payload: PayloadOf<T, C>,
         options?: RunOptions,
@@ -86,24 +116,24 @@ export interface TreeModel<T extends TreeTypes = AnyTypes> {
      */
     dispatch(input: unknown, options?: DispatchOptions): CommandResult<unknown>;
     /** whether `run` would succeed now (nothing is committed or emitted) */
-    can<C extends CommandName>(
+    can<C extends CommandNameOf<F>>(
         command: C,
         payload: PayloadOf<T, C>,
         options?: RunOptions,
     ): boolean;
     /** what `run` would return (its value, or why it is refused), without committing or emitting */
-    check<C extends CommandName>(
+    check<C extends CommandNameOf<F>>(
         command: C,
         payload: PayloadOf<T, C>,
         options?: RunOptions,
     ): CommandResult<ResultOf<T, C>>;
     /** reads from the current state: an item, its children, the visible items, the JSON, … */
-    get<K extends ModelGetKey>(
+    get<K extends ModelGetKeyOf<F>>(
         key: K,
         ...payload: QueryArgs<ModelGetPayload<T, K>>
     ): ModelGetResult<T, K>;
     /** asks a yes/no question about the current state */
-    is<K extends ModelIsKey>(key: K, payload: ModelIsPayload<K>): boolean;
+    is<K extends ModelIsKeyOf<F>>(key: K, payload: ModelIsPayload<K>): boolean;
     /** adds a middleware around every command (the first added runs outermost); returns its remover */
     use(middleware: Middleware<T>): () => void;
     /** listens to every committed command (one event per commit); returns its remover */
@@ -153,9 +183,13 @@ interface Execution {
     thrown: { error: unknown } | undefined;
 }
 
-class Model<T extends TreeTypes> implements TreeModel<T> {
+class Model<T extends TreeTypes, F extends TreeFeatures>
+    implements TreeModel<T, F>
+{
     /** the committed state: what queries read and commands start from */
     private committed: TreeState;
+    private readonly features: ComposedFeatures;
+    private readonly queries: Queries;
     private readonly ids: IdSource;
     private readonly dataSchemas: DataSchemas | undefined;
     private readonly freeze: boolean;
@@ -168,9 +202,16 @@ class Model<T extends TreeTypes> implements TreeModel<T> {
     private readonly events: CommandEvent<T>[] = [];
     private delivering = false;
 
-    constructor(state: TreeState, ids: IdSource, options: TreeModelOptions<T>) {
+    constructor(
+        state: TreeState,
+        ids: IdSource,
+        options: TreeModelOptions<T, F>,
+        features: ComposedFeatures,
+    ) {
         this.committed = state;
         this.ids = ids;
+        this.features = features;
+        this.queries = createQueries(features);
         this.dataSchemas = options.dataSchemas as DataSchemas | undefined;
         this.freeze = options.freeze ?? true;
         // the bus can be passed around detached: `const { run } = model`
@@ -184,22 +225,39 @@ class Model<T extends TreeTypes> implements TreeModel<T> {
         this.subscribe = this.subscribe.bind(this);
     }
 
-    get state(): TreeState<T> {
-        return this.committed as unknown as TreeState<T>;
+    get state(): TreeStateOf<T, F> {
+        return this.committed as unknown as TreeStateOf<T, F>;
     }
 
-    get<K extends ModelGetKey>(
+    get<K extends ModelGetKeyOf<F>>(
         key: K,
         ...payload: QueryArgs<ModelGetPayload<T, K>>
     ): ModelGetResult<T, K> {
-        return queryGet(this.committed, key, payload[0]) as ModelGetResult<
-            T,
-            K
-        >;
+        return this.queries.get(
+            this.committed,
+            key,
+            payload[0],
+        ) as ModelGetResult<T, K>;
     }
 
-    is<K extends ModelIsKey>(key: K, payload: ModelIsPayload<K>): boolean {
-        return queryIs(this.committed, key, payload);
+    is<K extends ModelIsKeyOf<F>>(key: K, payload: ModelIsPayload<K>): boolean {
+        return this.queries.is(this.committed, key, payload);
+    }
+
+    /** A command by name: the core's or an installed feature's. */
+    private definition(command: string): CommandDefinition | undefined {
+        return (
+            COMMAND_DEFINITIONS.get(command) ??
+            this.features.commands.get(command)
+        );
+    }
+
+    /** The failure of a name that is no command here: a missing feature's, or unknown. */
+    private unknown(command: string, path?: string): CommandResult<never> {
+        const owner = this.features.missing("commands", command);
+        return owner !== undefined
+            ? fail("not_found", `"${command}" ${requiresFeature(owner)}`, path)
+            : fail("unknown_command", `unknown command "${command}"`, path);
     }
 
     use(middleware: Middleware<T>): () => void {
@@ -220,7 +278,7 @@ class Model<T extends TreeTypes> implements TreeModel<T> {
         };
     }
 
-    run<C extends CommandName>(
+    run<C extends CommandNameOf<F>>(
         command: C,
         payload: PayloadOf<T, C>,
         options?: RunOptions,
@@ -233,7 +291,7 @@ class Model<T extends TreeTypes> implements TreeModel<T> {
         ) as CommandResult<ResultOf<T, C>>;
     }
 
-    can<C extends CommandName>(
+    can<C extends CommandNameOf<F>>(
         command: C,
         payload: PayloadOf<T, C>,
         options?: RunOptions,
@@ -241,7 +299,7 @@ class Model<T extends TreeTypes> implements TreeModel<T> {
         return this.check(command, payload, options).ok;
     }
 
-    check<C extends CommandName>(
+    check<C extends CommandNameOf<F>>(
         command: C,
         payload: PayloadOf<T, C>,
         options?: RunOptions,
@@ -270,13 +328,7 @@ class Model<T extends TreeTypes> implements TreeModel<T> {
         if (typeof command !== "string") {
             return fail("invalid_payload", "must be a string", "/command");
         }
-        if (!COMMAND_DEFINITIONS.has(command)) {
-            return fail(
-                "unknown_command",
-                `unknown command "${command}"`,
-                "/command",
-            );
-        }
+        if (!this.definition(command)) return this.unknown(command, "/command");
         if (!isObject(payload)) {
             return fail("invalid_payload", "must be an object", "/payload");
         }
@@ -342,7 +394,7 @@ class Model<T extends TreeTypes> implements TreeModel<T> {
     ): CommandResult<unknown> {
         // a dry run commits nothing, not even the ids it generated
         const ids = dryRun ? this.ids.clone() : this.ids;
-        const draft = new Draft(this.committed, ids);
+        const draft = new Draft(this.committed, ids, this.features);
         const execution: Execution = {
             draft,
             dryRun,
@@ -407,13 +459,8 @@ class Model<T extends TreeTypes> implements TreeModel<T> {
         inBatch: boolean,
     ): { result: CommandResult<unknown>; payload: unknown } {
         const { draft, dryRun, options } = execution;
-        const definition = COMMAND_DEFINITIONS.get(command);
-        if (!definition) {
-            return {
-                result: fail("unknown_command", `unknown command "${command}"`),
-                payload,
-            };
-        }
+        const definition = this.definition(command);
+        if (!definition) return { result: this.unknown(command), payload };
         const failed = invalid(
             validate(definition.payloadSchema, payload, at.payload),
         );
@@ -472,7 +519,11 @@ class Model<T extends TreeTypes> implements TreeModel<T> {
             loadTree: (json, path) => {
                 const built = buildState(
                     json,
-                    { dataSchemas: this.dataSchemas, freeze: false },
+                    {
+                        dataSchemas: this.dataSchemas,
+                        freeze: false,
+                        features: this.features,
+                    },
                     path,
                 );
                 return built.ok
@@ -608,21 +659,26 @@ class Model<T extends TreeTypes> implements TreeModel<T> {
 const EMPTY_TREE: TreeJson = { version: 1, rootItemIds: [], items: {} };
 
 /**
- * Creates a tree model from a JSON v1 document (an empty tree without one). The document is
- * validated; an invalid one throws a {@link TreeValidationError} listing every problem with its
- * JSON path.
+ * Creates a tree model from a JSON v1 document (an empty tree without one), with the opt-in
+ * features of `options.features`. The document is validated; an invalid one (a field of a feature
+ * that is not installed included) throws a {@link TreeValidationError} listing every problem with
+ * its JSON path. A missing feature requirement throws too.
  */
-export function createTreeModel<T extends TreeTypes = AnyTypes>(
-    json?: TreeJson<T>,
-    options: TreeModelOptions<T> = {},
-): TreeModel<T> {
+export function createTreeModel<
+    T extends TreeTypes = AnyTypes,
+    const F extends TreeFeatures = readonly [],
+>(json?: TreeJson<T>, options: TreeModelOptions<T, F> = {}): TreeModel<T, F> {
+    const features = composeFeatures(options.features);
     const ids = new IdSource(options.createId);
     const built = buildState(json ?? EMPTY_TREE, {
         dataSchemas: options.dataSchemas as DataSchemas | undefined,
         freeze: options.freeze ?? true,
+        features,
     });
     if (!built.ok) {
         throw new TreeValidationError(built.issues);
     }
-    return new Model<T>(built.state, ids, options);
+    const model = new Model<T, F>(built.state, ids, options, features);
+    registerFeatures(model, features);
+    return model;
 }

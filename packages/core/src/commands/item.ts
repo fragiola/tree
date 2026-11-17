@@ -347,18 +347,8 @@ export const itemSetFlags = defineCommand({
         draft.patchItem(item.id, patch);
         const updated = draft.item(item.id);
         const flags = updated && resolveFlags(draft.settings, updated);
-        if (flags?.disabled) {
-            // a disabled item is never selected
-            if (draft.state.selectedItemIds.includes(item.id)) {
-                draft.set(
-                    "selectedItemIds",
-                    draft.state.selectedItemIds.filter((id) => id !== item.id),
-                );
-            }
-            if (draft.state.selectionAnchorItemId === item.id) {
-                draft.set("selectionAnchorItemId", null);
-            }
-        }
+        // a disabled item is never selected (the features drop it from their lists)
+        if (flags?.disabled) draft.features.disabled(draft, item.id);
         if (
             flags &&
             (flags.disabled || !flags.renamable) &&
