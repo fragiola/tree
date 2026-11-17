@@ -221,7 +221,19 @@ In Angular, `class` has no function form. Most states are a variant away
 
 ## Themes
 
-The examples read their sizes and colours from CSS variables (`--tr-indent`, `--tr-row-height`,
-`--tr-selected-bg`, …) set by a theme file, so one set of class strings works in the light and
-the dark theme: `ps-[calc(var(--tree-depth)*var(--tr-indent)+0.25rem)]`,
-`data-selected:bg-(--tr-selected-bg)`. Copy that pattern to theme your own tree.
+The examples read their sizes, colours and shapes from CSS variables (`--tr-indent`,
+`--tr-row-height`, `--tr-selected-bg`, …) set by a theme file, so one set of class strings works
+in all five example themes (light, dark, ide, paper and terminal):
+`ps-[calc(var(--tree-depth)*var(--tr-indent)+0.25rem)]`, `data-selected:bg-(--tr-selected-bg)`.
+A theme changes the tree's shape as well as its colours, through values the class strings read:
+
+- **Indentation guides**: a row draws `--tr-guide` (an image, or `none`) over its indentation, one
+  line per level: `bg-(image:--tr-guide) bg-size-[calc(var(--tree-depth)*var(--tr-indent))_100%] bg-no-repeat`.
+- **The selected row's marker**: `border-s-(length:--tr-marker) border-transparent data-selected:border-(--tr-marker-color)`.
+- **The toggle's look**: the chevron's display and turn (`[&_svg]:[display:var(--tr-toggle-icon)]`,
+  `data-expanded:rotate-(--tr-toggle-turn)`), or a text drawn instead
+  (`before:content-(--tr-toggle-closed) data-expanded:before:content-(--tr-toggle-open)`).
+- **The drop line and the focus ring**: `--tr-indicator-width`, `--tr-indicator-style`,
+  `--tr-focus-width`.
+
+Copy that pattern to theme your own tree: the package never decides any of it.
