@@ -485,7 +485,8 @@ function examplesVersion(framework: Framework, name: string): string {
 }
 
 // The Vue smoke app: single-file components typed by the registry through `typedTree<Types>()`,
-// with the recursion in a self-referencing component. Everything comes from the Vue package.
+// with the recursion in a self-referencing component, and a button on a tree ref
+// (`:tree-ref="tree"`, read as `tree.value`). Everything comes from the Vue package.
 const VUE_SMOKE_TREE = `import { typedTree } from "@fragiola/tree-vue";
 
 export type Types = { items: { folder: undefined; file: { size: number } } };
@@ -512,17 +513,21 @@ createApp(App, { model }).mount("#root");
 `;
 
 const VUE_SMOKE_APP = `<script setup lang="ts">
-import type { TreeModel } from "@fragiola/tree-vue";
+import { type TreeModel, useTreeRef } from "@fragiola/tree-vue";
 import { ref } from "vue";
 import FileItem from "./file-item.vue";
 import { Tree, type Types } from "./tree";
 
 defineProps<{ model: TreeModel<Types> }>();
 const selected = ref<string[]>([]);
+const tree = useTreeRef<Types>();
 </script>
 
 <template>
-    <Tree.Root :model="model" v-model:selected-item-ids="selected" aria-label="Files">
+    <button type="button" :disabled="!tree.value" @click="tree.value?.model.run('tree.collapse-all', {})">
+        Collapse all
+    </button>
+    <Tree.Root :model="model" :tree-ref="tree" v-model:selected-item-ids="selected" aria-label="Files">
         <Tree.Items v-slot="{ item }"><FileItem :item="item" /></Tree.Items>
         <Tree.DropIndicator />
         <Tree.LiveRegion />

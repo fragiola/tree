@@ -1,6 +1,6 @@
 // Type fixtures, checked by `tsc` (not run): the registry `T` flows from the model into the parts'
 // props and scoped slots (through `typedTree<T>()`) and into the composables, with no cast.
-import { h } from "vue";
+import { h, shallowRef } from "vue";
 import {
     createTreeModel,
     createTreeRef,
@@ -56,6 +56,14 @@ h(Tree.Root, {
 h(Tree.RenameInput, {
     onRenameError: (error) => error.code,
 });
+// a tree ref is not a Vue ref: `value` is the handle, read-only, and a ref of the app's own is not
+// a tree ref (a template would unwrap it)
+const tree = createTreeRef<Types>();
+tree.value?.model.run("item.expand", { itemId: "a" });
+// @ts-expect-error: only the root sets the handle
+tree.value = null;
+// @ts-expect-error: a Vue ref is not a tree ref
+h(Tree.Root, { model, treeRef: shallowRef(null) });
 // @ts-expect-error: a root takes a model of its registry only
 h(Tree.Root, { model: createTreeModel<{ items: { other: undefined } }>() });
 
