@@ -1,11 +1,11 @@
 ---
 title: Features
-description: A minimal core and opt-in features - selection, checkboxes, rename, async children, type-ahead, virtualization - so a tree ships only what it installs.
+description: A minimal core and opt-in features - selection, checkboxes, rename, async children, type-ahead, virtualization, drags - so a tree ships only what it installs.
 ---
 
 The tree is a **minimal core** and **opt-in features**. With no feature, a tree renders, expands
-and collapses, moves one roving tab stop with the WAI-ARIA keys, and drags: it is a complete,
-accessible tree. A feature adds one capability, its state, commands, keys and ARIA,
+and collapses, and moves one roving tab stop with the WAI-ARIA keys: it is a complete, accessible
+tree. A feature adds one capability, its state, commands, keys and ARIA,
 and comes from **its own entry**: an app that never imports it does not ship it.
 
 | feature | entry | adds |
@@ -16,8 +16,13 @@ and comes from **its own entry**: an app that never imports it does not ship it.
 | `asyncChildren()` | `@fragiola/tree-react/async-children` | parents whose children come from your `loadChildren` (`childrenStatus`), their commands, the engine's `load-children`, `aria-busy`, `data-loading`, `data-load-error`, and the `loadChildren` prop ([Async loading](/docs/guides/async-loading)) |
 | `typeAhead(options?)` | `@fragiola/tree-react/type-ahead` | typed characters focus the next item whose label starts with them (`timeout`), and `model.get("type-ahead-match")` ([Keyboard and type-ahead](/docs/guides/keyboard#type-ahead)) |
 | `virtualization(options?)` | `@fragiola/tree-react/virtualization` | a window of the visible items in view, rendered by `VirtualItems`, for trees of hundreds of thousands of rows ([Virtualization](/docs/guides/virtualization)) |
+| `dragAndDrop(options?)` | `@fragiola/tree-react/drag-and-drop` | the Pointer Events drag and the keyboard drag of the tree's items (one `item.move` per drop), auto-expand and auto-scroll, `DropIndicator`, `data-dragging`, `data-drop-target`, `data-drop-position`, and the drag keys (`drop-target`, `start-keyboard-drag`, …) ([Drag and drop](/docs/guides/drag-and-drop)) |
+| `dragGroup({ name, transfer? })` | `@fragiola/tree-react/drag-group` | drags between the trees of a group, a transfer between two models, `data-dragging-from-other-tree`; needs `dragAndDrop()` ([Between trees](/docs/guides/drag-and-drop#between-trees)) |
+| `foreignDrop({ accept?, onDrop })` | `@fragiola/tree-react/foreign-drop` | files, links and text dropped from outside, with the same target and `DropIndicator`, with or without `dragAndDrop()` ([Foreign content](/docs/guides/drag-and-drop#foreign-content)) |
+| `dropOutside({ onDrop })` | `@fragiola/tree-react/drop-outside` | rows dropped on your own targets outside every tree, `drop-outside-element`; needs `dragAndDrop()` ([Dropping outside](/docs/guides/drag-and-drop#dropping-outside)) |
 
-Each framework's package has the same entries (`@fragiola/tree-vue/selection`,
+`item.move` and the `movable` and `droppable` flags stay in the core: a tree without drag and drop
+still moves items by command. Each framework's package has the same entries (`@fragiola/tree-vue/selection`,
 `@fragiola/tree-angular/virtualization`, …), and the core's are `@fragiola/tree/<feature>`.
 
 ## Installing

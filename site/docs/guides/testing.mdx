@@ -162,7 +162,7 @@ test("drags README.md into src", async ({ page }) => {
 ```
 
 Pointer Events drags work with Playwright's mouse; a drag starts after the press moves past
-`dragThreshold` (4 pixels by default), which `dragTo` does. To test a drag without a pointer,
+`dragThreshold` (4 pixels by default, a `dragAndDrop()` option), which `dragTo` does. To test a drag without a pointer,
 use the keyboard drag (Ctrl+Shift+D, the arrows, Enter).
 
 ## Never by class name

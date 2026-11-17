@@ -12,10 +12,10 @@ framework has an adapter, so **every piece of logic that isn't rendering lives i
 
 | package | name | contains | depends on |
 |---|---|---|---|
-| `packages/core` | `@fragiola/tree` | the tree model (JSON document v1 and its JSON Schema, the command bus, commands with JSON Schemas, `get`/`is` queries, middleware, events), and the engine (DOM focus, the WAI-ARIA keyboard model, Pointer Events drag and drop with keyboard drag, announcements, the opt-in foreign drops `createTreeForeignDrop` and drops outside `createTreeDropOutside`), the feature registry (`src/features/`), and the opt-in features, each from its own entry: `@fragiola/tree/selection` (`selection()`), `/checkboxes` (`checkboxes()`), `/rename` (`rename()`), `/async-children` (`asyncChildren()`), `/type-ahead` (`typeAhead()`) and `/virtualization` (`virtualization()`) (rule 11) | DOM only, zero runtime deps |
-| `packages/react` | `@fragiola/tree-react` | the `Tree.*` primitives (`Root`, `Items`, `Item`, `ItemContent`, `Group`, `Toggle`, `DropIndicator`, `LiveRegion`) and hooks (`useTree`, `useTreeItem`, `useTreeState`, `useTreeRef`, `createTreeRef`) over the core, and the core re-exported; the features' entries `/selection`, `/checkboxes`, `/rename` (`useTreeItemRename`), `/async-children`, `/type-ahead` and `/virtualization` (`VirtualItems`, `useTreeVirtualWindow`) | the core (`workspace:*`, published as the exact version); peer `react`, `react-dom` (^19) |
-| `packages/vue` | `@fragiola/tree-vue` | the same `Tree.*` primitives as Vue 3.5 components (plain `.ts` render functions, `as` and a `render` scoped slot, default scoped slots for the recursion, `v-model:*-item-ids`), `typedTree<Types, Features>()`, the composables (`useTree`, `useTreeItem`, `useTreeState`, `useTreeRef`, `createTreeRef`), and the core re-exported; the features' entries `/selection`, `/checkboxes`, `/rename` (`useTreeItemRename`), `/async-children`, `/type-ahead` and `/virtualization` (`VirtualItems`, `typedVirtualItems`, `useTreeVirtualWindow`) | the core (`workspace:*`, published as the exact version); peer `vue` (^3.5) |
-| `packages/angular` | `@fragiola/tree-angular` | the same primitives as Angular standalone attribute directives on the consumer's elements (`[treeRoot]`, `ng-template[treeItems]` for the recursion, `[treeItem]`, `[treeItemContent]`, `[treeGroup]`, `[treeToggle]`, `[treeDropIndicator]`, `[treeLiveRegion]`, the `TREE` array; signals, `host` bindings, zoneless), the injection functions (`injectTree`, `injectTreeItem`, `injectTreeState`), and the core re-exported; the features' secondary entry points `packages/angular/selection/`, `/checkboxes/`, `/rename/` (`input[treeItemRename]`, `TreeItemRenameDirective`, out of `TREE`), `/async-children/`, `/type-ahead/` and `packages/angular/virtualization/` (`ng-template[treeVirtualItems]`, `TreeVirtualItemsDirective`, out of `TREE`; `injectTreeVirtualWindow`), which build on the main entry's `ɵ` exports only. Built by ng-packagr (Angular Package Format, partial compilation, ESM only) on TypeScript 6.0.3, pinned in this package (the Angular compiler supports `>=6.0 <6.1`); published from its `dist` (`publishConfig.directory`, its manifest written by `scripts/publish-manifest.ts`) | the core (`workspace:*`, published as the exact version); peer `@angular/core` (^22) |
+| `packages/core` | `@fragiola/tree` | the tree model (JSON document v1 and its JSON Schema, the command bus, commands with JSON Schemas, `get`/`is` queries, middleware, events), and the engine (DOM focus, the WAI-ARIA keyboard model, announcements), the feature registry (`src/features/`), and the opt-in features, each from its own entry: `@fragiola/tree/selection` (`selection()`), `/checkboxes` (`checkboxes()`), `/rename` (`rename()`), `/async-children` (`asyncChildren()`), `/type-ahead` (`typeAhead()`), `/virtualization` (`virtualization()`), `/drag-and-drop` (`dragAndDrop()`: Pointer Events and keyboard drag), `/drag-group` (`dragGroup()`), `/foreign-drop` (`foreignDrop()`) and `/drop-outside` (`dropOutside()`) (rules 9, 11) | DOM only, zero runtime deps |
+| `packages/react` | `@fragiola/tree-react` | the `Tree.*` primitives (`Root`, `Items`, `Item`, `ItemContent`, `Group`, `Toggle`, `LiveRegion`) and hooks (`useTree`, `useTreeItem`, `useTreeState`, `useTreeRef`, `createTreeRef`) over the core, and the core re-exported; the features' entries `/selection`, `/checkboxes`, `/rename` (`useTreeItemRename`), `/async-children`, `/type-ahead`, `/virtualization` (`VirtualItems`, `useTreeVirtualWindow`), `/drag-and-drop` (`DropIndicator`), `/drag-group`, `/foreign-drop` (`DropIndicator` too) and `/drop-outside` | the core (`workspace:*`, published as the exact version); peer `react`, `react-dom` (^19) |
+| `packages/vue` | `@fragiola/tree-vue` | the same `Tree.*` primitives as Vue 3.5 components (plain `.ts` render functions, `as` and a `render` scoped slot, default scoped slots for the recursion, `v-model:*-item-ids`), `typedTree<Types, Features>()`, the composables (`useTree`, `useTreeItem`, `useTreeState`, `useTreeRef`, `createTreeRef`), and the core re-exported; the features' entries `/selection`, `/checkboxes`, `/rename` (`useTreeItemRename`), `/async-children`, `/type-ahead`, `/virtualization` (`VirtualItems`, `typedVirtualItems`, `useTreeVirtualWindow`), `/drag-and-drop` (`DropIndicator`), `/drag-group`, `/foreign-drop` (`DropIndicator` too) and `/drop-outside` | the core (`workspace:*`, published as the exact version); peer `vue` (^3.5) |
+| `packages/angular` | `@fragiola/tree-angular` | the same primitives as Angular standalone attribute directives on the consumer's elements (`[treeRoot]`, `ng-template[treeItems]` for the recursion, `[treeItem]`, `[treeItemContent]`, `[treeGroup]`, `[treeToggle]`, `[treeLiveRegion]`, the `TREE` array; signals, `host` bindings, zoneless), the injection functions (`injectTree`, `injectTreeItem`, `injectTreeState`), and the core re-exported; the features' secondary entry points `packages/angular/selection/`, `/checkboxes/`, `/rename/` (`input[treeItemRename]`, `TreeItemRenameDirective`, out of `TREE`), `/async-children/`, `/type-ahead/`, `packages/angular/virtualization/` (`ng-template[treeVirtualItems]`, `TreeVirtualItemsDirective`, out of `TREE`; `injectTreeVirtualWindow`), `/drag-and-drop/` (`[treeDropIndicator]`, `TreeDropIndicatorDirective`, out of `TREE`), `/drag-group/`, `/foreign-drop/` (re-exporting the directive) and `/drop-outside/`, which build on the main entry's `ɵ` exports only. Built by ng-packagr (Angular Package Format, partial compilation, ESM only) on TypeScript 6.0.3, pinned in this package (the Angular compiler supports `>=6.0 <6.1`); published from its `dist` (`publishConfig.directory`, its manifest written by `scripts/publish-manifest.ts`) | the core (`workspace:*`, published as the exact version); peer `@angular/core` (^22) |
 | `examples/shared` | `examples-shared`, private | what every framework's examples share: the metadata (`src/meta/<id>.ts`), the five example themes (`light`, `dark`, `ide`, `paper`, `terminal`: Dockable's, each changing the tree's shape as well as its colours, read by every example of every framework through the `--tr-*` tokens), the embed protocol, the manifest builder and loader generator, every Playwright spec | no framework |
 | `examples/react` | `examples-react`, private | the 16 React examples (`src/examples/<id>/`), the vendored Fragiola UI (`src/components`, `scripts/vendor-fragiola.ts`), the embed app | `@fragiola/tree-react`, Fragiola UI's stack |
 | `examples/vue` | `examples-vue`, private | the 16 examples in Vue (`src/examples/<id>/index.vue`, `styles.ts` copied from React's), the Vue kit (Dockable's, over Reka UI, with the React kit's classes; `src/styles` and `src/lib/cn.ts` copied from examples/react, `tests/vendored.test.ts`), the embed app; single-file components checked by `vue-tsc` on TypeScript 6.0.3, pinned in this app only | `@fragiola/tree-vue`, Vue 3.5, Reka UI, `@lucide/vue` |
@@ -99,8 +99,9 @@ Do not "fix" these. A change that breaks one is a decision for the maintainer.
    `AGENTS.md`). One namespace, `Tree`: `Tree.Root` (`role="tree"`), `Tree.Items`, `Tree.Item`
    (`role="treeitem"` with `aria-level`, `aria-posinset`, `aria-setsize`, `aria-expanded`,
    the features' ARIA (`aria-selected` with `selection()`), `aria-checked`, `aria-disabled`, `aria-busy` and the roving `tabindex`),
-   `Tree.ItemContent`, `Tree.Group` (`role="group"`), `Tree.Toggle`, `Tree.DropIndicator`,
-   `Tree.LiveRegion`, with the same file names in every adapter. `render`, never `asChild`; the
+   `Tree.ItemContent`, `Tree.Group` (`role="group"`), `Tree.Toggle`, `Tree.LiveRegion`, with the
+   same file names in every adapter; a feature's parts come from its entry (`DropIndicator` from
+   `/drag-and-drop`, `VirtualItems` from `/virtualization`), with the same file names too. `render`, never `asChild`; the
    developer owns the recursion (children functions over the model's items); no text and no
    `aria-label` of their own. **Model state that needs only the item's state and a command gets no
    primitive** (decided by the maintainer on 2026-11-17, Epic #41): an item's check is the app's
@@ -120,30 +121,36 @@ Do not "fix" these. A change that breaks one is a decision for the maintainer.
    `data-disabled`, `data-leaf`, `data-dragging`, `data-drop-target`, `data-drop-position`,
    `data-depth`, and `--tree-depth` for the indentation; on the root `data-dragging`,
    `data-keyboard-dragging`, `data-dragging-from-other-tree` and `data-empty`.
-9. **Drag and drop uses Pointer Events** (`../guidelines/decisions.md#drag-and-drop`): pointer
-   capture on the item content, a movement threshold, one path for mouse, touch and pen, and the
-   keyboard drag on the same machine. A drop runs one `item.move`. Native HTML5 drag events are
-   used only to receive foreign content (below). **Drags between trees** (Epic #31) are opt-in through the engine's `dragGroup`
-   (every root's prop/input): the trees of one document with the same group share a drag, through
-   a registry keyed by the roots' `ownerDocument` (a `WeakMap`, no global; `src/dnd/drag-group.ts`).
-   The source keeps the pointer capture, the keys and the announcements; the tree under the pointer
-   (found by its root's rect) evaluates and shows its own target. Over one model a drop is one
-   `item.move`; over two it is a transfer (`src/dnd/transfer.ts`): one `batch` of `item.add` on the
-   target (ids kept) and `item.remove` on the source, each through its own middleware, or the
-   app's `transfer` option; a target shows only when the models accept it. The keyboard drag walks
-   the group's trees in document order, asking `model.can` of a position only when it reaches it.
-   **Foreign content** (Epic #34) is opt-in through the engine's `foreignDrop`
-   (`createTreeForeignDrop({ accept, onDrop })`, every root's prop/input): the adapters forward the
-   root's `dragenter`, `dragover`, `dragleave` and `drop` (`engine.adapter.handleDragEvent`), and
-   `src/dnd/foreign-drop.ts` evaluates the target with `drop-target.ts` (the same state, indicator,
-   auto-expand and auto-scroll); `accept` decides from `DataTransfer.types` (the data is readable
-   only on the drop), once per target, and `onDrop` is the app's: the package reads no file. A
-   pointer drag released outside every tree of its group goes to the opt-in `dropOutside`
-   (`createTreeDropOutside({ onDrop })`, `src/dnd/drop-outside.ts`), with the element under the
-   pointer (`get("drop-outside-element")` while it is outside). Both are object options: the engine imports only their types, so an app that never imports the factories
-   does not ship them (a guard test). **Native outbound drags** (rows to the desktop or another
-   window) are not done: a second, native mechanism is the maintainer's decision
-   (`site/docs/limitations.mdx`).
+9. **Drag and drop is opt-in, and uses Pointer Events** (`../guidelines/decisions.md#drag-and-drop`;
+   opt-in since Epic #50). A tree without `dragAndDrop()` never drags. With it
+   (`src/drag-and-drop/`): pointer capture on the item content, a movement threshold, one path
+   for mouse, touch and pen, and the keyboard drag on the same machine; a drop runs the core's
+   `item.move` (`item.move`, `movable` and `droppable` stay in the core: structure editing needs no
+   drag). Its tuning is its options: `dragAndDrop({ dragThreshold, autoExpandDelay, indentation,
+   indicatorInset, autoScroll })`. Three features extend it, each from its own entry, and none
+   imports another; their shared code (the drop evaluation, the targets, the per-engine drag
+   session that implements `DragHost`) is `src/drop-target/`, imported only by their entries
+   (the engine's `shared` slot holds one session per engine):
+   - **`dragGroup({ name, transfer? })`** (`src/drag-group/`, needs `dragAndDrop()`): every tree on
+     screen of a model with it joins the group `name` of its document, through a registry keyed by
+     the roots' `ownerDocument` (a `WeakMap`, no global). The group is the model's: two views of one
+     model share it. The source keeps the pointer capture, the keys and the announcements; the tree
+     under the pointer (found by its root's rect) evaluates and shows its own target. Over one
+     model a drop is one `item.move`; over two it is a transfer (`src/drag-and-drop/transfer.ts`):
+     one `batch` of `item.add` on the target (ids kept) and `item.remove` on the source, each
+     through its own middleware, or the app's `transfer`; a target shows only when the models
+     accept it. The keyboard drag walks the group's trees in document order.
+   - **`foreignDrop({ accept, onDrop })`** (`src/foreign-drop/`, with or without `dragAndDrop()`):
+     the one case for native HTML5 drag events, receiving foreign content. The adapters forward the
+     root's `dragenter`, `dragover`, `dragleave` and `drop` (`engine.adapter.handleDragEvent`) only
+     when it is installed; the target, indicator, auto-expand and auto-scroll are a tree drag's;
+     `accept` decides from `DataTransfer.types` once per target, and `onDrop` is the app's: the
+     package reads no file.
+   - **`dropOutside({ onDrop })`** (`src/drop-outside/`, needs `dragAndDrop()`): a pointer drag
+     released outside every tree of its group goes to the app, with the element under the pointer
+     (`get("drop-outside-element")` while it is outside).
+   **Native outbound drags** (rows to the desktop or another window) are not done: a second,
+   native mechanism is the maintainer's decision (`site/docs/limitations.mdx`).
 10. **App policy stays in the app.** No undo/redo, no persistence, no translations, no announcement
     text in the packages. Labels are raw model data no primitive reads or renders. The examples
     show those features as copyable code.
@@ -170,7 +177,9 @@ Do not "fix" these. A change that breaks one is a decision for the maintainer.
     a window of `model.get("visible-items")` rendered flat by `VirtualItems` /
     `ng-template[treeVirtualItems]` between `data-tree-part="spacer"` elements; Data Grid's window
     math and scroll target are copied with their header; rows measured through the root window's
-    `ResizeObserver`; each engine on the model gets its own).
+    `ResizeObserver`; each engine on the model gets its own); and the drag features
+    `dragAndDrop()`, `dragGroup()`, `foreignDrop()`, `dropOutside()` (rule 9). A key two features
+    own (`drop-target`: drag and drop's and a foreign drop's) is there with either installed.
     - **The names a feature owns are a table in the core** (`src/features/keys.ts`,
       `FEATURE_KEYS`: its commands, `get`/`is` keys, engine keys, document fields, settings and
       root props), so the core refuses them when the feature is not installed (`not_found`, a
@@ -186,13 +195,16 @@ Do not "fix" these. A change that breaks one is a decision for the maintainer.
       the reactions to items added, moved or removed (`childrenChanged`), to a flag
       (`flagsChanged`) and to a load (`loaded`), its part of each engine (`firstKeyAction`,
       `keyAction`, `unboundKey`, `keysReset`, `click`, `modelChanged`, `settled`, `pinnedItemId`,
-      engine verbs, a `viewport`) and its root props
+      `press`, `consumeClick`, `interceptKey`, `nativeDrag`, `attached`, `detached`, engine verbs,
+      a `viewport`; the host's `shared(key, create)` gives the features of one engine a value they
+      share without importing each other) and its root props
       (`TreeRootProp`, which the adapters map generically, as the core's `TREE_ROOT_PROPS`).
-      Features talk to each other only through keys (`dnd/drag-set.ts` reads
-      `get("selected-items")`).
+      Features talk to each other only through keys (`drag-and-drop/drag-set.ts` reads
+      `get("selected-items")`), and `tests/guard.test.ts` fails on a folder importing another
+      feature's code (`drop-target/` is the drag features' shared folder).
     - Nothing in a main entry imports a feature's code: `scripts/check-features.ts` (run by
       `pnpm build`) reads the source maps of every package's main entry and its chunks, and fails
-      on a source under a feature's folder (`src/<feature>/`, `src/virtual/`,
+      on a source under a feature's folder (`src/<feature>/`, `src/virtual/`, `src/drop-target/`,
       `packages/angular/<feature>/`) or an import of a feature's entry; its
       tests plant both. The bare fixture (`apps/playground/fixtures/bare/`) is the tree with no
       feature, driven by e2e. `pnpm size` lists every entry.
@@ -206,10 +218,12 @@ Do not "fix" these. A change that breaks one is a decision for the maintainer.
 ## The engine (`createTreeEngine(model, options)`)
 
 - **Verbs** (`src/engine/verbs.ts`): `run` `focus`, `scroll-to` (`{ itemId, align? }`),
-  `load-children` (`asyncChildren()`), `start-keyboard-drag`, `cancel-drag`, `commit-rename` /
-  `cancel-rename` (`rename()`); `get` `drop-target`, `dragging-item-ids`,
-  `drop-indicator`, `announcement`, `direction`, `virtual-window` (`virtualization()`), `drop-outside-element`; `is` `dragging`, `keyboard-dragging`,
-  `dragging-from-other-tree`, `item-dragging`, `item-drop-target`. The engine object is exactly
+  `load-children` (`asyncChildren()`), `start-keyboard-drag` (`dragAndDrop()`), `cancel-drag`
+  (`dragAndDrop()` or `foreignDrop()`), `commit-rename` / `cancel-rename` (`rename()`); `get`
+  `drop-target`, `drop-indicator` (a drag feature), `dragging-item-ids` (`dragAndDrop()`),
+  `announcement`, `direction`, `virtual-window` (`virtualization()`), `drop-outside-element`
+  (`dropOutside()`); `is` `dragging`, `item-drop-target` (a drag feature), `keyboard-dragging`,
+  `item-dragging` (`dragAndDrop()`), `dragging-from-other-tree` (`dragGroup()`). The engine object is exactly
   the verbs plus `adapter`,
   `subscribe` and `destroy` (a guard test).
 - **`engine.adapter`** (`src/engine/adapter.ts`): the root and item element registration, the
@@ -218,15 +232,16 @@ Do not "fix" these. A change that breaks one is a decision for the maintainer.
   (`subscribe` / `getSnapshot`). An adapter forwards events; the core decides.
 - **Keys** (`src/keyboard/key-map.ts`): the APG Tree View model (type-ahead with `typeAhead()`), overridable
   through the `keyMap` option; Right and Left swap in `rtl`. Adapters never hard-code a key.
-- **Drag and drop** (`src/dnd/`): Pointer Events with pointer capture and a threshold; the target
-  comes from `drop-evaluation.ts` (ported from React Complex Tree: thirds of a row, the pointer's
+- **Drag and drop** (`dragAndDrop()`, `src/drag-and-drop/`; the shared `src/drop-target/`):
+  Pointer Events with pointer capture and a threshold; the target comes from
+  `drop-target/drop-evaluation.ts` (ported from React Complex Tree: thirds of a row, the pointer's
   inline offset for the level at the end of a sublist) and shows only when
   `model.can("item.move", …)` accepts it; a hovered collapsed parent auto-expands (a transient
   `item.expand`); the nearest scroll container auto-scrolls; a drop runs one `item.move`. The
-  keyboard drag steps through the same positions. In a drag group (`dragGroup`) the same steps
+  keyboard drag steps through the same positions. In a drag group (`dragGroup()`) the same steps
   run in the tree under the pointer, and a drop in a tree of another model is a transfer (rule 9).
-  Foreign content dragged on the root (`foreignDrop`) gets the same target, indicator, auto-expand
-  and auto-scroll; a pointer drag released outside every tree goes to `dropOutside`.
+  Foreign content dragged on the root (`foreignDrop()`) gets the same target, indicator,
+  auto-expand and auto-scroll; a pointer drag released outside every tree goes to `dropOutside()`.
 - **Async children** (`asyncChildren()`, `src/async-children/loader.ts`): the app's `loadChildren(item, { signal })`
   runs when an `unloaded` item is expanded and visible; `destroy()` aborts it, and an aborted or
   stale load runs no command. With `resetLoadsOnDestroy` (every adapter sets it), `destroy()` puts
@@ -308,7 +323,6 @@ packages/core/      @fragiola/tree      src/index.ts (the entry), and one folder
                     src/schema/         the document and command schemas, the validator
                     src/engine/         the tree engine, its verbs registry, the adapter surface
                     src/keyboard/       the key map
-                    src/dnd/            the drag machine, drop evaluation, keyboard drag, auto-scroll, drag groups, foreign drops, drops outside
                     src/geometry/       rect math
                     src/dom/            owner document / window helpers
                     src/features/       the feature contract, the registry, FEATURE_KEYS, TREE_ROOT_PROPS
@@ -318,6 +332,11 @@ packages/core/      @fragiola/tree      src/index.ts (the entry), and one folder
                     src/async-children/ the async children feature (entry ./async-children): the commands, the loader
                     src/type-ahead/     the type-ahead feature (entry ./type-ahead): the search
                     src/virtual/        the virtualization feature (entry ./virtualization): row sizes, the window (from Data Grid), scroll targets
+                    src/drag-and-drop/  the drag and drop feature (entry ./drag-and-drop): the pointer drag, the keyboard drag, the group drag, transfers
+                    src/drag-group/     the drag group feature (entry ./drag-group): the registry of a document's groups
+                    src/foreign-drop/   the foreign drop feature (entry ./foreign-drop)
+                    src/drop-outside/   the drop outside feature (entry ./drop-outside)
+                    src/drop-target/    the drag features' shared code (no entry): drop evaluation, targets, the drag session
                     tests/              mirrors src/; tests/types/ (type fixtures); guard.test.ts
                     scripts/            generate-command-docs.ts
 packages/react/     @fragiola/tree-react  src/index.ts, parts.ts (the Tree namespace), context.ts, and

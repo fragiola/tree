@@ -261,6 +261,7 @@ const REACT_SMOKE_MAIN = `import {
     type TreeJson,
     type TreeModel,
 } from "@fragiola/tree-react";
+import { DropIndicator, dragAndDrop } from "@fragiola/tree-react/drag-and-drop";
 import { rename } from "@fragiola/tree-react/rename";
 import { selection } from "@fragiola/tree-react/selection";
 import { createRoot } from "react-dom/client";
@@ -279,7 +280,7 @@ const json: TreeJson<Types> = {
 };
 
 // a feature, from its own entry of the package
-const features = [selection(), rename()] as const;
+const features = [selection(), rename(), dragAndDrop()] as const;
 const model: TreeModel<Types, typeof features> = createTreeModel<
     Types,
     typeof features
@@ -307,7 +308,7 @@ if (container) {
     createRoot(container).render(
         <Tree.Root<Types> model={model} aria-label="Files">
             <Tree.Items<Types>>{(item) => <FileItem item={item} />}</Tree.Items>
-            <Tree.DropIndicator />
+            <DropIndicator />
             <Tree.LiveRegion />
         </Tree.Root>,
     );
@@ -495,12 +496,13 @@ function examplesVersion(framework: Framework, name: string): string {
 // with the recursion in a self-referencing component, and a button on a tree ref
 // (`:tree-ref="tree"`, read as `tree.value`). Everything comes from the Vue package.
 const VUE_SMOKE_TREE = `import { typedTree } from "@fragiola/tree-vue";
+import { dragAndDrop } from "@fragiola/tree-vue/drag-and-drop";
 import { rename } from "@fragiola/tree-vue/rename";
 import { selection } from "@fragiola/tree-vue/selection";
 
 export type Types = { items: { folder: undefined; file: { size: number } } };
 // a feature, from its own entry of the package: it types v-model:selected-item-ids
-export const features = [selection(), rename()] as const;
+export const features = [selection(), rename(), dragAndDrop()] as const;
 export const Tree = typedTree<Types, typeof features>();
 `;
 
@@ -525,6 +527,7 @@ createApp(App, { model }).mount("#root");
 
 const VUE_SMOKE_APP = `<script setup lang="ts">
 import { type TreeModel, useTreeRef } from "@fragiola/tree-vue";
+import { DropIndicator } from "@fragiola/tree-vue/drag-and-drop";
 import { ref } from "vue";
 import FileItem from "./file-item.vue";
 import { type features, Tree, type Types } from "./tree";
@@ -540,7 +543,7 @@ const tree = useTreeRef<Types, typeof features>();
     </button>
     <Tree.Root :model="model" :tree-ref="tree" v-model:selected-item-ids="selected" aria-label="Files">
         <Tree.Items v-slot="{ item }"><FileItem :item="item" /></Tree.Items>
-        <Tree.DropIndicator />
+        <DropIndicator />
         <Tree.LiveRegion />
     </Tree.Root>
 </template>
@@ -661,13 +664,17 @@ import {
     TREE,
     type TreeJson,
 } from "@fragiola/tree-angular";
+import {
+    dragAndDrop,
+    TreeDropIndicatorDirective,
+} from "@fragiola/tree-angular/drag-and-drop";
 import { rename } from "@fragiola/tree-angular/rename";
 import { selection } from "@fragiola/tree-angular/selection";
 
 type Types = { items: { folder: undefined; file: { size: number } } };
 
 // a feature, from its own entry of the package (a secondary entry point)
-const features = [selection(), rename()] as const;
+const features = [selection(), rename(), dragAndDrop()] as const;
 
 const json: TreeJson<Types> = {
     version: 1,
@@ -682,7 +689,7 @@ const json: TreeJson<Types> = {
 
 @Component({
     selector: "app-root",
-    imports: [TREE],
+    imports: [TREE, TreeDropIndicatorDirective],
     template: \`
         <div [treeRoot]="model" [(selectedItemIds)]="selected" aria-label="Files">
             <ng-template [treeItems]="model" let-item>

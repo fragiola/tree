@@ -3,23 +3,76 @@ title: Drag and drop
 description: Move items with the pointer or the keyboard, draw the drop indicator, restrict what moves and where, and announce each step to screen readers.
 ---
 
-Drag and drop is on by default: a row dragged with the mouse, a finger or a pen moves its item
-(and the rest of the selection, when it is selected) with one `item.move`. The package brings the
-gesture (Pointer Events, a movement threshold, auto-expanding folders, auto-scroll), the drop
-evaluation and the keyboard drag; the indicator's look and the announcements are yours.
-
-## The drop indicator
-
-Render `Tree.DropIndicator` inside the root. It exists only while there is a drop target, and is
-absolutely positioned in the root: a zero-height line for `before` and `after`, the row's box for
-`inside`. Draw it with `data-drop-position`:
+Drag and drop is a feature: `dragAndDrop()`, from `@fragiola/tree-react/drag-and-drop`
+(`@fragiola/tree-vue/drag-and-drop`, `@fragiola/tree-angular/drag-and-drop`). With it, a row
+dragged with the mouse, a finger or a pen moves its item (and the rest of the selection, when it
+is selected) with one `item.move`. The package brings the gesture (Pointer Events, a movement
+threshold, auto-expanding folders, auto-scroll), the drop evaluation and the keyboard drag; the
+indicator's look and the announcements are yours. A tree without it never drags, and does not ship
+its code. Three more features extend it, each from its own entry: `dragGroup()` (between trees),
+`foreignDrop()` (files and links from outside) and `dropOutside()` (rows dropped on your own
+targets).
 
 <Framework name="react">
 
 ```tsx
-<Tree.Root<Types> defaultTree={json} aria-label="Project files">
+import { createTreeModel, Tree } from "@fragiola/tree-react";
+import { DropIndicator, dragAndDrop } from "@fragiola/tree-react/drag-and-drop";
+
+// the toggle and a grip come before the label: the drop line starts after them
+const features = [dragAndDrop({ indicatorInset: 30 })] as const;
+const model = createTreeModel<Types, typeof features>(json, { features });
+```
+
+</Framework>
+
+<Framework name="vue">
+
+```ts
+import { createTreeModel, typedTree } from "@fragiola/tree-vue";
+import { DropIndicator, dragAndDrop } from "@fragiola/tree-vue/drag-and-drop";
+
+const features = [dragAndDrop({ indicatorInset: 30 })] as const;
+const Tree = typedTree<Types, typeof features>();
+const model = createTreeModel<Types, typeof features>(json, { features });
+```
+
+</Framework>
+
+<Framework name="angular">
+
+```ts
+import { createTreeModel, TREE } from "@fragiola/tree-angular";
+import {
+    dragAndDrop,
+    TreeDropIndicatorDirective,
+} from "@fragiola/tree-angular/drag-and-drop";
+
+const features = [dragAndDrop({ indicatorInset: 30 })] as const;
+// in the component: imports: [TREE, TreeDropIndicatorDirective]
+readonly model = createTreeModel<Types, typeof features>(json, { features });
+```
+
+</Framework>
+
+`dragAndDrop(options)` takes `dragThreshold` (px a press moves before it is a drag, default `4`),
+`autoExpandDelay` (ms a hovered collapsed parent waits before it expands, default `800`),
+`indentation` (px of one level, default `16`), `indicatorInset` (px a drop line starts past its
+level, default `0`) and `autoScroll` (`{ threshold, speed }`). The features are the model's, fixed
+when it is created ([Features](/docs/concepts/features)).
+
+## The drop indicator
+
+Render `DropIndicator` (from the feature's entry) inside the root. It exists only while there is a
+drop target, and is absolutely positioned in the root: a zero-height line for `before` and
+`after`, the row's box for `inside`. Draw it with `data-drop-position`:
+
+<Framework name="react">
+
+```tsx
+<Tree.Root model={model} aria-label="Project files">
     <Tree.Items<Types>>{(item) => <FileItem item={item} />}</Tree.Items>
-    <Tree.DropIndicator className="drop-indicator" />
+    <DropIndicator className="drop-indicator" />
 </Tree.Root>
 ```
 
@@ -28,9 +81,9 @@ absolutely positioned in the root: a zero-height line for `before` and `after`, 
 <Framework name="vue">
 
 ```vue
-<Tree.Root :default-tree="json" aria-label="Project files">
+<Tree.Root :model="model" aria-label="Project files">
     <Tree.Items v-slot="{ item }"><FileItem :item="item" /></Tree.Items>
-    <Tree.DropIndicator class="drop-indicator" />
+    <DropIndicator class="drop-indicator" />
 </Tree.Root>
 ```
 
@@ -39,8 +92,8 @@ absolutely positioned in the root: a zero-height line for `before` and `after`, 
 <Framework name="angular">
 
 ```html
-<div treeRoot [defaultTree]="json" aria-label="Project files">
-    <ng-template [treeItems]="json" let-item>
+<div [treeRoot]="model" aria-label="Project files">
+    <ng-template [treeItems]="model" let-item>
         <div [treeItem]="item">
             <div treeItemContent>{{ item.label }}</div>
             <div treeGroup></div>
@@ -241,24 +294,33 @@ drop ([Undo and redo](/docs/guides/undo-redo)).
 
 ## Between trees
 
-Trees in the same document with the same `dragGroup` share their drags: a row dragged out of one
-tree drops into another, with the pointer or the keyboard. The tree under the pointer finds its
-own target (the same thirds and inline offset), draws its own `Tree.DropIndicator`, expands a
+The trees in the same document whose models have the same `dragGroup({ name })` share their
+drags: a row dragged out of one tree drops into another, with the pointer or the keyboard. It
+needs `dragAndDrop()` (a missing one fails at `createTreeModel`), from
+`@fragiola/tree-react/drag-group` (and the Vue and Angular entries). The tree under the pointer
+finds its own target (the same thirds and inline offset), draws its own `DropIndicator`, expands a
 hovered folder and scrolls near its edges, virtualized or not; the source keeps the pointer
 capture, the keys and the announcements. The receiving tree carries `data-dragging` and
-`data-dragging-from-other-tree` while the drag is under way. A tree without a group behaves as
-before.
+`data-dragging-from-other-tree` while the drag is under way. A tree without it keeps its drags.
+The group is the model's: every tree on screen of a model joins it.
 
 <Framework name="react">
 
 ```tsx
-<Tree.Root model={available} dragGroup="lists" aria-label="Available">
+import { DropIndicator, dragAndDrop } from "@fragiola/tree-react/drag-and-drop";
+import { dragGroup } from "@fragiola/tree-react/drag-group";
+
+const features = [dragAndDrop(), dragGroup({ name: "lists" })] as const;
+const available = createTreeModel<Types, typeof features>(left, { features });
+const selected = createTreeModel<Types, typeof features>(right, { features });
+
+<Tree.Root model={available} aria-label="Available">
     <Tree.Items>{(item) => <Item item={item} />}</Tree.Items>
-    <Tree.DropIndicator />
+    <DropIndicator />
 </Tree.Root>
-<Tree.Root model={selected} dragGroup="lists" aria-label="Selected">
+<Tree.Root model={selected} aria-label="Selected">
     <Tree.Items>{(item) => <Item item={item} />}</Tree.Items>
-    <Tree.DropIndicator />
+    <DropIndicator />
 </Tree.Root>
 ```
 
@@ -267,14 +329,23 @@ before.
 <Framework name="vue">
 
 ```vue
+<script setup lang="ts">
+import { DropIndicator, dragAndDrop } from "@fragiola/tree-vue/drag-and-drop";
+import { dragGroup } from "@fragiola/tree-vue/drag-group";
+
+const features = [dragAndDrop(), dragGroup({ name: "lists" })] as const;
+const available = createTreeModel<Types, typeof features>(left, { features });
+const selected = createTreeModel<Types, typeof features>(right, { features });
+</script>
+
 <template>
-    <Tree.Root :model="available" drag-group="lists" aria-label="Available">
+    <Tree.Root :model="available" aria-label="Available">
         <Tree.Items v-slot="{ item }"><Item :item="item" /></Tree.Items>
-        <Tree.DropIndicator />
+        <DropIndicator />
     </Tree.Root>
-    <Tree.Root :model="selected" drag-group="lists" aria-label="Selected">
+    <Tree.Root :model="selected" aria-label="Selected">
         <Tree.Items v-slot="{ item }"><Item :item="item" /></Tree.Items>
-        <Tree.DropIndicator />
+        <DropIndicator />
     </Tree.Root>
 </template>
 ```
@@ -283,12 +354,19 @@ before.
 
 <Framework name="angular">
 
+```ts
+import { dragAndDrop, TreeDropIndicatorDirective } from "@fragiola/tree-angular/drag-and-drop";
+import { dragGroup } from "@fragiola/tree-angular/drag-group";
+
+const features = [dragAndDrop(), dragGroup({ name: "lists" })] as const;
+```
+
 ```html
-<div [treeRoot]="available" dragGroup="lists" aria-label="Available" #a="treeRoot">
+<div [treeRoot]="available" aria-label="Available" #a="treeRoot">
     <ng-template [treeItems]="available" let-item><!-- the item --></ng-template>
     @if (a.state().dragging) { <div treeDropIndicator></div> }
 </div>
-<div [treeRoot]="selected" dragGroup="lists" aria-label="Selected" #s="treeRoot">
+<div [treeRoot]="selected" aria-label="Selected" #s="treeRoot">
     <ng-template [treeItems]="selected" let-item><!-- the item --></ng-template>
     @if (s.state().dragging) { <div treeDropIndicator></div> }
 </div>
@@ -306,7 +384,7 @@ the batch (`model.can`): a veto, a non-droppable parent, data its schema refuses
 already has hides it. Atomicity across the two models is yours: an undo stack that spans them
 records both commands ([Undo and redo](/docs/guides/undo-redo)).
 
-The `transfer` option (on the receiving root, else the source's) replaces the default: copy
+The `transfer` option of `dragGroup({ name, transfer })` (the receiving model's, else the source's) replaces the default: copy
 instead of move, convert kinds, refuse. It is asked first with `dryRun: true` for each target
 (return `false` to hide it, `true` to show it, nothing for the default answer), then at the drop (return `true` once your commands ran, `false` when nothing happened, nothing for the default transfer). `commands` holds
 the default transfer's commands, to map:
@@ -359,11 +437,14 @@ const announce = (event: AnnounceEvent) => {
 ## Foreign content
 
 Files from the desktop, links and text dragged from another window come with native HTML5 drag
-events, the one case the package listens to them. Give the root a `foreignDrop`, made once by
-`createTreeForeignDrop`: the tree then evaluates the target under the pointer as for its own
-drags (the same thirds and inline offset), draws `Tree.DropIndicator` and `data-drop-target`,
-expands a hovered folder and scrolls near its edges, virtualized or not. The root carries
-`data-dragging` meanwhile, and `engine.get("dragging-item-ids")` is empty.
+events, the one case the package listens to them. Install `foreignDrop({ accept, onDrop })`, from
+`@fragiola/tree-react/foreign-drop` (and the Vue and Angular entries): the tree then evaluates
+the target under the pointer as for its own drags (the same thirds and inline offset), draws
+`DropIndicator` (that entry exports it too) and `data-drop-target`, expands a hovered folder and
+scrolls near its edges, virtualized or not. The root carries `data-dragging` meanwhile. It works
+with or without `dragAndDrop()`: a tree can take files without dragging its own items. It takes
+the same `autoExpandDelay`, `indentation`, `indicatorInset` and `autoScroll` options
+(`dragAndDrop()`'s win when both are installed).
 
 Before the drop a browser shows only the drag's types (`"Files"`, `"text/uri-list"`,
 `"text/plain"`), so `accept` decides from `types` and the target `to`; it is asked once per
@@ -374,10 +455,10 @@ uploading or rejecting is your commands.
 <Framework name="react">
 
 ```tsx
-import { createTreeForeignDrop, Tree } from "@fragiola/tree-react";
+import { createTreeModel, Tree } from "@fragiola/tree-react";
+import { DropIndicator, foreignDrop } from "@fragiola/tree-react/foreign-drop";
 
-// once, at module level (another object creates another engine)
-const foreignDrop = createTreeForeignDrop<Types>({
+const files = foreignDrop<Types>({
     accept: ({ types }) => types.includes("Files"),
     onDrop: ({ dataTransfer, to: { parentItemId, index }, model }) => {
         [...dataTransfer.files].forEach((file, i) => {
@@ -388,10 +469,12 @@ const foreignDrop = createTreeForeignDrop<Types>({
         });
     },
 });
+const features = [files] as const;
+const model = createTreeModel<Types, typeof features>(json, { features });
 
-<Tree.Root model={model} foreignDrop={foreignDrop} aria-label="Project files">
+<Tree.Root model={model} aria-label="Project files">
     <Tree.Items>{(item) => <Item item={item} />}</Tree.Items>
-    <Tree.DropIndicator />
+    <DropIndicator />
 </Tree.Root>;
 ```
 
@@ -401,10 +484,10 @@ const foreignDrop = createTreeForeignDrop<Types>({
 
 ```vue
 <script setup lang="ts">
-import { createTreeForeignDrop } from "@fragiola/tree-vue";
+import { createTreeModel } from "@fragiola/tree-vue";
+import { DropIndicator, foreignDrop } from "@fragiola/tree-vue/foreign-drop";
 
-// once (in setup, or at module level): another object creates another engine
-const foreignDrop = createTreeForeignDrop<Types>({
+const files = foreignDrop<Types>({
     accept: ({ types }) => types.includes("Files"),
     onDrop: ({ dataTransfer, to: { parentItemId, index }, model }) => {
         [...dataTransfer.files].forEach((file, i) => {
@@ -415,12 +498,14 @@ const foreignDrop = createTreeForeignDrop<Types>({
         });
     },
 });
+const features = [files] as const;
+const model = createTreeModel<Types, typeof features>(json, { features });
 </script>
 
 <template>
-    <Tree.Root :model="model" :foreign-drop="foreignDrop" aria-label="Project files">
+    <Tree.Root :model="model" aria-label="Project files">
         <Tree.Items v-slot="{ item }"><Item :item="item" /></Tree.Items>
-        <Tree.DropIndicator />
+        <DropIndicator />
     </Tree.Root>
 </template>
 ```
@@ -430,10 +515,10 @@ const foreignDrop = createTreeForeignDrop<Types>({
 <Framework name="angular">
 
 ```ts
-import { createTreeForeignDrop } from "@fragiola/tree-angular";
+import { createTreeModel } from "@fragiola/tree-angular";
+import { foreignDrop, TreeDropIndicatorDirective } from "@fragiola/tree-angular/foreign-drop";
 
-// a field (another object creates another engine)
-protected readonly foreignDrop = createTreeForeignDrop<Types>({
+const files = foreignDrop<Types>({
     accept: ({ types }) => types.includes("Files"),
     onDrop: ({ dataTransfer, to: { parentItemId, index }, model }) => {
         [...dataTransfer.files].forEach((file, i) => {
@@ -444,10 +529,13 @@ protected readonly foreignDrop = createTreeForeignDrop<Types>({
         });
     },
 });
+const features = [files] as const;
+// a field of the component (imports: [TREE, TreeDropIndicatorDirective])
+protected readonly model = createTreeModel<Types, typeof features>(json, { features });
 ```
 
 ```html
-<div [treeRoot]="model" [foreignDrop]="foreignDrop" aria-label="Project files" #tree="treeRoot">
+<div [treeRoot]="model" aria-label="Project files" #tree="treeRoot">
     <ng-template [treeItems]="model" let-item><!-- the item --></ng-template>
     @if (tree.state().dragging) { <div treeDropIndicator></div> }
 </div>
@@ -460,31 +548,33 @@ protected readonly foreignDrop = createTreeForeignDrop<Types>({
 `to` is a `DropTarget`: its `parentItemId` and `index` are an `item.add`'s placement. `announce`
 gets `foreign-drag-over` (the `types` and the `target`, `null` where nothing is taken) when the
 target changes (and a `null` target when the drag leaves), and `foreign-drop` after `onDrop`.
-With `foreignDrop` the root is a drop zone: the browser never opens a file dropped on it, and
-shows no drop where nothing is taken. A tree without `foreignDrop` ignores native drags, and the
-browser keeps its own behaviour for them (opening a dropped file).
+With `foreignDrop()` the root is a drop zone: the browser never opens a file dropped on it, and
+shows no drop where nothing is taken. A tree without it forwards no native drag, and the browser
+keeps its own behaviour for them (opening a dropped file).
 
 Text or a link selected in a row and dragged natively comes back as foreign content too: an
 `accept` that takes `text/plain` or `text/uri-list` takes it.
 
 ## Dropping outside
 
-A pointer drag of the tree's rows released outside every tree (outside every tree of its
-`dragGroup`, or outside its own tree without one) is cancelled, unless the root has a
-`dropOutside`, made once by `createTreeDropOutside`. Its `onDrop` gets the dragged `itemIds`, the
-`model`, the client point, the modifier keys and the `element` under the pointer, and returns
-`true` when it took the items (announced as `drop-outside`) or `false` (a `drag-cancel`). Your own
-targets are what it looks for: a trash zone, a panel, a `@fragiola/dnd` droppable.
+A pointer drag of the tree's rows released outside every tree (outside every tree of its drag
+group, or outside its own tree without one) is cancelled, unless the model has
+`dropOutside({ onDrop })`, from `@fragiola/tree-react/drop-outside` (and the Vue and Angular
+entries); it needs `dragAndDrop()`. Its `onDrop` gets the dragged `itemIds`, the `model`, the
+client point, the modifier keys and the `element` under the pointer, and returns `true` when it
+took the items (announced as `drop-outside`) or `false` (a `drag-cancel`). Your own targets are
+what it looks for: a trash zone, a panel, a `@fragiola/dnd` droppable.
 
 ```ts
-import { createTreeDropOutside } from "@fragiola/tree-react";
+import { dragAndDrop } from "@fragiola/tree-react/drag-and-drop";
+import { dropOutside } from "@fragiola/tree-react/drop-outside";
 
-const dropOutside = createTreeDropOutside<Types>({
+const trash = dropOutside<Types>({
     onDrop: ({ itemIds, element, model }) =>
         element?.closest("[data-trash]") != null &&
         model.run("item.remove", { itemIds: [...itemIds] }).ok,
 });
-// <Tree.Root dropOutside={dropOutside} …> (Vue :drop-outside, Angular [dropOutside])
+const features = [dragAndDrop(), trash] as const;
 ```
 
 The drag keeps the pointer capture on its row, so your targets get no pointer events of their
@@ -493,7 +583,7 @@ while the drag is outside every tree (`null` otherwise), and `engine.subscribe` 
 changes: a target highlights when it contains it.
 
 ```tsx
-const tree = useTreeRef<Types>();
+const tree = useTreeRef<Types, typeof features>();
 const engine = tree.current?.engine;
 const overTrash = useSyncExternalStore(
     useCallback((onChange: () => void) => engine?.subscribe(onChange) ?? (() => {}), [engine]),

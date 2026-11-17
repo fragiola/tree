@@ -78,16 +78,15 @@ Every part is `Tree.<Part>`, with the props of its React page except `render`, `
 
 | part | Vue props | slots | events |
 | --- | --- | --- | --- |
-| `Tree.Root` | `model`, `defaultTree`, `features`, `expandedItemIds`, `selectedItemIds`, `checkedItemIds`, `loadChildren`, `announce`, `keyMap`, `expandOnClick`, `dragThreshold`, `autoExpandDelay`, `indentation`, `indicatorInset`, `dragGroup`, `transfer`, `foreignDrop`, `dropOutside`, `treeRef` | default | `update:expandedItemIds`, `update:selectedItemIds`, `update:checkedItemIds` |
+| `Tree.Root` | `model`, `defaultTree`, `features`, `expandedItemIds`, `selectedItemIds`, `checkedItemIds`, `loadChildren`, `announce`, `keyMap`, `expandOnClick`, `treeRef` | default | `update:expandedItemIds`, `update:selectedItemIds`, `update:checkedItemIds` |
 | `Tree.Items` | none | default `{ item }` | none |
 | `Tree.Item` | `item` | default `{ state }` | none |
 | `Tree.ItemContent` | none | default `{ state }` | none |
 | `Tree.Group` | `keepMounted` | default `{ item }` | none |
 | `Tree.Toggle` | none | default `{ state }` | none |
-| `Tree.DropIndicator` | none | none | none |
 | `Tree.LiveRegion` | none | none | none |
 
-`VirtualItems` (from `@fragiola/tree-vue/virtualization`, with `VirtualItemsProps` and
+`DropIndicator` (from `@fragiola/tree-vue/drag-and-drop`, and `/foreign-drop`, with `DropIndicatorProps`, `DropIndicatorSlots` and `DropIndicatorState`) takes no props of its own and a `render` slot. `VirtualItems` (from `@fragiola/tree-vue/virtualization`, with `VirtualItemsProps` and
 `VirtualItemsSlots`) takes no prop and has a default slot `{ item, row }` (`row`: its
 `VirtualRow`); `typedVirtualItems<Types>()` is the same component typed by the registry.
 

@@ -6,8 +6,8 @@ single and multiple selection, the WAI-ARIA keyboard model with type-ahead, drag
 children, inline rename and tri-state checkboxes.
 
 Fragiola Tree is **headless**. It ships the behaviour, the accessibility and the primitives
-(`Tree.Root`, `Items`, `Item`, `ItemContent`, `Group`, `Toggle`, `DropIndicator`, `LiveRegion`,
-and `VirtualItems` with the virtualization feature) and the hooks below them (`useTreeItem`, `useTreeItemRename` from `/rename`, …), and **no CSS, no
+(`Tree.Root`, `Items`, `Item`, `ItemContent`, `Group`, `Toggle`, `LiveRegion`, `VirtualItems`
+with the virtualization feature and `DropIndicator` with drag and drop) and the hooks below them (`useTreeItem`, `useTreeItemRename` from `/rename`, …), and **no CSS, no
 icons and no text**: you style every part with
 `className`, `style` and the `data-*` attributes it exposes, and every visible word and accessible
 name comes from you.
@@ -82,6 +82,10 @@ import a feature does not ship it.
 | `asyncChildren()`: children from your `loadChildren`, `aria-busy` | `@fragiola/tree-react/async-children` |
 | `typeAhead(options?)`: typed characters focus a matching label | `@fragiola/tree-react/type-ahead` |
 | `virtualization(options?)`: a window of the rows in view, rendered by `VirtualItems` | `@fragiola/tree-react/virtualization` |
+| `dragAndDrop(options?)`: the pointer and keyboard drag, `DropIndicator` | `@fragiola/tree-react/drag-and-drop` |
+| `dragGroup({ name })`: drags between the trees of a group | `@fragiola/tree-react/drag-group` |
+| `foreignDrop({ accept, onDrop })`: files, links and text dropped from outside | `@fragiola/tree-react/foreign-drop` |
+| `dropOutside({ onDrop })`: rows dropped on your own targets | `@fragiola/tree-react/drop-outside` |
 
 ```ts
 import { createTreeModel } from "@fragiola/tree-react";
