@@ -10,7 +10,7 @@
 //   its exact version, and passes its smoke test: a scratch app outside the workspace that installs
 //   the adapter's tarball only (the core tarball comes as its dependency), typechecks, builds and
 //   loads its dev server. Each adapter Epic adds its entry and its smoke app (Dockable's
-//   `reactSmoke`, `vueSmoke`, `angularSmoke` are the model): React's is `reactSmoke`.
+//   `reactSmoke`, `vueSmoke`, `angularSmoke` are the model): `reactSmoke`, `vueSmoke`.
 //
 // `--tarballs <dir>` checks the tarballs found in `dir` (at any depth) instead of packing: the
 // release workflow passes the directory `changeset pack` wrote, so what is checked is what is
@@ -464,9 +464,172 @@ async function reactSmoke(
     await loadThroughDevServer(app, "/src/main.tsx");
 }
 
+/** The version `examples/<framework>` pins of `name`: the Vue smoke app's tools (vue-tsc, TS 6). */
+function examplesVersion(framework: Framework, name: string): string {
+    const manifest = JSON.parse(
+        readFileSync(join(root, "examples", framework, "package.json"), "utf8"),
+    ) as {
+        dependencies?: Record<string, string>;
+        devDependencies?: Record<string, string>;
+    };
+    const version =
+        manifest.dependencies?.[name] ?? manifest.devDependencies?.[name];
+    if (version === undefined) {
+        throw new Error(`examples/${framework} does not depend on ${name}`);
+    }
+    return version;
+}
+
+// The Vue smoke app: single-file components typed by the registry through `typedTree<Types>()`,
+// with the recursion in a self-referencing component. Everything comes from the Vue package.
+const VUE_SMOKE_TREE = `import { typedTree } from "@fragiola/tree-vue";
+
+export type Types = { items: { folder: undefined; file: { size: number } } };
+export const Tree = typedTree<Types>();
+`;
+
+const VUE_SMOKE_MAIN = `import { createTreeModel } from "@fragiola/tree-vue";
+import { createApp } from "vue";
+import App from "./app.vue";
+import type { Types } from "./tree";
+
+const model = createTreeModel<Types>({
+    version: 1,
+    rootItemIds: ["src", "readme"],
+    items: {
+        src: { kind: "folder", label: "src", childItemIds: ["app"] },
+        app: { kind: "file", label: "app.ts", data: { size: 120 } },
+        readme: { kind: "file", label: "README.md", data: { size: 3 } },
+    },
+    expandedItemIds: ["src"],
+});
+
+createApp(App, { model }).mount("#root");
+`;
+
+const VUE_SMOKE_APP = `<script setup lang="ts">
+import type { TreeModel } from "@fragiola/tree-vue";
+import { ref } from "vue";
+import FileItem from "./file-item.vue";
+import { Tree, type Types } from "./tree";
+
+defineProps<{ model: TreeModel<Types> }>();
+const selected = ref<string[]>([]);
+</script>
+
+<template>
+    <Tree.Root :model="model" v-model:selected-item-ids="selected" aria-label="Files">
+        <Tree.Items v-slot="{ item }"><FileItem :item="item" /></Tree.Items>
+        <Tree.DropIndicator />
+        <Tree.LiveRegion />
+    </Tree.Root>
+</template>
+`;
+
+const VUE_SMOKE_ITEM = `<script setup lang="ts">
+import type { ItemOf } from "@fragiola/tree-vue";
+import { Tree, type Types } from "./tree";
+
+defineProps<{ item: ItemOf<Types> }>();
+</script>
+
+<template>
+    <Tree.Item :item="item">
+        <Tree.ItemContent>
+            <Tree.Toggle />
+            {{ item.label }}
+            <!-- item.kind narrows item.data -->
+            <span v-if="item.kind === 'file'">{{ item.data.size }}</span>
+        </Tree.ItemContent>
+        <Tree.Group v-slot="{ item: child }"><FileItem :item="child" /></Tree.Group>
+    </Tree.Item>
+</template>
+`;
+
+/**
+ * A scratch Vite + Vue app in `dir` that depends on the Vue tarball only (the core tarball comes
+ * as its dependency). It typechecks with vue-tsc on the TypeScript examples/vue pins (vue-tsc does
+ * not run on TypeScript 7 yet).
+ */
+function writeVueSmokeApp(dir: string, core: string, vue: string): void {
+    const version = (name: string) => examplesVersion("vue", name);
+    const manifest = {
+        name: "tree-smoke",
+        private: true,
+        type: "module",
+        dependencies: {
+            "@fragiola/tree-vue": `file:${vue}`,
+            vue: version("vue"),
+        },
+        devDependencies: {
+            "@vitejs/plugin-vue": version("@vitejs/plugin-vue"),
+            typescript: version("typescript"),
+            vite: version("vite"),
+            "vue-tsc": version("vue-tsc"),
+        },
+    };
+    writeFileSync(
+        join(dir, "package.json"),
+        `${JSON.stringify(manifest, null, 4)}\n`,
+    );
+    writeFileSync(
+        join(dir, "pnpm-workspace.yaml"),
+        `overrides:\n  "@fragiola/tree": "file:${core}"\n`,
+    );
+    writeFileSync(
+        join(dir, "vite.config.js"),
+        `import vue from "@vitejs/plugin-vue";\nimport { defineConfig } from "vite";\n\nexport default defineConfig({ plugins: [vue()] });\n`,
+    );
+    writeFileSync(
+        join(dir, "index.html"),
+        `<!doctype html>\n<html lang="en">\n<body>\n<div id="root"></div>\n<script type="module" src="/src/main.ts"></script>\n</body>\n</html>\n`,
+    );
+    // strict, with the published declarations checked too (no skipLibCheck)
+    const tsconfig = {
+        compilerOptions: {
+            target: "ES2022",
+            lib: ["ES2022", "DOM", "DOM.Iterable"],
+            module: "ESNext",
+            moduleResolution: "bundler",
+            jsx: "preserve",
+            strict: true,
+            noUncheckedIndexedAccess: true,
+            verbatimModuleSyntax: true,
+            noEmit: true,
+            types: [],
+        },
+        include: ["src/**/*.ts", "src/**/*.vue"],
+    };
+    writeFileSync(
+        join(dir, "tsconfig.json"),
+        `${JSON.stringify(tsconfig, null, 4)}\n`,
+    );
+    mkdirSync(join(dir, "src"));
+    writeFileSync(join(dir, "src/tree.ts"), VUE_SMOKE_TREE);
+    writeFileSync(join(dir, "src/main.ts"), VUE_SMOKE_MAIN);
+    writeFileSync(join(dir, "src/app.vue"), VUE_SMOKE_APP);
+    writeFileSync(join(dir, "src/file-item.vue"), VUE_SMOKE_ITEM);
+}
+
+/**
+ * The Vue smoke test: the scratch Vite + Vue app installs the Vue tarball, typechecks (vue-tsc),
+ * builds and loads its dev server.
+ */
+async function vueSmoke(
+    app: string,
+    tarballs: { core: string; adapter: string },
+): Promise<void> {
+    writeVueSmokeApp(app, tarballs.core, tarballs.adapter);
+    run("pnpm", ["install", "--no-frozen-lockfile"], app);
+    run("pnpm", ["exec", "vue-tsc", "--noEmit"], app);
+    run("pnpm", ["exec", "vite", "build"], app);
+    await loadThroughDevServer(app, "/src/main.ts");
+}
+
 /** Every adapter, one per package under packages/ but the core (`unlistedPackages` checks it). */
 export const ADAPTERS: readonly AdapterCheck[] = [
     { dir: "react", framework: "react", smoke: reactSmoke },
+    { dir: "vue", framework: "vue", smoke: vueSmoke },
 ];
 
 /** The packages/ directories that are neither the core nor an adapter of `adapters`. */
