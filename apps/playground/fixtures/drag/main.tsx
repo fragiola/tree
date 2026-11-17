@@ -1,5 +1,9 @@
 import { createTreeModel, veto } from "@fragiola/tree-react";
 import {
+    type DragAndDropFeature,
+    dragAndDrop,
+} from "@fragiola/tree-react/drag-and-drop";
+import {
     type SelectionFeature,
     selection,
 } from "@fragiola/tree-react/selection";
@@ -13,10 +17,12 @@ import "../../src/fixture/fixture.css";
 
 function App() {
     const [model] = useState(() => {
-        const created = createTreeModel<Types, readonly [SelectionFeature]>(
-            files(),
-            { features: [selection()] },
-        );
+        const created = createTreeModel<
+            Types,
+            readonly [SelectionFeature, DragAndDropFeature]
+        >(files(), {
+            features: [selection(), dragAndDrop({ autoExpandDelay: 300 })],
+        });
         created.use((ctx, next) =>
             ctx.command === "item.move" &&
             (ctx.payload as { to: { parentItemId: string | null } }).to
@@ -40,7 +46,6 @@ function App() {
         <>
             <FixtureTree
                 model={model}
-                autoExpandDelay={300}
                 announce={(event) =>
                     event.type === "drop"
                         ? `Dropped ${event.itemIds.join(", ")}`

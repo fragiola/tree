@@ -5,6 +5,7 @@ import {
     type TreeFeatures,
     type TreeTypes,
 } from "@fragiola/tree-react";
+import { DropIndicator } from "@fragiola/tree-react/drag-and-drop";
 import type { ReactNode } from "react";
 
 // The styled tree the scenarios render (palette roles only, as the examples): every primitive,
@@ -53,7 +54,7 @@ export function StyledTree<
             <Tree.Items<T>>
                 {(item) => <Item item={item} after={after} />}
             </Tree.Items>
-            <Tree.DropIndicator className="h-0.5 rounded-full bg-palette-contrast/70 data-[drop-position=inside]:h-auto data-[drop-position=inside]:rounded-sm data-[drop-position=inside]:bg-transparent data-[drop-position=inside]:outline-2 data-[drop-position=inside]:outline-palette-ring" />
+            <DropIndicator className="h-0.5 rounded-full bg-palette-contrast/70 data-[drop-position=inside]:h-auto data-[drop-position=inside]:rounded-sm data-[drop-position=inside]:bg-transparent data-[drop-position=inside]:outline-2 data-[drop-position=inside]:outline-palette-ring" />
             <Tree.LiveRegion className="sr-only" />
         </Tree.Root>
     );
