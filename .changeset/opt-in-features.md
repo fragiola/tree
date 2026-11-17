@@ -26,7 +26,7 @@ feature does not carry it (`pnpm build` checks every package's main entry).
 - The model, the engine, the roots, the hooks, the refs and `typedTree` take the features as a type
   argument (`TreeModel<T, F>`, `useTreeState(selector, { model })` infers them); a feature's
   command, key, state field or root prop compiles only when it is installed.
-- New in the core: `model.get("features")`, `engine.adapter.itemAttributes` / `rootAttributes`, the
+- New in the core: `model.get("features")`, `model.get("item-attributes-by")` / `get("root-attributes")` (the features' ARIA and `data-*`, model state), the
   feature contract (`TreeFeature`, …), `TREE_ROOT_PROPS` and `FEATURE_ROOT_PROPS`. A root warns
   once when its `features` change after it created its model, or when a feature's prop is given
   without the feature.

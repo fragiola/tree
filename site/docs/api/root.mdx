@@ -156,7 +156,7 @@ ignored with a warning.
 | attribute | when |
 | --- | --- |
 | `role="tree"` | always |
-| `aria-multiselectable` | `selection()` in `multiple` mode (the features' ARIA and `data-*` come from `engine.adapter.rootAttributes()`) |
+| `aria-multiselectable` | `selection()` in `multiple` mode (the features' ARIA and `data-*` are model state: `model.get("root-attributes")`, a server render has them) |
 | `data-tree-part="root"` | always |
 | `data-dragging` | a drag is under way, or foreign content (`foreignDrop`) is dragged over the tree |
 | `data-keyboard-dragging` | a keyboard drag is under way |

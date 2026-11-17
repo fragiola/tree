@@ -167,8 +167,11 @@ Do not "fix" these. A change that breaks one is a decision for the maintainer.
       and result types stay in the core's maps; only the code moves. A new feature adds its row.
     - A feature contributes, composed once at creation (`src/features/registry.ts`): settings,
       document rules (`issues`), its state (`load`, `toJson`), commands, `get`/`is` keys, reactions
-      (`forget`, `disabled`, `configured`), the tab stop, its part of each engine (`keyAction`,
-      `click`, engine verbs, `itemAttributes` / `rootAttributes`, a `viewport`) and its root props
+      (`forget`, `disabled`, `configured`), the tab stop, the ARIA and `data-*` an item and the root
+      get (`itemAttributes` / `rootAttributes`, from the state alone: model keys
+      `item-attributes-by` and `root-attributes`, so a server render and the first render before
+      the engine have them, rule 3; an item's element gets them all, its other parts the `data-*`),
+      its part of each engine (`keyAction`, `click`, engine verbs, a `viewport`) and its root props
       (`TreeRootProp`, which the adapters map generically, as the core's `TREE_ROOT_PROPS`).
       Features talk to each other only through keys (`dnd/drag-set.ts` reads
       `get("selected-items")`).
@@ -195,8 +198,7 @@ Do not "fix" these. A change that breaks one is a decision for the maintainer.
   `subscribe` and `destroy` (a guard test).
 - **`engine.adapter`** (`src/engine/adapter.ts`): the root and item element registration, the
   forwarded events (`handleKeyDown`, `handlePointerDown`, `handleClick`, `handleToggleClick`,
-  `handleFocus`, `handleDragEvent`), the features' attributes (`itemAttributes`, `rootAttributes`:
-  an item's element gets them all, its other parts the `data-*`) and the render revision
+  `handleFocus`, `handleDragEvent`) and the render revision
   (`subscribe` / `getSnapshot`). An adapter forwards events; the core decides.
 - **Keys** (`src/keyboard/key-map.ts`): the APG Tree View model with type-ahead, overridable
   through the `keyMap` option; Right and Left swap in `rtl`. Adapters never hard-code a key.

@@ -243,7 +243,7 @@ functions):
 | `dragging` | `boolean` | it is being dragged |
 | `dropTarget` | `boolean` | the drop target of the drag under way is relative to it |
 | `dropPosition` | `DropPosition \| undefined` | while it is the drop target: `before`, `after` or `inside` |
-| `attributes` | `Readonly<Record<string, string \| undefined>>` | the ARIA and `data-*` the installed features give it (`selection()`: `aria-selected`, `data-selected`): its element gets them all, every other part of it the `data-*` (`engine.adapter.itemAttributes`) |
+| `attributes` | `Readonly<Record<string, string \| undefined>>` | the ARIA and `data-*` the installed features give it (`selection()`: `aria-selected`, `data-selected`): its element gets them all, every other part of it the `data-*` (`model.get("item-attributes-by", { itemId })`: model state, so the first render and a server's have them) |
 
 ## `useTreeItemRename`
 

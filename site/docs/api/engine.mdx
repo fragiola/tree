@@ -301,5 +301,3 @@ an app never needs it. The adapter forwards events; the core decides.
 | `handleDragEvent(event)` | a native drag event on the root (`dragenter`, `dragover`, `dragleave`, `drop`): foreign content with `foreignDrop`, ignored without it |
 | `subscribe(listener)` | calls `listener` when adapters should re-render; returns its remover |
 | `getSnapshot()` | the render revision: a number that changes whenever adapters should re-render |
-| `itemAttributes(itemId)` | the ARIA and `data-*` the installed features give an item (`selection()`: `aria-selected`, `data-selected`), each a string or `undefined` for an absent attribute |
-| `rootAttributes()` | the ARIA and `data-*` the installed features give the root (`selection()` in `multiple` mode: `aria-multiselectable`) |

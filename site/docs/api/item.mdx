@@ -86,7 +86,7 @@ state (`expanded`, `selected`, `focused`, `tabStop`, `checkState`, `checked`, `i
 | `role="treeitem"` | always |
 | `aria-level`, `aria-posinset`, `aria-setsize` | always: 1 for a root item; its position among its siblings, from 1; how many siblings it has |
 | `aria-expanded` | a parent: `true` or `false` |
-| `aria-selected` | the `selection()` feature, in a mode other than `none` (the features' ARIA and `data-*` come from `engine.adapter.itemAttributes`) |
+| `aria-selected` | the `selection()` feature, in a mode other than `none` (the features' ARIA and `data-*` are model state: `model.get("item-attributes-by", { itemId })`, a server render has them) |
 | `aria-checked` | the root has `checkboxes`: `true`, `false` or `"mixed"` |
 | `aria-disabled` | the item is disabled |
 | `aria-busy` | its children are loading |

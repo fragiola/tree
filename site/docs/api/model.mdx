@@ -111,6 +111,8 @@ nothing needs no payload (`QueryArgs`).
 | `"tree-json"` | none | `TreeJson<T>`: the document of the current state, every field written (a copy) |
 | `"commands"` | none | `readonly CommandInfo[]`: every command of the core and of the installed features, with its description and JSON Schemas |
 | `"features"` | none | `readonly TreeFeatureInfo[]`: the installed features (`name`), each with the controlled root props it ships (`rootProps`) |
+| `"item-attributes-by"` | `{ itemId }` | `Readonly<Record<string, string \| undefined>>`: the ARIA and `data-*` the installed features give an item (`selection()`: `aria-selected`, `data-selected`), from the state alone; an adapter puts them all on the item's element, the `data-*` on its other parts |
+| `"root-attributes"` | none | `Readonly<Record<string, string \| undefined>>`: the ARIA and `data-*` the installed features give the root (`aria-multiselectable`) |
 | `"settings"` | none | `TreeSettings` |
 | `"item-by"` | `{ id }` | `ItemOf<T> \| undefined` |
 | `"item-parent-by"` | `{ itemId }` | `ItemOf<T> \| undefined`: undefined for a root item |
