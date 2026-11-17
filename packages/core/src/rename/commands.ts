@@ -1,15 +1,16 @@
 // Inline rename: `item.start-rename`, `item.rename` (commits the label and ends renaming) and
 // `item.cancel-rename`. Refused for an item that is disabled or not `renamable`.
+import { defineCommand, type Failure, fail, ok } from "../commands/define";
+import { itemIdPayload, itemIdResult } from "../commands/expansion";
+import { isFailure, requireEnabled } from "../commands/rules";
 import type { Draft } from "../state/draft";
 import type { TreeItem } from "../state/types";
-import { defineCommand, type Failure, fail, ok } from "./define";
-import { itemIdPayload, itemIdResult } from "./expansion";
-import { isFailure, requireEnabled, resolveFlags } from "./rules";
+import { isRenamable, renamingOf, setRenaming } from "./state";
 
 function requireRenamable(draft: Draft, itemId: string): TreeItem | Failure {
     const item = requireEnabled(draft, itemId, "be renamed");
     if (isFailure(item)) return item;
-    if (!resolveFlags(draft.settings, item).renamable) {
+    if (!isRenamable(draft.settings, item)) {
         return fail("refused", `"${itemId}" is not renamable`, "/itemId");
     }
     return item;
@@ -25,7 +26,7 @@ export const itemStartRename = defineCommand({
     reduce: (payload, { draft }) => {
         const item = requireRenamable(draft, payload.itemId);
         if (isFailure(item)) return item;
-        draft.set("renamingItemId", item.id);
+        setRenaming(draft, item.id);
         return ok({ itemId: item.id });
     },
 });
@@ -55,9 +56,7 @@ export const itemRename = defineCommand({
         if (item.label !== payload.label) {
             draft.patchItem(item.id, { label: payload.label });
         }
-        if (draft.state.renamingItemId === item.id) {
-            draft.set("renamingItemId", null);
-        }
+        if (renamingOf(draft.state) === item.id) setRenaming(draft, null);
         return ok({ itemId: item.id });
     },
 });
@@ -77,14 +76,14 @@ export const itemCancelRename = defineCommand({
                 "/itemId",
             );
         }
-        if (draft.state.renamingItemId !== payload.itemId) {
+        if (renamingOf(draft.state) !== payload.itemId) {
             return fail(
                 "refused",
                 `"${payload.itemId}" is not being renamed`,
                 "/itemId",
             );
         }
-        draft.set("renamingItemId", null);
+        setRenaming(draft, null);
         return ok({ itemId: payload.itemId });
     },
 });

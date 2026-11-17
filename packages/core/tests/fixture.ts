@@ -7,7 +7,17 @@
 //       a.ts
 //       b.ts
 //   readme.md
+import {
+    type AsyncChildrenFeature,
+    asyncChildren,
+} from "../src/async-children/async-children";
+import {
+    type CheckboxesFeature,
+    type CheckboxesOptions,
+    checkboxes,
+} from "../src/checkboxes/checkboxes";
 import type { TreeFeatures } from "../src/features/types";
+import { type RenameFeature, rename } from "../src/rename/rename";
 import { type SelectionFeature, selection } from "../src/selection/selection";
 import type { TreeJson } from "../src/state/json";
 import {
@@ -15,6 +25,11 @@ import {
     type TreeModel,
     type TreeModelOptions,
 } from "../src/state/model";
+import {
+    type TypeAheadFeature,
+    type TypeAheadOptions,
+    typeAhead,
+} from "../src/type-ahead/type-ahead";
 
 export type FileTypes = {
     items: { folder: undefined; file: { size: number } };
@@ -45,18 +60,60 @@ export function files(
 }
 
 /**
- * A model of `files()`, with the selection feature unless `options.features` says otherwise
- * (`features: []`: a bare tree).
+ * `files()` for a model without `asyncChildren()`: `lib` is a parent with no children instead of
+ * one the loader fills (a bare document has no `childrenStatus`).
  */
-export function filesModel<
-    const F extends TreeFeatures = readonly [SelectionFeature],
->(
+export function bareFiles(
+    patch: Partial<TreeJson<FileTypes>> = {},
+): TreeJson<FileTypes> {
+    const json = files(patch);
+    for (const item of Object.values(json.items)) {
+        if (item.childrenStatus === undefined) continue;
+        delete item.childrenStatus;
+        item.childItemIds ??= [];
+    }
+    return json;
+}
+
+/** Every feature with a model of its own: what a test model installs unless it says otherwise. */
+export type AllFeatures = readonly [
+    SelectionFeature,
+    CheckboxesFeature,
+    RenameFeature,
+    AsyncChildrenFeature,
+    TypeAheadFeature,
+];
+
+export function allFeatures(
+    options: {
+        checkboxes?: CheckboxesOptions;
+        typeAhead?: TypeAheadOptions;
+    } = {},
+): AllFeatures {
+    return [
+        selection(),
+        checkboxes(options.checkboxes),
+        rename(),
+        asyncChildren(),
+        typeAhead(options.typeAhead),
+    ] as const;
+}
+
+/**
+ * A model of `files()`, with every feature unless `options.features` says otherwise (`features:
+ * []`: a bare tree, of `bareFiles()` when `asyncChildren()` is not installed).
+ */
+export function filesModel<const F extends TreeFeatures = AllFeatures>(
     patch: Partial<TreeJson<FileTypes>> = {},
     options: TreeModelOptions<FileTypes, F> = {},
 ): TreeModel<FileTypes, F> {
-    return createTreeModel<FileTypes, F>(files(patch), {
-        features: [selection()] as unknown as F,
+    const features = (options.features ?? allFeatures()) as TreeFeatures;
+    const json = features.some((feature) => feature.name === "async-children")
+        ? files(patch)
+        : bareFiles(patch);
+    return createTreeModel<FileTypes, F>(json, {
         ...options,
+        features: features as unknown as F,
     });
 }
 

@@ -90,8 +90,6 @@ export interface ResolvedEngineOptions {
     readonly indicatorInset: number;
     /** how close (px) to a scroll container's edge a drag scrolls it, and how fast (px per frame) */
     readonly autoScroll: { readonly threshold: number; readonly speed: number };
-    /** how long (ms) between two typed characters keeps one type-ahead search */
-    readonly typeAheadTimeout: number;
     /** the app's transfer of items dropped here from a tree of another model (`transfer`) */
     readonly transfer: TransferHandler | undefined;
 }

@@ -325,6 +325,8 @@ model.run("tree.clear-selection", {});
 
 ## Checkboxes
 
+These commands come with the checkboxes feature: install `checkboxes()` from `@fragiola/tree/checkboxes` (`createTreeModel(json, { features: [checkboxes()] })`). Without it, each one returns `not_found`.
+
 ### `item.check`
 
 Check or uncheck an item's checkbox. In cascade mode its loaded descendants follow it and its ancestors are recomputed (checked when all their children are, mixed when some are); children loaded later inherit a checked parent. In independent mode only the item changes. Refused for a disabled item.
@@ -385,6 +387,8 @@ model.run("item.toggle-check", {
 ```
 
 ## Rename
+
+These commands come with the rename feature: install `rename()` from `@fragiola/tree/rename` (`createTreeModel(json, { features: [rename()] })`). Without it, each one returns `not_found`.
 
 ### `item.start-rename`
 
@@ -473,6 +477,8 @@ model.run("item.cancel-rename", {
 ```
 
 ## Async children
+
+These commands come with the async-children feature: install `asyncChildren()` from `@fragiola/tree/async-children` (`createTreeModel(json, { features: [asyncChildren()] })`). Without it, each one returns `not_found`.
 
 ### `item.set-children-status`
 
@@ -714,7 +720,7 @@ model.run("item.set-data", {
 
 ### `item.set-flags`
 
-Set an item's permission flags: disabled (focusable, not actionable), movable, renamable, droppable. A flag set to null takes the tree's default again (settings). A disabled item stops renaming.
+Set an item's permission flags: disabled (focusable, not actionable), movable, droppable, and renamable (with the rename feature). A flag set to null takes the tree's default again (settings). A disabled item stops renaming.
 
 **Payload** (`ItemSetFlagsPayload`)
 
@@ -749,7 +755,7 @@ model.run("item.set-flags", {
 
 ### `tree.configure`
 
-Change the tree's settings: the selection mode (none, single, multiple; a narrower mode trims the selection; with the selection feature), the check mode (cascade or independent; switching to cascade makes the checks consistent) and the defaults of the movable, renamable and droppable flags.
+Change the tree's settings: the defaults of the movable and droppable flags, and an installed feature's: the selection mode (none, single, multiple; a narrower mode trims the selection; the selection feature), the check mode (cascade or independent; switching to cascade makes the checks consistent; the checkboxes feature), the default of the renamable flag (the rename feature).
 
 **Payload** (`{ settings: TreeSettingsPatch }`)
 
@@ -757,7 +763,7 @@ Change the tree's settings: the selection mode (none, single, multiple; a narrow
 | --- | --- | --- | --- |
 | `settings` | `object` | yes | the settings to change (the others are kept) |
 
-**Result** (`{ settings: TreeSettings & { selectionMode?: SelectionMode } }`)
+**Result** (`{ settings: TreeSettings & { selectionMode?: SelectionMode; checkMode?: CheckMode; renamable?: boolean; }; }`)
 
 | field | type | required | description |
 | --- | --- | --- | --- |

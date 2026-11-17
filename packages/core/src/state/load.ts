@@ -11,7 +11,6 @@ import type { FeatureDocument, TreeFeatures } from "../features/types";
 import { treeSchema } from "../schema/tree";
 import type { JsonSchema, ValidationIssue } from "../schema/types";
 import { joinPointer, jsonIssues, validate } from "../schema/validator";
-import { normalizeChecks } from "./check-state";
 import { Draft, deepFreeze } from "./draft";
 import { IdSource } from "./ids";
 import { cloneJson } from "./json";
@@ -73,6 +72,16 @@ function featureFieldIssues(
                 path: `${prefix}/${key}`,
                 message: requiresFeature(owner),
             });
+    }
+    for (const [id, item] of Object.entries(json.items)) {
+        for (const key of Object.keys(item)) {
+            const owner = features.missing("itemFields", key);
+            if (owner !== undefined)
+                issues.push({
+                    path: `${prefix}${joinPointer("/items", id)}/${key}`,
+                    message: requiresFeature(owner),
+                });
+        }
     }
     for (const key of Object.keys(json.settings ?? {})) {
         const owner = features.missing("settings", key);
@@ -157,26 +166,20 @@ function structureIssues(
             });
         }
     }
-    const lists = ["expandedItemIds", "checkedItemIds"] as const;
-    for (const list of lists) {
-        json[list]?.forEach((id, i) => {
-            if (!has(id)) {
-                issues.push({
-                    path: at(`/${list}/${i}`),
-                    message: `"${id}" is not an item`,
-                });
-            }
-        });
-    }
-    const singles = ["focusedItemId", "renamingItemId"] as const;
-    for (const single of singles) {
-        const id = json[single];
-        if (typeof id === "string" && !has(id)) {
+    json.expandedItemIds?.forEach((id, i) => {
+        if (!has(id)) {
             issues.push({
-                path: at(`/${single}`),
+                path: at(`/expandedItemIds/${i}`),
                 message: `"${id}" is not an item`,
             });
         }
+    });
+    const focused = json.focusedItemId;
+    if (typeof focused === "string" && !has(focused)) {
+        issues.push({
+            path: at("/focusedItemId"),
+            message: `"${focused}" is not an item`,
+        });
     }
     return issues;
 }
@@ -196,9 +199,7 @@ interface DocumentInput {
         } & Readonly<Record<string, unknown>>;
     };
     readonly expandedItemIds?: readonly string[];
-    readonly checkedItemIds?: readonly string[];
     readonly focusedItemId?: string | null;
-    readonly renamingItemId?: string | null;
 }
 
 /** An item of the document as state: its key as id, a loaded parent always with its list. */
@@ -290,14 +291,7 @@ export function buildState(
             const item = items[id];
             return item !== undefined && !isLeaf(item);
         }),
-        checkedItemIds: [...(input.checkedItemIds ?? [])],
         focusedItemId: input.focusedItemId ?? null,
-        // a disabled item is never renamed
-        renamingItemId:
-            input.renamingItemId != null &&
-            items[input.renamingItemId]?.disabled !== true
-                ? input.renamingItemId
-                : null,
         ...features.load(
             featureInput,
             items,
@@ -306,7 +300,7 @@ export function buildState(
     };
     // loading draws no id: a document's ids are its keys
     const draft = new Draft(base, new IdSource(), features);
-    normalizeChecks(draft);
+    features.loaded(draft);
     const focused = draft.state.focusedItemId;
     if (focused !== null) {
         draft.set(

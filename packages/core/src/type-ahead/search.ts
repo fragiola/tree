@@ -1,6 +1,6 @@
 // Type-ahead (the APG tree's printable characters): the characters typed within `timeout` of each
 // other make one search, and the search moves to the next visible item whose label starts with
-// it (`model.get("type-ahead-match", …)`). Typing the same character again cycles through the
+// it (`model.get("type-ahead-match", …)`, `type-ahead.ts`). Typing the same character again cycles through the
 // items that start with it, as in React Complex Tree's search and the APG's recommendation.
 import type { Scheduler } from "../dom/owner";
 

@@ -168,8 +168,14 @@ export interface CommandMap<T extends TreeTypes = AnyTypes> {
     };
     "tree.configure": {
         payload: { settings: TreeSettingsPatch };
-        /** the settings: the core's, and `selectionMode` with the selection feature */
-        result: { settings: TreeSettings & { selectionMode?: SelectionMode } };
+        /** the settings: the core's, and the installed features' (`selectionMode`, `checkMode`, `renamable`) */
+        result: {
+            settings: TreeSettings & {
+                selectionMode?: SelectionMode;
+                checkMode?: CheckMode;
+                renamable?: boolean;
+            };
+        };
     };
     "tree.load": {
         payload: { json: TreeJson<T> };

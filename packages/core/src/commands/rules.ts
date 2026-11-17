@@ -16,7 +16,6 @@ import { type Failure, fail } from "./define";
 export interface ResolvedFlags {
     readonly disabled: boolean;
     readonly movable: boolean;
-    readonly renamable: boolean;
     readonly droppable: boolean;
 }
 
@@ -27,7 +26,6 @@ export function resolveFlags(
     return {
         disabled: item.disabled ?? false,
         movable: item.movable ?? settings.movable,
-        renamable: item.renamable ?? settings.renamable,
         droppable: item.droppable ?? settings.droppable,
     };
 }
@@ -206,12 +204,8 @@ export function forgetItems(
         return kept.length === ids.length ? ids : kept;
     };
     draft.set("expandedItemIds", keep(draft.state.expandedItemIds));
-    draft.set("checkedItemIds", keep(draft.state.checkedItemIds));
     draft.features.forget(draft, removed);
-    const { focusedItemId, renamingItemId } = draft.state;
-    if (renamingItemId !== null && removed.has(renamingItemId)) {
-        draft.set("renamingItemId", null);
-    }
+    const { focusedItemId } = draft.state;
     if (focusedItemId !== null && removed.has(focusedItemId)) {
         const visible = visibleItems(draft.state);
         const next =

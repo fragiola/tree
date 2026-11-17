@@ -1,11 +1,11 @@
 // Tri-state checkboxes: `item.check` and `item.toggle-check`. In cascade mode (the default) an
 // item's descendants follow it and its ancestors are recomputed; in independent mode only the item
-// changes (state/check-state.ts).
+// changes (state.ts).
+import { defineCommand, ok } from "../commands/define";
+import { itemIdPayload } from "../commands/expansion";
+import { isFailure, requireEnabled } from "../commands/rules";
 import { idListSchema } from "../schema/tree";
-import { checkStateOf, setChecked } from "../state/check-state";
-import { defineCommand, ok } from "./define";
-import { itemIdPayload } from "./expansion";
-import { isFailure, requireEnabled } from "./rules";
+import { checkedOf, checkStateOf, setChecked } from "./state";
 
 export const itemCheck = defineCommand({
     name: "item.check",
@@ -39,7 +39,7 @@ export const itemCheck = defineCommand({
         const item = requireEnabled(draft, payload.itemId, "be checked");
         if (isFailure(item)) return item;
         setChecked(draft, item.id, payload.checked);
-        return ok({ checkedItemIds: [...draft.state.checkedItemIds] });
+        return ok({ checkedItemIds: [...checkedOf(draft.state)] });
     },
 });
 

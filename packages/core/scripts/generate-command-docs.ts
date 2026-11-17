@@ -56,9 +56,9 @@ const COMMAND_SOURCES = [
     "commands/expansion",
     "commands/focus",
     "selection/commands",
-    "commands/check",
-    "commands/rename",
-    "commands/children",
+    "checkboxes/commands",
+    "rename/commands",
+    "async-children/commands",
     "commands/item",
     "commands/tree",
     "commands/rules",
@@ -67,6 +67,10 @@ const COMMAND_SOURCES = [
 /** The features, by their entry (`dist/<entry>.js`) and factory: every one is installed here. */
 const FEATURES = [
     { entry: "selection", factory: "selection" },
+    { entry: "checkboxes", factory: "checkboxes" },
+    { entry: "rename", factory: "rename" },
+    { entry: "async-children", factory: "asyncChildren" },
+    { entry: "type-ahead", factory: "typeAhead" },
     { entry: "virtualization", factory: "virtualization" },
 ] as const;
 
@@ -77,8 +81,8 @@ const RULE_CODES = ["not_found", "refused"] as const;
 const GROUPS: readonly [
     title: string,
     names: readonly string[],
-    /** the feature whose commands these are */
-    feature?: string,
+    /** the feature whose commands these are: its entry and factory */
+    feature?: { readonly subpath: string; readonly factory: string },
 ][] = [
     [
         "Expanding and collapsing",
@@ -100,10 +104,18 @@ const GROUPS: readonly [
             "tree.select-all",
             "tree.clear-selection",
         ],
-        "selection",
+        { subpath: "selection", factory: "selection" },
     ],
-    ["Checkboxes", ["item.check", "item.toggle-check"]],
-    ["Rename", ["item.start-rename", "item.rename", "item.cancel-rename"]],
+    [
+        "Checkboxes",
+        ["item.check", "item.toggle-check"],
+        { subpath: "checkboxes", factory: "checkboxes" },
+    ],
+    [
+        "Rename",
+        ["item.start-rename", "item.rename", "item.cancel-rename"],
+        { subpath: "rename", factory: "rename" },
+    ],
     [
         "Async children",
         [
@@ -111,6 +123,7 @@ const GROUPS: readonly [
             "item.set-children",
             "item.reset-children",
         ],
+        { subpath: "async-children", factory: "asyncChildren" },
     ],
     [
         "Structure",
@@ -453,7 +466,7 @@ async function render(): Promise<string> {
             `## ${title}`,
             ...(feature
                 ? [
-                      `These commands come with the ${feature} feature: install \`${feature}()\` from \`@fragiola/tree/${feature}\` (\`createTreeModel(json, { features: [${feature}()] })\`). Without it, each one returns \`not_found\`.`,
+                      `These commands come with the ${feature.subpath} feature: install \`${feature.factory}()\` from \`@fragiola/tree/${feature.subpath}\` (\`createTreeModel(json, { features: [${feature.factory}()] })\`). Without it, each one returns \`not_found\`.`,
                   ]
                 : []),
             ...members.map((info) =>

@@ -4,7 +4,9 @@
 // when the model (or an engine on it) is created. Features talk to each other only through keys.
 import type { CommandDefinition } from "../commands/define";
 import type { CommandName, CommandResult, RunOptions } from "../commands/types";
-import type { PressInput } from "../engine/adapter";
+import type { Scheduler } from "../dom/owner";
+import type { KeyEventInput, PressInput } from "../engine/adapter";
+import type { AnnounceEvent } from "../engine/host";
 import type {
     EngineActionKey,
     EngineGetKey,
@@ -71,6 +73,7 @@ export interface FeatureModel {
         options?: RunOptions,
     ): CommandResult<unknown>;
     can(command: CommandName, payload: object): boolean;
+    check(command: CommandName, payload: object): CommandResult<unknown>;
     get(key: ModelGetKey, payload?: object): unknown;
     is(key: ModelIsKey, payload: object): boolean;
 }
@@ -92,6 +95,20 @@ export interface FeatureEngineHost {
     changed(): void;
     /** moves the roving tab stop and DOM focus to an item; false when it cannot */
     focus(itemId: string): boolean;
+    /** gives DOM focus to an item's element (the roving tab stop stays where the model has it) */
+    focusElement(itemId: string): void;
+    /** the element of an item, once rendered */
+    itemElement(itemId: string): HTMLElement | undefined;
+    /** the roving tab stop: the item the keys act on */
+    current(): string | undefined;
+    /** the root window's timers */
+    scheduler(): Scheduler;
+    /** hands an event to the app's `announce` (the live region's text) */
+    announce(event: AnnounceEvent): void;
+    /** whether the engine was destroyed */
+    isDestroyed(): boolean;
+    /** the options the engine was created with (`loadChildren`, `resetLoadsOnDestroy`, …) */
+    readonly options: Readonly<Record<string, unknown>>;
 }
 
 /** What a key action sees: the focused item and its place among the visible items. */
@@ -128,11 +145,32 @@ export interface FeatureViewport {
 
 /** What a feature adds to one engine (each engine on a model gets its own). */
 export interface FeatureEngine {
+    /**
+     * a key's action, asked before every feature's `keyAction` (checkboxes take Space before the
+     * selection does): true when it did something, undefined when not its own
+     */
+    firstKeyAction?(
+        action: KeyAction,
+        context: FeatureKeyContext,
+    ): boolean | undefined;
     /** a key's action on the focused item: true when it did something, undefined when not its own */
     keyAction?(
         action: KeyAction,
         context: FeatureKeyContext,
     ): boolean | undefined;
+    /** a key no action is bound to (a typed character): true when it used it */
+    unboundKey?(event: KeyEventInput): boolean | undefined;
+    /** a bound key did something, or the root went away: what a sequence of keys holds ends */
+    keysReset?(): void;
+    /**
+     * the model changed, before the adapters re-render: true when DOM focus, inside the tree in
+     * `active`, must go back to the focused item (an editor of the feature's goes away)
+     */
+    modelChanged?(active: Element): boolean;
+    /** the model changed and the adapters re-rendered (and once when the engine is created) */
+    settled?(): void;
+    /** an item whose row stays rendered wherever the scroll is (the renaming item) */
+    pinnedItemId?(): string | null | undefined;
     /** a click on an item's content, after the engine focused it */
     click?(itemId: string, event: PressInput): void;
     /** engine actions (`engine.run`), each with its dry run */
@@ -201,6 +239,19 @@ export interface TreeFeature<
     disabled?(draft: Draft, itemId: string): void;
     /** the settings changed (`tree.configure`) */
     configured?(draft: Draft, before: FeatureState["settings"]): void;
+    /** a document was loaded into the draft (`createTreeModel`, `tree.load`): its fields made consistent */
+    loaded?(draft: Draft): void;
+    /**
+     * a parent's children changed (`null`: the root items): `addedItemIds` were added under it
+     * (an add, loaded children), none when some left or moved
+     */
+    childrenChanged?(
+        draft: Draft,
+        parentItemId: string | null,
+        addedItemIds: readonly string[],
+    ): void;
+    /** an item's flags changed (`item.set-flags`) */
+    flagsChanged?(draft: Draft, itemId: string): void;
     /** the items that take the roving tab stop before the first visible item */
     tabStop?(state: FeatureState): readonly string[];
     /**

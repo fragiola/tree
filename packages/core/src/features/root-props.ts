@@ -1,4 +1,4 @@
-// The core's controlled root props: the expanded and the checked items, described as a feature
+// The core's controlled root props: the expanded items, described as a feature
 // describes its own (`TreeRootProp`), so an adapter maps every controlled list the same way.
 import type { RunOptions } from "../commands/types";
 import type { FeatureModel, TreeRootProp } from "./types";
@@ -28,8 +28,7 @@ function sameSet(a: readonly string[], b: readonly string[]): boolean {
 }
 
 /**
- * The controlled lists every tree has: `expandedItemIds` and `checkedItemIds`, with their change
- * callbacks. A feature's are in `model.get("features")` (`rootProps`).
+ * The controlled list every tree has: `expandedItemIds`, with its change callback. A feature's are in `model.get("features")` (`rootProps`).
  */
 export const TREE_ROOT_PROPS: readonly TreeRootProp[] = Object.freeze([
     {
@@ -55,36 +54,6 @@ export const TREE_ROOT_PROPS: readonly TreeRootProp[] = Object.freeze([
                         .map((itemId) => ({
                             command: "item.expand",
                             payload: { itemId },
-                        })),
-                ],
-                options,
-            );
-        },
-    },
-    {
-        prop: "checkedItemIds",
-        changeProp: "onCheckedItemIdsChange",
-        read: (state) => state.checkedItemIds,
-        sync: (model, itemIds, options) => {
-            const now = model.state.checkedItemIds;
-            if (sameSet(itemIds, now)) return;
-            const wanted = new Set(itemIds);
-            const current = new Set(now);
-            // unchecks first: unchecking a parent (cascade) must not undo a check of its children
-            runAll(
-                model,
-                [
-                    ...now
-                        .filter((itemId) => !wanted.has(itemId))
-                        .map((itemId) => ({
-                            command: "item.check",
-                            payload: { itemId, checked: false },
-                        })),
-                    ...itemIds
-                        .filter((itemId) => !current.has(itemId))
-                        .map((itemId) => ({
-                            command: "item.check",
-                            payload: { itemId, checked: true },
                         })),
                 ],
                 options,

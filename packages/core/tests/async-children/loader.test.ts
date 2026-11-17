@@ -7,7 +7,7 @@ import {
     type TreeEngine,
 } from "../../src/engine/tree-engine";
 import type { TreeItemJson } from "../../src/state/json";
-import { type FileTypes, filesModel } from "../fixture";
+import { type AllFeatures, type FileTypes, filesModel } from "../fixture";
 
 /** A loader whose loads the test settles by hand. */
 function deferredLoader() {
@@ -29,7 +29,7 @@ function deferredLoader() {
 
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
 
-let engine: TreeEngine<FileTypes> | undefined;
+let engine: TreeEngine<FileTypes, AllFeatures> | undefined;
 afterEach(() => {
     engine?.destroy();
     engine = undefined;

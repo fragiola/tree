@@ -8,9 +8,8 @@ import {
     type TreeEngineOptions,
 } from "../../src/engine/tree-engine";
 import type { TreeFeatures } from "../../src/features/types";
-import type { SelectionFeature } from "../../src/selection/selection";
 import type { TreeModel } from "../../src/state/model";
-import type { FileTypes } from "../fixture";
+import type { AllFeatures, FileTypes } from "../fixture";
 
 export const ROW = 20;
 export const WIDTH = 300;
@@ -36,7 +35,7 @@ function setRect(
         }) as DOMRect;
 }
 
-export interface Mounted<F extends TreeFeatures = readonly [SelectionFeature]> {
+export interface Mounted<F extends TreeFeatures = AllFeatures> {
     readonly root: HTMLElement;
     readonly engine: TreeEngine<FileTypes, F>;
     readonly model: TreeModel<FileTypes, F>;
@@ -54,7 +53,7 @@ export interface Mounted<F extends TreeFeatures = readonly [SelectionFeature]> {
     unmount(): void;
 }
 
-export function mount<F extends TreeFeatures = readonly [SelectionFeature]>(
+export function mount<F extends TreeFeatures = AllFeatures>(
     model: TreeModel<FileTypes, F>,
     options: TreeEngineOptions<FileTypes> = {},
     host: Document = document,

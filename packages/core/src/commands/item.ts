@@ -1,12 +1,13 @@
 // The structure: `item.add`, `item.remove`, `item.move`, and an item's own fields, `item.set-data`
 // and `item.set-flags`. The move rules (cycles, `movable`, `droppable`, `disabled`) are in rules.ts,
 // so `model.can("item.move", …)` answers what a drag asks.
+
+import { requiresFeature } from "../features/registry";
 import {
     idListSchema,
     itemFlagProperties,
     itemJsonSchema,
 } from "../schema/tree";
-import { inheritCheck, settleAncestors } from "../state/check-state";
 import type { Draft } from "../state/draft";
 import type { TreeItemInit } from "../state/json";
 import { itemFromJson } from "../state/load";
@@ -46,6 +47,15 @@ export function newItem(
     reserved: ReadonlySet<string> = new Set(),
 ): TreeItem | Failure {
     const { draft } = context;
+    for (const key of Object.keys(json)) {
+        const owner = draft.features.missing("itemFields", key);
+        if (owner !== undefined)
+            return fail(
+                "invalid_payload",
+                requiresFeature(owner),
+                `${path}/${key}`,
+            );
+    }
     const childItemIds = json.childItemIds;
     if (Array.isArray(childItemIds) && childItemIds.length > 0) {
         return fail(
@@ -97,7 +107,7 @@ export function removeSubtrees(
     forgetItems(draft, new Set(removed), focusedAt);
     for (const parent of parents) {
         if (parent !== null && draft.item(parent))
-            settleAncestors(draft, parent);
+            draft.features.childrenChanged(draft, parent, []);
     }
     return removed;
 }
@@ -159,8 +169,7 @@ export const itemAdd = defineCommand({
             [item.id],
             siblings[payload.to.index ?? siblings.length],
         );
-        inheritCheck(draft, parentItemId, [item.id]);
-        settleAncestors(draft, parentItemId);
+        draft.features.childrenChanged(draft, parentItemId, [item.id]);
         return ok({ itemId: item.id });
     },
 });
@@ -266,7 +275,8 @@ export const itemMove = defineCommand({
         }
         insertChildren(draft, parentItemId, moving, before);
         for (const parent of [...from, parentItemId]) {
-            if (parent !== null) settleAncestors(draft, parent);
+            if (parent !== null)
+                draft.features.childrenChanged(draft, parent, []);
         }
         settleFocus(draft);
         return ok({ itemIds: moving });
@@ -316,7 +326,7 @@ const nullableFlag = (description: string) =>
 export const itemSetFlags = defineCommand({
     name: "item.set-flags",
     description:
-        "Set an item's permission flags: disabled (focusable, not actionable), movable, renamable, droppable. A flag set to null takes the tree's default again (settings). A disabled item stops renaming.",
+        "Set an item's permission flags: disabled (focusable, not actionable), movable, droppable, and renamable (with the rename feature). A flag set to null takes the tree's default again (settings). A disabled item stops renaming.",
     payloadSchema: {
         type: "object",
         properties: {
@@ -334,6 +344,15 @@ export const itemSetFlags = defineCommand({
     reduce: (payload, { draft }) => {
         const item = requireItem(draft, payload.itemId);
         if (isFailure(item)) return item;
+        for (const key of Object.keys(payload)) {
+            const owner = draft.features.missing("itemFields", key);
+            if (owner !== undefined)
+                return fail(
+                    "invalid_payload",
+                    requiresFeature(owner),
+                    `/${key}`,
+                );
+        }
         const patch: Record<string, boolean | undefined> = {};
         for (const flag of [
             "disabled",
@@ -349,13 +368,7 @@ export const itemSetFlags = defineCommand({
         const flags = updated && resolveFlags(draft.settings, updated);
         // a disabled item is never selected (the features drop it from their lists)
         if (flags?.disabled) draft.features.disabled(draft, item.id);
-        if (
-            flags &&
-            (flags.disabled || !flags.renamable) &&
-            draft.state.renamingItemId === item.id
-        ) {
-            draft.set("renamingItemId", null);
-        }
+        draft.features.flagsChanged(draft, item.id);
         return ok({ itemId: item.id });
     },
 });

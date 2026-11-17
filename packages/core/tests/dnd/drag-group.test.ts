@@ -7,7 +7,12 @@ import type { AnnounceEvent } from "../../src/engine/host";
 import type { TreeEngineOptions } from "../../src/engine/tree-engine";
 import { createTreeModel } from "../../src/state/model";
 import { type Mounted, mount, pointer, WIDTH } from "../engine/dom";
-import { type FileTypes, filesModel } from "../fixture";
+import {
+    type AllFeatures,
+    allFeatures,
+    type FileTypes,
+    filesModel,
+} from "../fixture";
 
 // tree A at x 0-300, tree B at x 400-700
 const B_LEFT = WIDTH + 100;
@@ -38,14 +43,17 @@ function tree(
 
 /** A second model: one folder, `inbox`, and a file. */
 function inboxModel() {
-    return createTreeModel<FileTypes>({
-        version: 1,
-        rootItemIds: ["inbox", "note"],
-        items: {
-            inbox: { kind: "folder", label: "inbox", childItemIds: [] },
-            note: { kind: "file", label: "note", data: { size: 9 } },
+    return createTreeModel<FileTypes, AllFeatures>(
+        {
+            version: 1,
+            rootItemIds: ["inbox", "note"],
+            items: {
+                inbox: { kind: "folder", label: "inbox", childItemIds: [] },
+                note: { kind: "file", label: "note", data: { size: 9 } },
+            },
         },
-    });
+        { features: allFeatures() },
+    );
 }
 
 function recorded(model: ReturnType<typeof filesModel>) {

@@ -107,9 +107,7 @@ export function stateToJson<T extends TreeTypes>(
         rootItemIds: [...state.rootItemIds],
         items: items as Record<string, TreeItemJson<T>>,
         expandedItemIds: [...state.expandedItemIds],
-        checkedItemIds: [...state.checkedItemIds],
         focusedItemId: state.focusedItemId,
-        renamingItemId: state.renamingItemId,
         ...features.toJson(state as unknown as FeatureState),
     };
 }

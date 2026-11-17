@@ -2,7 +2,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { matchesKey, parseKey } from "../../src/keyboard/key-map";
 import { type Mounted, mount, wait } from "../engine/dom";
-import { filesModel } from "../fixture";
+import { allFeatures, filesModel } from "../fixture";
 
 let mounted: Mounted | undefined;
 afterEach(() => {
@@ -136,7 +136,12 @@ describe("the APG keyboard: selecting", () => {
     });
 
     it("Space toggles the checkbox when checkboxes are on", () => {
-        mounted = mount(filesModel(), { checkboxes: true });
+        mounted = mount(
+            filesModel(
+                {},
+                { features: allFeatures({ checkboxes: { space: "check" } }) },
+            ),
+        );
         const m = mounted;
         m.engine.run("focus", { itemId: "utils" });
         m.key(" ");
@@ -211,7 +216,12 @@ describe("the APG keyboard: selecting", () => {
 
 describe("type-ahead", () => {
     it("moves to the next visible item whose label starts with the typed text", async () => {
-        mounted = mount(filesModel(), { typeAheadTimeout: 30 });
+        mounted = mount(
+            filesModel(
+                {},
+                { features: allFeatures({ typeAhead: { timeout: 30 } }) },
+            ),
+        );
         const m = mounted;
         m.engine.run("focus", { itemId: "src" });
         m.key("u");
@@ -232,8 +242,11 @@ describe("type-ahead", () => {
     });
 
     it("typing the same character again cycles through its items", async () => {
-        const model = filesModel({ expandedItemIds: ["src", "utils"] });
-        mounted = mount(model, { typeAheadTimeout: 30 });
+        const model = filesModel(
+            { expandedItemIds: ["src", "utils"] },
+            { features: allFeatures({ typeAhead: { timeout: 30 } }) },
+        );
+        mounted = mount(model);
         const m = mounted;
         m.engine.run("focus", { itemId: "src" });
         m.key("a");

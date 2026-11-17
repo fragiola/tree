@@ -1,13 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { selection } from "../../src/selection/selection";
 import { TreeValidationError, validateTree } from "../../src/state/load";
 import { createTreeModel } from "../../src/state/model";
 import { DEFAULT_SETTINGS } from "../../src/state/types";
-import { files, filesModel } from "../fixture";
+import { allFeatures, bareFiles, files, filesModel } from "../fixture";
 
-const features = [selection()] as const;
+const features = allFeatures();
 
-/** The issues of a document that should not load (with the selection feature), as `path: message`. */
+/** The issues of a document that should not load (with every feature), as `path: message`. */
 function issues(json: unknown, withFeatures = true): string[] {
     return validateTree(json, withFeatures ? { features } : {}).map(
         (issue) => `${issue.path}: ${issue.message}`,
@@ -32,6 +31,8 @@ describe("loading a document", () => {
         expect(model.state.settings).toEqual({
             ...DEFAULT_SETTINGS,
             selectionMode: "single",
+            checkMode: "cascade",
+            renamable: true,
         });
         expect(model.state.selectedItemIds).toEqual([]);
         expect(filesModel({}, { features: [] }).state.settings).toEqual(
@@ -43,7 +44,7 @@ describe("loading a document", () => {
     });
 
     it("freezes the state, and never the caller's document", () => {
-        const json = files();
+        const json = bareFiles();
         const model = createTreeModel(json);
         expect(Object.isFrozen(model.state)).toBe(true);
         expect(Object.isFrozen(model.state.items.app)).toBe(true);
@@ -65,6 +66,8 @@ describe("loading a document", () => {
         expect(first.settings).toEqual({
             ...DEFAULT_SETTINGS,
             selectionMode: "multiple",
+            checkMode: "cascade",
+            renamable: true,
         });
         expect(first.items.src).toEqual({
             id: "src",
@@ -105,19 +108,22 @@ describe("loading a document", () => {
     });
 
     it("gives a loaded parent its list, and drops the children of one waiting for the loader", () => {
-        const model = createTreeModel({
-            version: 1,
-            rootItemIds: ["x", "y"],
-            items: {
-                x: { kind: "folder", label: "x", childrenStatus: "loaded" },
-                y: {
-                    kind: "folder",
-                    label: "y",
-                    childrenStatus: "error",
-                    childItemIds: [],
+        const model = createTreeModel(
+            {
+                version: 1,
+                rootItemIds: ["x", "y"],
+                items: {
+                    x: { kind: "folder", label: "x", childrenStatus: "loaded" },
+                    y: {
+                        kind: "folder",
+                        label: "y",
+                        childrenStatus: "error",
+                        childItemIds: [],
+                    },
                 },
             },
-        });
+            { features },
+        );
         expect(model.state.items.x?.childItemIds).toEqual([]);
         expect(model.state.items.y?.childItemIds).toBeUndefined();
     });
@@ -154,7 +160,8 @@ describe("an invalid document", () => {
         expect(() => createTreeModel(json as never)).toThrow(
             TreeValidationError,
         );
-        expect(validateTree(files())).toEqual([]);
+        expect(validateTree(bareFiles())).toEqual([]);
+        expect(validateTree(files(), { features })).toEqual([]);
     });
 
     it("refuses unknown fields and wrong types", () => {
@@ -224,23 +231,46 @@ describe("an invalid document", () => {
 
     it("refuses the fields and settings of a feature that is not installed", () => {
         const json = files({
-            settings: { selectionMode: "multiple" },
+            settings: {
+                selectionMode: "multiple",
+                checkMode: "independent",
+                renamable: false,
+            },
             selectedItemIds: ["app"],
             selectionAnchorItemId: "app",
+            checkedItemIds: ["app"],
+            renamingItemId: "app",
+            items: {
+                ...files().items,
+                readme: {
+                    kind: "file",
+                    label: "readme.md",
+                    data: { size: 3 },
+                    renamable: false,
+                },
+            },
         });
         expect(issues(json, false)).toEqual([
             "/selectedItemIds: requires the selection feature (`@fragiola/tree/selection`)",
             "/selectionAnchorItemId: requires the selection feature (`@fragiola/tree/selection`)",
+            "/checkedItemIds: requires the checkboxes feature (`@fragiola/tree/checkboxes`)",
+            "/renamingItemId: requires the rename feature (`@fragiola/tree/rename`)",
+            "/items/lib/childrenStatus: requires the async-children feature (`@fragiola/tree/async-children`)",
+            "/items/readme/renamable: requires the rename feature (`@fragiola/tree/rename`)",
             "/settings/selectionMode: requires the selection feature (`@fragiola/tree/selection`)",
+            "/settings/checkMode: requires the checkboxes feature (`@fragiola/tree/checkboxes`)",
+            "/settings/renamable: requires the rename feature (`@fragiola/tree/rename`)",
         ]);
         expect(() => createTreeModel(json)).toThrow(TreeValidationError);
         expect(issues(json)).toEqual([]);
     });
 
     it("writes only the installed features' fields", () => {
-        const bare = createTreeModel(files()).get("tree-json");
+        const bare = createTreeModel(bareFiles()).get("tree-json");
         expect("selectedItemIds" in bare).toBe(false);
         expect("selectionAnchorItemId" in bare).toBe(false);
+        expect("checkedItemIds" in bare).toBe(false);
+        expect("renamingItemId" in bare).toBe(false);
         expect(bare.settings).toEqual(DEFAULT_SETTINGS);
     });
 

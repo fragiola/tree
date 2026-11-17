@@ -3,7 +3,6 @@
 import { requiresFeature } from "../features/registry";
 import type { FeatureState } from "../features/types";
 import { idListSchema, settingsProperties, treeSchema } from "../schema/tree";
-import { normalizeChecks } from "../state/check-state";
 import type { StateField } from "../state/draft";
 import type { TreeSettings, TreeState } from "../state/types";
 import { defineCommand, fail, ok } from "./define";
@@ -17,20 +16,23 @@ const settingsResultSchema = {
         },
         checkMode: {
             ...settingsProperties.checkMode,
-            description: "how checkboxes relate",
+            description: "how checkboxes relate (`checkboxes()`)",
         },
         movable: { type: "boolean", description: "the default of movable" },
-        renamable: { type: "boolean", description: "the default of renamable" },
+        renamable: {
+            type: "boolean",
+            description: "the default of renamable (`rename()`)",
+        },
         droppable: { type: "boolean", description: "the default of droppable" },
     },
-    required: ["checkMode", "movable", "renamable", "droppable"],
+    required: ["movable", "droppable"],
     additionalProperties: false,
 } as const;
 
 export const treeConfigure = defineCommand({
     name: "tree.configure",
     description:
-        "Change the tree's settings: the selection mode (none, single, multiple; a narrower mode trims the selection; with the selection feature), the check mode (cascade or independent; switching to cascade makes the checks consistent) and the defaults of the movable, renamable and droppable flags.",
+        "Change the tree's settings: the defaults of the movable and droppable flags, and an installed feature's: the selection mode (none, single, multiple; a narrower mode trims the selection; the selection feature), the check mode (cascade or independent; switching to cascade makes the checks consistent; the checkboxes feature), the default of the renamable flag (the rename feature).",
     payloadSchema: {
         type: "object",
         properties: {
@@ -73,20 +75,6 @@ export const treeConfigure = defineCommand({
         );
         if (changed) draft.set("settings", settings);
         draft.features.configured(draft, before as FeatureState["settings"]);
-        if (
-            settings.checkMode === "cascade" &&
-            before.checkMode !== "cascade"
-        ) {
-            normalizeChecks(draft);
-        }
-        if (
-            settings.renamable === false &&
-            draft.state.renamingItemId !== null
-        ) {
-            const item = draft.item(draft.state.renamingItemId);
-            if (item?.renamable === undefined)
-                draft.set("renamingItemId", null);
-        }
         return ok({ settings: { ...draft.settings } });
     },
 });
@@ -96,9 +84,7 @@ const FIELDS: readonly StateField[] = [
     "settings",
     "rootItemIds",
     "expandedItemIds",
-    "checkedItemIds",
     "focusedItemId",
-    "renamingItemId",
 ];
 
 export const treeLoad = defineCommand({

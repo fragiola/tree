@@ -6,7 +6,7 @@ import { selection } from "../../src/selection/selection";
 import { createTreeModel } from "../../src/state/model";
 import { virtualization } from "../../src/virtual/virtualization";
 import { type Mounted, mount } from "../engine/dom";
-import { files, filesModel } from "../fixture";
+import { bareFiles, files, filesModel } from "../fixture";
 
 let mounted: Mounted<readonly []> | undefined;
 afterEach(() => {
@@ -46,7 +46,7 @@ describe("the feature registry", () => {
             "Missing features: virtualization requires selection",
         );
         expect(() =>
-            createTreeModel(files(), { features: [selection(), needy] }),
+            createTreeModel(bareFiles(), { features: [selection(), needy] }),
         ).not.toThrow();
     });
 
@@ -95,7 +95,7 @@ describe("the feature registry", () => {
 
     it("lists only the installed features' commands", () => {
         const names = (features: readonly AnyTreeFeature[]) =>
-            createTreeModel(files(), { features })
+            createTreeModel(bareFiles(), { features })
                 .get("commands")
                 .map((command) => command.name);
         expect(names([])).not.toContain("item.select");
