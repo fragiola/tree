@@ -1,4 +1,8 @@
 import { createTreeModel, type TreeJson } from "@fragiola/tree-react";
+import {
+    type SelectionFeature,
+    selection,
+} from "@fragiola/tree-react/selection";
 import { useState } from "react";
 import { StyledTree } from "../../fixture/styled";
 
@@ -49,6 +53,10 @@ function big(): TreeJson<Types> {
 }
 
 export default function Stress() {
-    const [model] = useState(() => createTreeModel<Types>(big()));
+    const [model] = useState(() =>
+        createTreeModel<Types, readonly [SelectionFeature]>(big(), {
+            features: [selection()],
+        }),
+    );
     return <StyledTree<Types> model={model} />;
 }

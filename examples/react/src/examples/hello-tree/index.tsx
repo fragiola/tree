@@ -1,8 +1,12 @@
 "use client";
 
 import { type ItemOf, Tree, type TreeJson } from "@fragiola/tree-react";
+import { selection } from "@fragiola/tree-react/selection";
 import { ChevronRight } from "lucide-react";
 import * as styles from "./styles";
+
+/** The opt-in features of the root's model: the selection. */
+const features = [selection()];
 
 // What the tree holds: each kind of item and the type of its data.
 type Types = { items: { folder: undefined; file: undefined } };
@@ -31,6 +35,7 @@ export default function HelloTree() {
             {/* the root keeps its own model from `defaultTree`; the name is yours */}
             <Tree.Root<Types>
                 defaultTree={json}
+                features={features}
                 aria-label="Documents"
                 className={styles.root}
             >

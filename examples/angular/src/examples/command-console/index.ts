@@ -6,6 +6,10 @@ import {
     veto,
 } from "@fragiola/tree-angular";
 import {
+    type SelectionFeature,
+    selection,
+} from "@fragiola/tree-angular/selection";
+import {
     LucideChevronRight,
     LucideFile,
     LucideFolder,
@@ -143,7 +147,10 @@ let nextId = 0;
 export default class CommandConsole {
     protected readonly styles = styles;
     protected readonly presets = PRESETS;
-    protected readonly model = createTreeModel<FileTypes>(fileSystem());
+    protected readonly model = createTreeModel<
+        FileTypes,
+        readonly [SelectionFeature]
+    >(fileSystem(), { features: [selection()] });
     protected readonly commands = this.model.get("commands");
     protected readonly text = signal(format(PRESETS[0]?.input));
     protected readonly outcome = signal<Outcome>(undefined);

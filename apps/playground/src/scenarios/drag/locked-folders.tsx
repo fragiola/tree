@@ -1,4 +1,8 @@
 import { createTreeModel, type TreeJson, veto } from "@fragiola/tree-react";
+import {
+    type SelectionFeature,
+    selection,
+} from "@fragiola/tree-react/selection";
 import { useState } from "react";
 import { StyledTree } from "../../fixture/styled";
 import { useInspector } from "../../inspector/context";
@@ -35,7 +39,10 @@ const json: TreeJson<Types> = {
 
 export default function LockedFolders() {
     const [model] = useState(() => {
-        const created = createTreeModel<Types>(json);
+        const created = createTreeModel<Types, readonly [SelectionFeature]>(
+            json,
+            { features: [selection()] },
+        );
         created.use((ctx, next) =>
             ctx.command === "item.move" &&
             (ctx.payload as { to: { parentItemId: string | null } }).to

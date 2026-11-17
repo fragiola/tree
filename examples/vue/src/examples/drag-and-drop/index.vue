@@ -6,6 +6,7 @@ import {
     type TreeJson,
     type TreeModel,
 } from "@fragiola/tree-vue";
+import { type SelectionFeature, selection } from "@fragiola/tree-vue/selection";
 import { Lock } from "@lucide/vue";
 import { useId } from "vue";
 import FileItem from "./file-item.vue";
@@ -78,7 +79,9 @@ function announcer(model: TreeModel<Types>) {
 }
 
 // The model is the source of truth: create it once (never in a ref).
-const model = createTreeModel<Types>(json);
+const model = createTreeModel<Types, readonly [SelectionFeature]>(json, {
+    features: [selection()],
+});
 const announce = announcer(model);
 // one description for every locked item, referenced by id (hidden, still read)
 const lockedId = useId();

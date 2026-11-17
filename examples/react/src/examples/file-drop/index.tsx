@@ -12,6 +12,10 @@ import {
     type TreeRef,
     useTreeRef,
 } from "@fragiola/tree-react";
+import {
+    type SelectionFeature,
+    selection,
+} from "@fragiola/tree-react/selection";
 import { ChevronRight, File, Folder, Trash2, Upload } from "lucide-react";
 import { useCallback, useState, useSyncExternalStore } from "react";
 import { type FileTypes, fileSystem, formatSize } from "../_kit/data";
@@ -79,7 +83,11 @@ function announcer(model: TreeModel<FileTypes>) {
 }
 
 export default function FileDrop() {
-    const [model] = useState(() => createTreeModel<FileTypes>(fileSystem()));
+    const [model] = useState(() =>
+        createTreeModel<FileTypes, readonly [SelectionFeature]>(fileSystem(), {
+            features: [selection()],
+        }),
+    );
     const [announce] = useState(() => announcer(model));
     const tree = useTreeRef<FileTypes>();
     const overTrash = useDragOver(tree);

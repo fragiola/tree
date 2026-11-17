@@ -54,7 +54,8 @@ function kitImportsOfReact(source: string): {
 const ALLOWED = [
     /^react$/,
     /^react-dom$/,
-    /^@fragiola\/tree-react$/,
+    // the adapter and its feature entries (`@fragiola/tree-react/selection`)
+    /^@fragiola\/tree-react(?:\/[a-z-]+)?$/,
     /^lucide-react$/,
     /^#\/components\/(ui|atoms)\/[a-z-]+$/,
     /^#\/lib\/cn$/,

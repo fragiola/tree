@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { createTreeModel } from "@fragiola/tree-vue";
+import { type SelectionFeature, selection } from "@fragiola/tree-vue/selection";
 import { onScopeDispose, ref, useId } from "vue";
 import { type FileTypes, fileSystem } from "../_kit/data";
 import FileItem from "./file-item.vue";
@@ -7,7 +8,10 @@ import { namingRules } from "./naming-rules";
 import * as styles from "./styles";
 import { Tree } from "./tree";
 
-const model = createTreeModel<FileTypes>(fileSystem());
+const model = createTreeModel<FileTypes, readonly [SelectionFeature]>(
+    fileSystem(),
+    { features: [selection()] },
+);
 // the reason the last rename was refused, until the label changes or the rename ends
 const error = ref<string>();
 const errorId = useId();

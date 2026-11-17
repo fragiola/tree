@@ -10,6 +10,10 @@ import {
     useTreeState,
 } from "@fragiola/tree-react";
 import {
+    type SelectionFeature,
+    selection,
+} from "@fragiola/tree-react/selection";
+import {
     ChevronRight,
     CircleAlert,
     File,
@@ -44,7 +48,11 @@ const json: TreeJson<FileTypes> = {
 };
 
 export default function AsyncLoading() {
-    const [model] = useState(() => createTreeModel<FileTypes>(json));
+    const [model] = useState(() =>
+        createTreeModel<FileTypes, readonly [SelectionFeature]>(json, {
+            features: [selection()],
+        }),
+    );
     // an app's loader fetches from its back-end; this fake answers after 500 ms, and fails the
     // first load of "documents"
     const [loadChildren] = useState(() =>

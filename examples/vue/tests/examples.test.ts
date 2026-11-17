@@ -21,7 +21,8 @@ const EXAMPLES_DIR = APP.examplesDir;
 /** What an example file may import, besides relative files inside examples/. */
 const ALLOWED = [
     /^vue$/,
-    /^@fragiola\/tree-vue$/,
+    // the adapter and its feature entries (`@fragiola/tree-vue/selection`)
+    /^@fragiola\/tree-vue(?:\/[a-z-]+)?$/,
     /^@lucide\/vue$/,
     /^#\/components\/(ui|atoms)\/[a-z-]+$/,
     /^#\/lib\/cn$/,

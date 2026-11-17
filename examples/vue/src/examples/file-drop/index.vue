@@ -8,6 +8,7 @@ import {
     type TreeModel,
     useTreeRef,
 } from "@fragiola/tree-vue";
+import { type SelectionFeature, selection } from "@fragiola/tree-vue/selection";
 import { Trash2, Upload } from "@lucide/vue";
 import { ref, watchEffect } from "vue";
 import { type FileTypes, fileSystem } from "../_kit/data";
@@ -77,7 +78,10 @@ function announcer(model: TreeModel<FileTypes>) {
 }
 
 // The model is the source of truth: create it once (never in a ref).
-const model = createTreeModel<FileTypes>(fileSystem());
+const model = createTreeModel<FileTypes, readonly [SelectionFeature]>(
+    fileSystem(),
+    { features: [selection()] },
+);
 const announce = announcer(model);
 const tree = useTreeRef<FileTypes>();
 

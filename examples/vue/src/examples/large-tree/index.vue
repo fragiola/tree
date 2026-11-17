@@ -2,13 +2,15 @@
 import {
     type AnnounceEvent,
     createTreeModel,
-    createTreeVirtualizer,
     type DropTarget,
+    type TreeEngine,
     type TreeJson,
     type TreeModel,
     useTreeRef,
     useTreeState,
 } from "@fragiola/tree-vue";
+import { selection } from "@fragiola/tree-vue/selection";
+import { virtualization } from "@fragiola/tree-vue/virtualization";
 import { ChevronRight, File, Folder } from "@lucide/vue";
 import { ref, watchEffect } from "vue";
 import { Clickable } from "#/components/atoms/clickable";
@@ -40,10 +42,12 @@ function largeTree(): TreeJson<Types> {
     return { version: 1, rootItemIds, items, expandedItemIds: rootItemIds };
 }
 
-// The virtualizer: the engine renders only the rows in view, plus 10 on each side. Each theme
-// sizes the rows, so they are measured (estimated at 28px until then). Create it once: it holds
-// options only, and another one would make another engine.
-const virtual = createTreeVirtualizer({ estimateRowSize: 28, overscan: 10 });
+// The virtualization feature: the engine renders only the rows in view, plus 10 on each side. Each
+// theme sizes the rows, so they are measured (estimated at 28px until then).
+const features = [
+    selection(),
+    virtualization({ estimateRowSize: 28, overscan: 10 }),
+] as const;
 
 /** The live region's text for each step of a drag (pointer or keyboard): the package writes none. */
 function announcer(model: TreeModel<Types>) {
@@ -76,7 +80,9 @@ function announcer(model: TreeModel<Types>) {
 }
 
 // The model is the source of truth: create it once (never in a ref).
-const model = createTreeModel<Types>(largeTree());
+const model = createTreeModel<Types, typeof features>(largeTree(), {
+    features,
+});
 const announce = announcer(model);
 const tree = useTreeRef<Types>();
 const visible = useTreeState<Types, number>(
@@ -90,7 +96,10 @@ watchEffect((onCleanup) => {
     const engine = tree.value?.engine;
     if (!engine) return;
     const read = () => {
-        rendered.value = engine.get("virtual-window")?.rows.length ?? 0;
+        rendered.value =
+            (engine as unknown as TreeEngine<Types, typeof features>).get(
+                "virtual-window",
+            )?.rows.length ?? 0;
     };
     read();
     const stopEngine = engine.subscribe(read);
@@ -126,7 +135,6 @@ watchEffect((onCleanup) => {
         </div>
         <Tree.Root
             :model="model"
-            :virtual="virtual"
             :tree-ref="tree"
             :indicator-inset="styles.indicatorInset"
             :announce="announce"

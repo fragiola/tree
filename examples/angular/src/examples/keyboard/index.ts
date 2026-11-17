@@ -6,6 +6,10 @@ import {
     TREE,
     type TreeModel,
 } from "@fragiola/tree-angular";
+import {
+    type SelectionFeature,
+    selection,
+} from "@fragiola/tree-angular/selection";
 import { LucideChevronRight, LucideFile, LucideFolder } from "@lucide/angular";
 import { type FileTypes, fileSystem } from "../_kit/data";
 import * as styles from "./styles";
@@ -127,10 +131,16 @@ export default class Keyboard {
     protected readonly styles = styles;
     protected readonly keys = KEYS;
     // The model is the source of truth: create it once.
-    protected readonly model = createTreeModel<FileTypes>({
-        ...fileSystem(),
-        settings: { selectionMode: "multiple" },
-    });
+    protected readonly model = createTreeModel<
+        FileTypes,
+        readonly [SelectionFeature]
+    >(
+        {
+            ...fileSystem(),
+            settings: { selectionMode: "multiple" },
+        },
+        { features: [selection()] },
+    );
     protected readonly announce = announcer(this.model);
     protected readonly legendId = `keyboard-legend-${nextId++}`;
 }

@@ -7,6 +7,10 @@ import {
     Tree,
     veto,
 } from "@fragiola/tree-react";
+import {
+    type SelectionFeature,
+    selection,
+} from "@fragiola/tree-react/selection";
 import { ChevronRight, File, Folder, Play } from "lucide-react";
 import { useEffect, useId, useState } from "react";
 import { Clickable } from "#/components/atoms/clickable";
@@ -60,7 +64,11 @@ function outcomeOf(result: CommandResult<unknown>): Outcome {
 }
 
 export default function CommandConsole() {
-    const [model] = useState(() => createTreeModel<FileTypes>(fileSystem()));
+    const [model] = useState(() =>
+        createTreeModel<FileTypes, readonly [SelectionFeature]>(fileSystem(), {
+            features: [selection()],
+        }),
+    );
     const [text, setText] = useState(() => format(PRESETS[0]?.input));
     const [outcome, setOutcome] = useState<Outcome>();
     const inputId = useId();

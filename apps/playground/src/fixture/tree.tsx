@@ -5,6 +5,7 @@ import {
     type TreeJson,
     useTreeItemRename,
 } from "@fragiola/tree-react";
+import { selection } from "@fragiola/tree-react/selection";
 
 // The unstyled tree every fixture renders: each primitive, the labels as text, the names inline.
 
@@ -53,9 +54,12 @@ function Item({ item }: { item: ItemOf<Types> }) {
     );
 }
 
+/** The fixtures' features: the selection. */
+const FEATURES = [selection()];
+
 export function FixtureTree(props: RootProps<Types>) {
     return (
-        <Tree.Root<Types> aria-label="Files" {...props}>
+        <Tree.Root<Types> aria-label="Files" features={FEATURES} {...props}>
             <Tree.Items<Types>>{(item) => <Item item={item} />}</Tree.Items>
             <Tree.DropIndicator />
             <Tree.LiveRegion />

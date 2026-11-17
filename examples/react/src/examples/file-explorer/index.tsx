@@ -1,6 +1,7 @@
 "use client";
 
 import { type ItemOf, Tree, useTreeState } from "@fragiola/tree-react";
+import { selection } from "@fragiola/tree-react/selection";
 import {
     ChevronRight,
     File,
@@ -15,6 +16,9 @@ import { useId } from "react";
 import { type FileTypes, fileSystem, formatSize } from "../_kit/data";
 import * as styles from "./styles";
 
+/** The opt-in features of the root's model: the selection. */
+const features = [selection()];
+
 // The kit's file system: folders, and files whose `data` is `{ size }` (typed by `FileTypes`).
 const json = fileSystem();
 
@@ -24,6 +28,7 @@ export default function FileExplorer() {
             {/* expandOnClick: a click on a folder's row also opens or closes it */}
             <Tree.Root<FileTypes>
                 defaultTree={json}
+                features={features}
                 expandOnClick
                 aria-label="Project files"
                 className={styles.root}

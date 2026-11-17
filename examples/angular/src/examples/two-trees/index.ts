@@ -8,6 +8,10 @@ import {
     type TreeModel,
 } from "@fragiola/tree-angular";
 import {
+    type SelectionFeature,
+    selection,
+} from "@fragiola/tree-angular/selection";
+import {
     LucideChevronRight,
     LucideFolder,
     LucideGripVertical,
@@ -195,9 +199,17 @@ export default class TwoTrees {
     protected readonly switchId = `two-trees-switch-${nextId++}`;
     // separate models (a transfer between them), or one model both trees show (a move)
     private readonly models = {
-        available: createTreeModel<Types>(available),
-        selected: createTreeModel<Types>(selected),
-        shared: createTreeModel<Types>(available),
+        available: createTreeModel<Types, readonly [SelectionFeature]>(
+            available,
+            { features: [selection()] },
+        ),
+        selected: createTreeModel<Types, readonly [SelectionFeature]>(
+            selected,
+            { features: [selection()] },
+        ),
+        shared: createTreeModel<Types, readonly [SelectionFeature]>(available, {
+            features: [selection()],
+        }),
     };
     protected readonly shared = signal(false);
     protected readonly lists = computed(() => {

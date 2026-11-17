@@ -10,6 +10,10 @@ import {
     type TreeModel,
 } from "@fragiola/tree-react";
 import {
+    type SelectionFeature,
+    selection,
+} from "@fragiola/tree-react/selection";
+import {
     ChevronRight,
     File,
     Folder,
@@ -88,7 +92,11 @@ function announcer(model: TreeModel<Types>) {
 }
 
 export default function DragAndDrop() {
-    const [model] = useState(() => createTreeModel<Types>(json));
+    const [model] = useState(() =>
+        createTreeModel<Types, readonly [SelectionFeature]>(json, {
+            features: [selection()],
+        }),
+    );
     const [announce] = useState(() => announcer(model));
     // one description for every locked item, referenced by id (hidden, still read)
     const lockedId = useId();

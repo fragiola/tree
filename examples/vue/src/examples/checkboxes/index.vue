@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { createTreeModel, useTreeState } from "@fragiola/tree-vue";
+import { type SelectionFeature, selection } from "@fragiola/tree-vue/selection";
 import { type PermissionTypes, permissions } from "../_kit/data";
 import PermissionItem from "./permission-item.vue";
 import * as styles from "./styles";
@@ -9,7 +10,10 @@ import { Tree } from "./tree";
 // checks its permissions, and a group with only some of them checked is mixed. `checkboxes` puts
 // `aria-checked` on every item, and makes Space toggle the focused item's check.
 
-const model = createTreeModel<PermissionTypes>(permissions());
+const model = createTreeModel<PermissionTypes, readonly [SelectionFeature]>(
+    permissions(),
+    { features: [selection()] },
+);
 // the scopes the app would save: the checked permissions (a group is only a shortcut)
 const scopes = useTreeState<PermissionTypes, string>(
     (state) =>

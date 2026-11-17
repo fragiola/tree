@@ -5,6 +5,7 @@ import {
     type DropTarget,
     type TreeModel,
 } from "@fragiola/tree-vue";
+import { type SelectionFeature, selection } from "@fragiola/tree-vue/selection";
 import { useId } from "vue";
 import { type FileTypes, fileSystem } from "../_kit/data";
 import FileItem from "./file-item.vue";
@@ -69,10 +70,13 @@ function announcer(model: TreeModel<FileTypes>) {
 }
 
 // The model is the source of truth: create it once (never in a ref).
-const model = createTreeModel<FileTypes>({
-    ...fileSystem(),
-    settings: { selectionMode: "multiple" },
-});
+const model = createTreeModel<FileTypes, readonly [SelectionFeature]>(
+    {
+        ...fileSystem(),
+        settings: { selectionMode: "multiple" },
+    },
+    { features: [selection()] },
+);
 const announce = announcer(model);
 const legendId = useId();
 </script>

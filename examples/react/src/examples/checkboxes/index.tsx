@@ -8,6 +8,10 @@ import {
     useTreeItem,
     useTreeState,
 } from "@fragiola/tree-react";
+import {
+    type SelectionFeature,
+    selection,
+} from "@fragiola/tree-react/selection";
 import { Check, ChevronRight, Minus } from "lucide-react";
 import { useState } from "react";
 import { type PermissionTypes, permissions } from "../_kit/data";
@@ -19,7 +23,10 @@ import * as styles from "./styles";
 
 export default function Checkboxes() {
     const [model] = useState(() =>
-        createTreeModel<PermissionTypes>(permissions()),
+        createTreeModel<PermissionTypes, readonly [SelectionFeature]>(
+            permissions(),
+            { features: [selection()] },
+        ),
     );
     // the scopes the app would save: the checked permissions (a group is only a shortcut)
     const scopes = useTreeState<PermissionTypes, string>(

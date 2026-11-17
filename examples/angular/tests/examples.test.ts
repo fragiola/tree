@@ -22,7 +22,8 @@ const EXAMPLES_DIR = APP.examplesDir;
 /** What an example file may import, besides relative files inside examples/. */
 const ALLOWED = [
     /^@angular\/(core|common)$/,
-    /^@fragiola\/tree-angular$/,
+    // the adapter and its feature entries (`@fragiola/tree-angular/selection`)
+    /^@fragiola\/tree-angular(?:\/[a-z-]+)?$/,
     /^@lucide\/angular$/,
     /^#\/components\/(ui|atoms)\/[a-z-]+$/,
     /^#\/lib\/cn$/,

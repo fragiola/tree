@@ -8,6 +8,10 @@ import {
     type TreeModel,
 } from "@fragiola/tree-angular";
 import {
+    type SelectionFeature,
+    selection,
+} from "@fragiola/tree-angular/selection";
+import {
     LucideChevronRight,
     LucideFile,
     LucideFolder,
@@ -157,7 +161,10 @@ let nextId = 0;
 export default class DragAndDrop {
     protected readonly styles = styles;
     // The model is the source of truth: create it once.
-    protected readonly model = createTreeModel<Types>(json);
+    protected readonly model = createTreeModel<
+        Types,
+        readonly [SelectionFeature]
+    >(json, { features: [selection()] });
     protected readonly announce = announcer(this.model);
     /** one description for every locked item, referenced by id (hidden, still read) */
     protected readonly lockedId = `drag-and-drop-locked-${nextId++}`;

@@ -1,5 +1,10 @@
 <script setup lang="ts">
-import { createTreeModel, useTreeState } from "@fragiola/tree-vue";
+import {
+    createTreeModel,
+    type TreeStateOf,
+    useTreeState,
+} from "@fragiola/tree-vue";
+import { type SelectionFeature, selection } from "@fragiola/tree-vue/selection";
 import { Redo2, Trash2, Undo2 } from "@lucide/vue";
 import { onUnmounted, shallowRef } from "vue";
 import { Clickable } from "#/components/atoms/clickable";
@@ -8,6 +13,9 @@ import { UndoManager } from "../_kit/undo";
 import FileItem from "./file-item.vue";
 import * as styles from "./styles";
 import { Tree } from "./tree";
+
+/** The state of a model with the selection feature. */
+type Selected = TreeStateOf<FileTypes, readonly [SelectionFeature]>;
 
 // Undo/redo is app code (`_kit/undo.ts`): it listens to the model's commits, keeps the document
 // before each step, and puts it back with `tree.load`. The package ships no history.
@@ -24,7 +32,10 @@ const STEP_NAMES: Partial<Record<string, string>> = {
 const stepName = (command: string) => STEP_NAMES[command] ?? command;
 
 // the model and its history are created once, outside Vue's reactivity
-const model = createTreeModel<FileTypes>(fileSystem());
+const model = createTreeModel<FileTypes, readonly [SelectionFeature]>(
+    fileSystem(),
+    { features: [selection()] },
+);
 const history = new UndoManager(model);
 // the history's snapshot, as a ref that changes with it
 const snapshot = shallowRef(history.getSnapshot());
@@ -35,7 +46,7 @@ onUnmounted(
 );
 
 const selected = useTreeState<FileTypes, number>(
-    (state) => state.selectedItemIds.length,
+    (state) => (state as Selected).selectedItemIds.length,
     { model },
 );
 const remove = () =>

@@ -9,6 +9,10 @@ import {
     type TreeModel,
     useTreeItemRename,
 } from "@fragiola/tree-react";
+import {
+    type SelectionFeature,
+    selection,
+} from "@fragiola/tree-react/selection";
 import { ChevronRight, File, Folder } from "lucide-react";
 import { Fragment, useId, useState } from "react";
 import { type FileTypes, fileSystem } from "../_kit/data";
@@ -73,10 +77,13 @@ function announcer(model: TreeModel<FileTypes>) {
 
 export default function Keyboard() {
     const [model] = useState(() =>
-        createTreeModel<FileTypes>({
-            ...fileSystem(),
-            settings: { selectionMode: "multiple" },
-        }),
+        createTreeModel<FileTypes, readonly [SelectionFeature]>(
+            {
+                ...fileSystem(),
+                settings: { selectionMode: "multiple" },
+            },
+            { features: [selection()] },
+        ),
     );
     const [announce] = useState(() => announcer(model));
     const legendId = useId();

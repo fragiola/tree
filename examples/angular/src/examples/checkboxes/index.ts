@@ -1,5 +1,9 @@
 import { Component, computed } from "@angular/core";
 import { createTreeModel, injectTreeState, TREE } from "@fragiola/tree-angular";
+import {
+    type SelectionFeature,
+    selection,
+} from "@fragiola/tree-angular/selection";
 import { LucideCheck, LucideChevronRight, LucideMinus } from "@lucide/angular";
 import { type PermissionTypes, permissions } from "../_kit/data";
 import * as styles from "./styles";
@@ -62,7 +66,10 @@ import * as styles from "./styles";
 })
 export default class Checkboxes {
     protected readonly styles = styles;
-    protected readonly model = createTreeModel<PermissionTypes>(permissions());
+    protected readonly model = createTreeModel<
+        PermissionTypes,
+        readonly [SelectionFeature]
+    >(permissions(), { features: [selection()] });
     // the scopes the app would save: the checked permissions (a group is only a shortcut)
     private readonly scopes = injectTreeState<PermissionTypes, string>(
         (state) =>

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { selection } from "@fragiola/tree-vue/selection";
 import { ref, useId } from "vue";
 import { Clickable } from "#/components/atoms/clickable";
 import { Switch } from "#/components/ui/switch";
@@ -6,6 +7,9 @@ import { fileSystem } from "../_kit/data";
 import FileItem from "./file-item.vue";
 import * as styles from "./styles";
 import { Tree } from "./tree";
+
+/** The opt-in features of the root's model: the selection. */
+const features = [selection()];
 
 const json = fileSystem();
 /** Every folder: what "Expand all" opens. */
@@ -84,7 +88,7 @@ const changeKeepSrcOpen = (checked: boolean) => {
             <!-- v-model:selected-item-ids binds the selection both ways; the expansion goes through
                  the app's own rule -->
             <Tree.Root
-                :default-tree="json"
+                :default-tree="json" :features="features"
                 :expanded-item-ids="expandedItemIds"
                 @update:expanded-item-ids="changeExpanded"
                 v-model:selected-item-ids="selectedItemIds"

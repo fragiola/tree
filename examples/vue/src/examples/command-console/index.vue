@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { type CommandResult, createTreeModel, veto } from "@fragiola/tree-vue";
+import { type SelectionFeature, selection } from "@fragiola/tree-vue/selection";
 import { Play } from "@lucide/vue";
 import { onUnmounted, ref, useId } from "vue";
 import { Clickable } from "#/components/atoms/clickable";
@@ -55,7 +56,10 @@ function outcomeOf(result: CommandResult<unknown>): Outcome {
 }
 
 // the model is created once, outside Vue's reactivity
-const model = createTreeModel<FileTypes>(fileSystem());
+const model = createTreeModel<FileTypes, readonly [SelectionFeature]>(
+    fileSystem(),
+    { features: [selection()] },
+);
 const commands = model.get("commands");
 const text = ref(format(PRESETS[0]?.input));
 const outcome = ref<Outcome>();

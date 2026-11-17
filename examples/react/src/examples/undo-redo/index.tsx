@@ -4,15 +4,23 @@ import {
     createTreeModel,
     type ItemOf,
     Tree,
+    type TreeStateOf,
     useTreeItemRename,
     useTreeState,
 } from "@fragiola/tree-react";
+import {
+    type SelectionFeature,
+    selection,
+} from "@fragiola/tree-react/selection";
 import { ChevronRight, File, Folder, Redo2, Trash2, Undo2 } from "lucide-react";
 import { type KeyboardEvent, useState, useSyncExternalStore } from "react";
 import { Clickable } from "#/components/atoms/clickable";
 import { type FileTypes, fileSystem } from "../_kit/data";
 import { UndoManager } from "../_kit/undo";
 import * as styles from "./styles";
+
+/** The state of a model with the selection feature. */
+type Selected = TreeStateOf<FileTypes, readonly [SelectionFeature]>;
 
 // Undo/redo is app code (`_kit/undo.ts`): it listens to the model's commits, keeps the document
 // before each step, and puts it back with `tree.load`. The package ships no history.
@@ -30,7 +38,10 @@ const stepName = (command: string) => STEP_NAMES[command] ?? command;
 
 export default function UndoRedo() {
     const [{ model, history }] = useState(() => {
-        const model = createTreeModel<FileTypes>(fileSystem());
+        const model = createTreeModel<FileTypes, readonly [SelectionFeature]>(
+            fileSystem(),
+            { features: [selection()] },
+        );
         return { model, history: new UndoManager(model) };
     });
     const { canUndo, canRedo, undoSteps, redoSteps } = useSyncExternalStore(
@@ -39,7 +50,7 @@ export default function UndoRedo() {
         history.getSnapshot,
     );
     const selected = useTreeState<FileTypes, number>(
-        (state) => state.selectedItemIds.length,
+        (state) => (state as Selected).selectedItemIds.length,
         { model },
     );
     const remove = () =>

@@ -1,12 +1,16 @@
 "use client";
 
 import { type ItemOf, Tree } from "@fragiola/tree-react";
+import { selection } from "@fragiola/tree-react/selection";
 import { ChevronRight, File, Folder } from "lucide-react";
 import { useId, useState } from "react";
 import { Clickable } from "#/components/atoms/clickable";
 import { Switch } from "#/components/ui/switch";
 import { type FileTypes, fileSystem } from "../_kit/data";
 import * as styles from "./styles";
+
+/** The opt-in features of the root's model: the selection. */
+const features = [selection()];
 
 const json = fileSystem();
 /** Every folder: what "Expand all" opens. */
@@ -82,6 +86,7 @@ export default function Controlled() {
             <div className={styles.body}>
                 <Tree.Root<FileTypes>
                     defaultTree={json}
+                    features={features}
                     expandedItemIds={expandedItemIds}
                     onExpandedItemIdsChange={changeExpanded}
                     selectedItemIds={selectedItemIds}

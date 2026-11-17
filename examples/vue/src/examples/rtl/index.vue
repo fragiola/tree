@@ -1,8 +1,12 @@
 <script setup lang="ts">
 import type { TreeJson } from "@fragiola/tree-vue";
+import { selection } from "@fragiola/tree-vue/selection";
 import ItemNode from "./item-node.vue";
 import * as styles from "./styles";
 import { Tree, type Types } from "./tree";
+
+/** The opt-in features of the root's model: the selection. */
+const features = [selection()];
 
 // A tree in a right-to-left document. Nothing is configured: the engine reads the root's
 // direction (`engine.get("direction")`), so Right and Left swap, and the styles use logical
@@ -39,7 +43,7 @@ const json: TreeJson<Types> = {
             السهم الأيسر <kbd :class="styles.kbd">←</kbd> يفتح المجلد،
             والسهم الأيمن <kbd :class="styles.kbd">→</kbd> يغلقه.
         </p>
-        <Tree.Root :default-tree="json" aria-label="الملفات" :class="styles.root">
+        <Tree.Root :default-tree="json" :features="features" aria-label="الملفات" :class="styles.root">
             <Tree.Items v-slot="{ item }">
                 <ItemNode :item="item" />
             </Tree.Items>

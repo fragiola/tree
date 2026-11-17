@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { createTreeModel, type TreeJson } from "@fragiola/tree-vue";
+import { type SelectionFeature, selection } from "@fragiola/tree-vue/selection";
 import { computed, ref, useId } from "vue";
 import { Switch } from "#/components/ui/switch";
 import List from "./list.vue";
@@ -46,9 +47,15 @@ const selected: TreeJson<Types> = { version: 1, rootItemIds: [], items: {} };
 // separate models (a transfer between them), or one model both trees show (a move); created
 // once (never in a ref)
 const models = {
-    available: createTreeModel<Types>(available),
-    selected: createTreeModel<Types>(selected),
-    shared: createTreeModel<Types>(available),
+    available: createTreeModel<Types, readonly [SelectionFeature]>(available, {
+        features: [selection()],
+    }),
+    selected: createTreeModel<Types, readonly [SelectionFeature]>(selected, {
+        features: [selection()],
+    }),
+    shared: createTreeModel<Types, readonly [SelectionFeature]>(available, {
+        features: [selection()],
+    }),
 };
 const shared = ref(false);
 const switchId = useId();

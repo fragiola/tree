@@ -5,10 +5,15 @@ import {
     type ItemOf,
     Tree,
     type TreeModel,
+    type TreeStateOf,
     useTreeItemRename,
     useTreeState,
     validateTree,
 } from "@fragiola/tree-react";
+import {
+    type SelectionFeature,
+    selection,
+} from "@fragiola/tree-react/selection";
 import { ChevronRight, File, Folder, RotateCcw, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Clickable } from "#/components/atoms/clickable";
@@ -16,16 +21,29 @@ import { type FileTypes, fileSystem } from "../_kit/data";
 import { persistTree, restoreTree } from "../_kit/persist";
 import * as styles from "./styles";
 
+/** The state of a model with the selection feature. */
+type Selected = TreeStateOf<FileTypes, readonly [SelectionFeature]>;
+
 /** Where the document is saved: one key per tree. */
 const STORAGE_KEY = "fragiola-tree:examples:save-restore";
 
 /** A model of the saved document when there is a valid one, else of the default. */
-function restore(): { model: TreeModel<FileTypes>; restored: boolean } {
+function restore(): {
+    model: TreeModel<FileTypes, readonly [SelectionFeature]>;
+    restored: boolean;
+} {
     const saved = restoreTree<FileTypes>(STORAGE_KEY);
     // a document saved by an older version of the app may no longer be valid
-    const restored = saved !== undefined && validateTree(saved).length === 0;
+    const restored =
+        saved !== undefined &&
+        validateTree(saved, { features: [selection()] }).length === 0;
     const json = restored ? saved : fileSystem();
-    return { model: createTreeModel<FileTypes>(json), restored };
+    return {
+        model: createTreeModel<FileTypes, readonly [SelectionFeature]>(json, {
+            features: [selection()],
+        }),
+        restored,
+    };
 }
 
 export default function SaveRestore() {
@@ -38,7 +56,7 @@ export default function SaveRestore() {
     );
 
     const selected = useTreeState<FileTypes, number>(
-        (state) => state.selectedItemIds.length,
+        (state) => (state as Selected).selectedItemIds.length,
         { model },
     );
     return (

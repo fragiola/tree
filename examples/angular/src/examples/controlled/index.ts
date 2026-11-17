@@ -1,5 +1,6 @@
 import { Component, signal } from "@angular/core";
 import { TREE } from "@fragiola/tree-angular";
+import { selection } from "@fragiola/tree-angular/selection";
 import { LucideChevronRight, LucideFile, LucideFolder } from "@lucide/angular";
 import { ClickableButton } from "#/components/atoms/clickable";
 import { SWITCH } from "#/components/ui/switch";
@@ -64,7 +65,7 @@ let nextId = 0;
                      the app's own rule -->
                 <div
                     treeRoot
-                    [defaultTree]="json"
+                    [defaultTree]="json" [features]="features"
                     [expandedItemIds]="expandedItemIds()"
                     (expandedItemIdsChange)="changeExpanded($event)"
                     [(selectedItemIds)]="selectedItemIds"
@@ -110,6 +111,8 @@ let nextId = 0;
     `,
 })
 export default class Controlled {
+    /** the opt-in features of the root's model: the selection */
+    protected readonly features = [selection()];
     protected readonly styles = styles;
     protected readonly json = json;
     protected readonly folderIds = FOLDER_IDS;
