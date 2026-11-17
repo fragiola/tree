@@ -145,7 +145,7 @@ describe("a drag group", () => {
     });
 
     it("over two models, the target adds the subtree and the source removes it", () => {
-        const files = filesModel();
+        const files = filesModel({ expandedItemIds: ["src", "utils"] });
         const inbox = inboxModel();
         const fromEvents = recorded(files);
         const toEvents = recorded(inbox);
@@ -165,6 +165,8 @@ describe("a drag group", () => {
             childItemIds: ["a", "b"],
         });
         expect(inbox.state.items.b).toMatchObject({ data: { size: 2 } });
+        // expanded as it was
+        expect(inbox.is("item-expanded", { itemId: "utils" })).toBe(true);
         expect(files.state.items.src?.childItemIds).toEqual(["app", "lib"]);
         expect(files.state.items.a).toBeUndefined();
         expect(toEvents.map((event) => event.command)).toEqual(["batch"]);

@@ -205,7 +205,7 @@ called with a `TreeTransfer`:
 | `items` | `readonly TreeItem[]` | those items, as the source model has them |
 | `from` | `TreeModel` | the source model |
 | `to` | `{ model, parentItemId, index }` | the target model, and where the items go (as `item.add`'s `to`) |
-| `commands` | `readonly BatchEntry[]` | the default transfer's `item.add` commands for the target, parents first: map them to copy with new ids or to convert kinds |
+| `commands` | `readonly BatchEntry[]` | the default transfer's commands for the target: an `item.add` per item, parents first, then an `item.expand` per item expanded in the source; map them to copy with new ids or to convert kinds |
 | `modifiers` | `DragModifiers` | `altKey`, `ctrlKey`, `metaKey`, `shiftKey` of the drop (of the pointer's last move during a dry run) |
 | `dryRun` | `boolean` | true while the drag asks whether a target takes the items: change nothing, return `false` to hide it, `true` to show it, nothing for the default answer; false for the drop: run your commands, return `false` when nothing happened |
 

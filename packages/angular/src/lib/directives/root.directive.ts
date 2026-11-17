@@ -17,6 +17,7 @@ import {
     createTreeModel,
     type KeyMap,
     type LoadChildren,
+    type TransferHandler,
     type TreeEngine,
     type TreeJson,
     type TreeModel,
@@ -48,6 +49,8 @@ export interface RootState {
     dragging: boolean;
     /** a keyboard drag is under way */
     keyboardDragging: boolean;
+    /** a drag from another tree of the drag group is under way (`dragGroup`) */
+    draggingFromOtherTree: boolean;
     /** the tree has no item */
     empty: boolean;
 }
@@ -76,6 +79,7 @@ export interface RootState {
         "data-tree-part": "root",
         "[attr.data-dragging]": "data().dragging",
         "[attr.data-keyboard-dragging]": "data().keyboardDragging",
+        "[attr.data-dragging-from-other-tree]": "data().draggingFromOtherTree",
         "[attr.data-empty]": "data().empty",
         "(keydown)": "onKeyDown($event)",
     },
@@ -123,6 +127,17 @@ export class TreeRootDirective<T extends TreeTypes = AnyTypes> {
      * another engine
      */
     readonly virtual = input<TreeVirtualizer | undefined>(undefined);
+    /**
+     * joins the trees of the document with the same group name: items drag between them, by pointer
+     * and keyboard (over one model a drop is one `item.move`, over two a transfer)
+     */
+    readonly dragGroup = input<string | undefined>(undefined);
+    /**
+     * what a drop from a tree of another model does here: run your commands (copy, convert kinds)
+     * and return false to refuse; asked first with `dryRun` for each target. Default: the target
+     * model adds the dragged subtrees and the source model removes them
+     */
+    readonly transfer = input<TransferHandler | undefined>(undefined);
 
     /** the expanded items, after every command that changes them */
     readonly expandedItemIdsChange = output<string[]>();
@@ -192,6 +207,8 @@ export class TreeRootDirective<T extends TreeTypes = AnyTypes> {
             multiselectable: tree.settings.selectionMode === "multiple",
             dragging: live?.is("dragging") ?? false,
             keyboardDragging: live?.is("keyboard-dragging") ?? false,
+            draggingFromOtherTree:
+                live?.is("dragging-from-other-tree") ?? false,
             empty: tree.rootItemIds.length === 0,
         };
     });
@@ -202,6 +219,7 @@ export class TreeRootDirective<T extends TreeTypes = AnyTypes> {
             multiselectable: state.multiselectable ? "true" : null,
             dragging: dataAttr(state.dragging),
             keyboardDragging: dataAttr(state.keyboardDragging),
+            draggingFromOtherTree: dataAttr(state.draggingFromOtherTree),
             empty: dataAttr(state.empty),
         };
     });
@@ -218,6 +236,8 @@ export class TreeRootDirective<T extends TreeTypes = AnyTypes> {
             indentation: this.indentation(),
             indicatorInset: this.indicatorInset(),
             typeAheadTimeout: this.typeAheadTimeout(),
+            dragGroup: this.dragGroup(),
+            hasTransfer: this.transfer() !== undefined,
         }),
     );
 
@@ -306,6 +326,11 @@ export class TreeRootDirective<T extends TreeTypes = AnyTypes> {
             indicatorInset: untracked(this.indicatorInset),
             typeAheadTimeout: untracked(this.typeAheadTimeout),
             virtual: untracked(this.virtual),
+            dragGroup: untracked(this.dragGroup),
+            transfer:
+                untracked(this.transfer) === undefined
+                    ? undefined
+                    : (event) => untracked(this.transfer)?.(event),
             // a new engine (a new model or option, a re-render) loads what this one was loading
             resetLoadsOnDestroy: true,
         });

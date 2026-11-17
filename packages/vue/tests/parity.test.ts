@@ -7,7 +7,15 @@ import { createRoot } from "react-dom/client";
 import { describe, expect, it } from "vitest";
 import { createTreeModel, type TreeJson } from "../src";
 import { bigFileTree, bigTree, virtual } from "./big-tree";
-import { type FileTypes, files, filesModel, fileTree, render } from "./tree";
+import {
+    type FileTypes,
+    files,
+    filesModel,
+    fileTree,
+    fire,
+    itemElement,
+    render,
+} from "./tree";
 
 type Item = { id: string; label: string; childItemIds?: string[] };
 
@@ -114,6 +122,113 @@ describe("parity with @fragiola/tree-react", () => {
                 (part) => part.attributes["data-tree-part"] === "rename-input",
             ),
         ).toBeDefined();
+        expect(vue).toEqual(react);
+    });
+});
+
+/** A second model for a drag between trees: one empty folder, "inbox". */
+const inboxModel = () =>
+    createTreeModel<FileTypes>({
+        version: 1,
+        rootItemIds: ["inbox"],
+        items: { inbox: { kind: "folder", label: "inbox", childItemIds: [] } },
+    });
+
+/**
+ * A keyboard drag of readme.md (Ctrl+Shift+D) on into the second tree, Down until it shows a drop
+ * target: `key` dispatches a keydown on readme.md and lets the adapter render.
+ */
+async function dragIntoInbox(
+    key: (key: string, init?: Record<string, unknown>) => Promise<void>,
+) {
+    itemElement("readme.md").focus();
+    await key("d", { ctrlKey: true, shiftKey: true });
+    const inbox = () => document.querySelectorAll('[role="tree"]')[1];
+    for (
+        let i = 0;
+        i < 20 && !inbox()?.querySelector("[data-drop-target]");
+        i++
+    )
+        await key("ArrowDown");
+}
+
+describe("parity with @fragiola/tree-react across trees", () => {
+    it("renders the same cross-tree drag state", async () => {
+        await render(() => [
+            fileTree({ model: filesModel(), dragGroup: "files" }),
+            fileTree({
+                model: inboxModel(),
+                dragGroup: "files",
+                "aria-label": "Inbox",
+            }),
+        ]);
+        await dragIntoInbox((key, init) =>
+            fire(itemElement("readme.md"), "keydown", { key, ...init }),
+        );
+        const vue = snapshot(document.body);
+        await fire(itemElement("readme.md"), "keydown", { key: "Escape" });
+        document.body.innerHTML = "";
+
+        const host = document.createElement("div");
+        document.body.append(host);
+        const root = createRoot(host);
+        (
+            globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
+        ).IS_REACT_ACT_ENVIRONMENT = true;
+        const reactTree = (model: unknown, label: string) =>
+            r(
+                ReactTree.Root,
+                {
+                    model: model as never,
+                    dragGroup: "files",
+                    "aria-label": label,
+                },
+                r(ReactTree.Items, {
+                    children: (item: Item) => reactItem(item),
+                } as never),
+                r(ReactTree.DropIndicator),
+                r(ReactTree.LiveRegion),
+            );
+        await act(async () => {
+            root.render(
+                r(
+                    React.Fragment,
+                    null,
+                    reactTree(filesModel(), "Files"),
+                    reactTree(inboxModel(), "Inbox"),
+                ),
+            );
+        });
+        await dragIntoInbox(async (key, init) => {
+            await act(async () => {
+                itemElement("readme.md").dispatchEvent(
+                    new KeyboardEvent("keydown", {
+                        key,
+                        bubbles: true,
+                        cancelable: true,
+                        ...init,
+                    }),
+                );
+            });
+        });
+        const react = snapshot(document.body);
+        act(() => root.unmount());
+
+        const inbox = vue.find(
+            (part) =>
+                part.attributes["data-tree-part"] === "root" &&
+                part.attributes["aria-label"] === "Inbox",
+        );
+        expect(inbox?.attributes["data-dragging-from-other-tree"]).toBe("");
+        expect(
+            vue.some((part) => part.attributes["data-drop-target"] === ""),
+        ).toBe(true);
+        expect(
+            vue.filter(
+                (part) =>
+                    part.attributes["data-tree-part"] === "drop-indicator",
+            ),
+        ).toHaveLength(1);
         expect(vue).toEqual(react);
     });
 });

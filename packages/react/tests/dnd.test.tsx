@@ -1,4 +1,4 @@
-import { type CommandEvent, veto } from "@fragiola/tree";
+import { type CommandEvent, createTreeModel, veto } from "@fragiola/tree";
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { ROW } from "./setup";
@@ -155,5 +155,76 @@ describe("drag and drop", () => {
         );
         expect(indicator).toHaveAttribute("data-drop-position", "before");
         expect(indicator?.style.insetInlineStart).toBe(`${16 + 28}px`);
+    });
+});
+
+describe("drag between trees", () => {
+    /** Two trees of one group: the files, and an inbox over another model. */
+    function setupGroup(dragGroup: string | undefined) {
+        const files = filesModel();
+        const inbox = createTreeModel<FileTypes>({
+            version: 1,
+            rootItemIds: ["inbox"],
+            items: {
+                inbox: { kind: "folder", label: "inbox", childItemIds: [] },
+            },
+        });
+        render(
+            <>
+                <FileTree model={files} dragGroup={dragGroup} />
+                <FileTree
+                    model={inbox}
+                    dragGroup={dragGroup}
+                    aria-label="Inbox"
+                />
+            </>,
+        );
+        const [filesRoot, inboxRoot] = screen.getAllByRole("tree") as [
+            HTMLElement,
+            HTMLElement,
+        ];
+        return { files, inbox, filesRoot, inboxRoot };
+    }
+
+    const key = (element: HTMLElement, key: string, init = {}) =>
+        fireEvent.keyDown(element, { key, ...init });
+
+    it("a keyboard drag goes on into the other tree, which shows the target, and drops there", () => {
+        const { files, inbox, filesRoot, inboxRoot } = setupGroup("files");
+        const readme = itemElement("readme.md");
+        act(() => readme.focus());
+        key(readme, "d", { ctrlKey: true, shiftKey: true });
+        expect(filesRoot).toHaveAttribute("data-dragging", "");
+        expect(inboxRoot).toHaveAttribute("data-dragging", "");
+        expect(inboxRoot).toHaveAttribute("data-dragging-from-other-tree", "");
+        expect(filesRoot).not.toHaveAttribute("data-dragging-from-other-tree");
+        for (
+            let i = 0;
+            i < 20 &&
+            content("inbox").getAttribute("data-drop-position") !== "inside";
+            i++
+        )
+            key(readme, "ArrowDown");
+        expect(content("inbox")).toHaveAttribute("data-drop-target", "");
+        expect(content("inbox")).toHaveAttribute(
+            "data-drop-position",
+            "inside",
+        );
+        expect(
+            inboxRoot.querySelector('[data-tree-part="drop-indicator"]'),
+        ).not.toBeNull();
+        key(readme, "Enter");
+        expect(inbox.state.items.inbox?.childItemIds).toEqual(["readme"]);
+        expect(files.state.rootItemIds).toEqual(["src"]);
+        expect(inboxRoot).not.toHaveAttribute("data-dragging");
+    });
+
+    it("trees without a group keep their drags", () => {
+        const { inboxRoot } = setupGroup(undefined);
+        const readme = itemElement("readme.md");
+        act(() => readme.focus());
+        key(readme, "d", { ctrlKey: true, shiftKey: true });
+        expect(inboxRoot).not.toHaveAttribute("data-dragging");
+        key(readme, "Escape");
     });
 });

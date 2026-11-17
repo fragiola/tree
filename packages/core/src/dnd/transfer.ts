@@ -46,7 +46,8 @@ export interface TreeTransfer {
     /**
      * the default transfer's commands for the target model, for a `batch`: an `item.add` for each
      * dragged item and each of its descendants (parents first, ids kept, children not loaded yet
-     * left to the loader). Map them to copy with new ids or to convert kinds
+     * left to the loader), then an `item.expand` for each one expanded in the source. Map them to
+     * copy with new ids or to convert kinds
      */
     readonly commands: readonly BatchEntry[];
     /** the modifier keys of the drop (or of the pointer's last move, when `dryRun`) */
@@ -200,6 +201,8 @@ function transferLanding(
 interface SubtreeEntry {
     readonly item: TreeItemInit;
     readonly parentItemId: string | undefined;
+    /** it shows its children in the source: it is expanded in the target too */
+    readonly expanded: boolean;
 }
 
 /** The outermost of `itemIds` (none inside another), in tree order. */
@@ -241,7 +244,11 @@ function subtreeEntries(
         } else if (json.childItemIds) {
             json.childItemIds = [];
         }
-        entries.push({ item: json, parentItemId });
+        entries.push({
+            item: json,
+            parentItemId,
+            expanded: model.is("item-expanded", { itemId: id }),
+        });
         if (status === "loading" || status === "error") return;
         for (const child of item.childItemIds ?? []) visit(child, id);
     };
@@ -249,13 +256,13 @@ function subtreeEntries(
     return entries;
 }
 
-/** The `item.add` commands of the subtrees for a drop at `target`. */
+/** The `item.add` commands of the subtrees for a drop at `target`, then their expansion. */
 function commandsOf(
     entries: readonly SubtreeEntry[],
     target: DropTarget,
 ): BatchEntry[] {
     let next = target.index;
-    return entries.map(({ item, parentItemId }) => ({
+    const added: BatchEntry[] = entries.map(({ item, parentItemId }) => ({
         command: "item.add",
         payload: {
             item: structuredJson(item),
@@ -265,6 +272,13 @@ function commandsOf(
                     : { parentItemId },
         },
     }));
+    for (const { item, expanded } of entries)
+        if (expanded && item.id !== undefined)
+            added.push({
+                command: "item.expand",
+                payload: { itemId: item.id },
+            });
+    return added;
 }
 
 /** A fresh copy of an item's JSON (each command owns its payload). */
