@@ -180,7 +180,39 @@ model.run("tree.collapse-all", {});
 { "command": "tree.collapse-all", "payload": {} }
 ```
 
-## Selection and focus
+## Focus
+
+### `item.focus`
+
+Make an item the tree's focused item: the roving tab stop, the one item with tabindex 0 (moving DOM focus is the engine's `focus` action). Disabled items can be focused. Refused for an item that is not visible (an ancestor is collapsed).
+
+**Payload** (`{ itemId: string }`)
+
+| field | type | required | description |
+| --- | --- | --- | --- |
+| `itemId` | `string` | yes | the item |
+
+**Result** (`{ itemId: string }`)
+
+| field | type | required | description |
+| --- | --- | --- | --- |
+| `itemId` | `string` | yes | the item |
+
+**Errors**: `not_found`, `refused`, besides those every command can return.
+
+```ts
+model.run("item.focus", {
+    itemId: "app"
+});
+```
+
+```json
+{ "command": "item.focus", "payload": {"itemId":"app"} }
+```
+
+## Selection
+
+These commands come with the selection feature: install `selection()` from `@fragiola/tree/selection` (`createTreeModel(json, { features: [selection()] })`). Without it, each one returns `not_found`.
 
 ### `item.select`
 
@@ -289,34 +321,6 @@ model.run("tree.clear-selection", {});
 
 ```json
 { "command": "tree.clear-selection", "payload": {} }
-```
-
-### `item.focus`
-
-Make an item the tree's focused item: the roving tab stop, the one item with tabindex 0 (moving DOM focus is the engine's `focus` action). Disabled items can be focused. Refused for an item that is not visible (an ancestor is collapsed).
-
-**Payload** (`{ itemId: string }`)
-
-| field | type | required | description |
-| --- | --- | --- | --- |
-| `itemId` | `string` | yes | the item |
-
-**Result** (`{ itemId: string }`)
-
-| field | type | required | description |
-| --- | --- | --- | --- |
-| `itemId` | `string` | yes | the item |
-
-**Errors**: `not_found`, `refused`, besides those every command can return.
-
-```ts
-model.run("item.focus", {
-    itemId: "app"
-});
-```
-
-```json
-{ "command": "item.focus", "payload": {"itemId":"app"} }
 ```
 
 ## Checkboxes
@@ -745,7 +749,7 @@ model.run("item.set-flags", {
 
 ### `tree.configure`
 
-Change the tree's settings: the selection mode (none, single, multiple; a narrower mode trims the selection), the check mode (cascade or independent; switching to cascade makes the checks consistent) and the defaults of the movable, renamable and droppable flags.
+Change the tree's settings: the selection mode (none, single, multiple; a narrower mode trims the selection; with the selection feature), the check mode (cascade or independent; switching to cascade makes the checks consistent) and the defaults of the movable, renamable and droppable flags.
 
 **Payload** (`{ settings: TreeSettingsPatch }`)
 
@@ -753,7 +757,7 @@ Change the tree's settings: the selection mode (none, single, multiple; a narrow
 | --- | --- | --- | --- |
 | `settings` | `object` | yes | the settings to change (the others are kept) |
 
-**Result** (`{ settings: TreeSettings }`)
+**Result** (`{ settings: TreeSettings & { selectionMode?: SelectionMode } }`)
 
 | field | type | required | description |
 | --- | --- | --- | --- |

@@ -58,7 +58,6 @@ in an iframe or a popup window.
 | `autoScroll` | `{ threshold?: number; speed?: number }` | engine defaults | how close (px) to a scroll container's edge a drag scrolls it, and how fast (px per frame) |
 | `typeAheadTimeout` | `number` | `500` | how long (ms) between two typed characters keeps one search |
 | `resetLoadsOnDestroy` | `boolean` | `false` | `destroy()` puts the items it was loading back to `unloaded`, so the next engine loads them again (adapters set it) |
-| `virtual` | `TreeVirtualizer` | none | renders only the visible items in view: `createTreeVirtualizer(options)` (below); without it every visible item is rendered |
 | `dragGroup` | `string` | none | joins the trees of the same document with the same group name: items drag between them by pointer and keyboard (below); without it a drag stays in its tree |
 | `transfer` | `TransferHandler` | the default transfer | what a drop from a tree of another model does here (the receiving tree's, else the source tree's): `(transfer: TreeTransfer) => boolean \| void` (below) |
 | `foreignDrop` | `TreeForeignDrop<T>` | none | takes files, links and text dragged on the tree from the desktop or another window: `createTreeForeignDrop(options)` (below); without it native drags are ignored |
@@ -103,7 +102,7 @@ An engine key never has a dot, so it never reads as a command (`EngineActionKey`
 | `"drop-indicator"` | `DropIndicator \| null`: where the drop indicator goes |
 | `"announcement"` | `string`: the latest text your `announce` returned (`""` before any) |
 | `"direction"` | `"ltr" \| "rtl"`: the root's writing direction; Right and Left swap in `rtl` |
-| `"virtual-window"` | `VirtualWindow \| null`: the rows a virtualized tree renders; `null` without the `virtual` option |
+| `"virtual-window"` | `VirtualWindow`: the rows a virtualized tree renders (the `virtualization()` feature; a type error and `undefined` without it) |
 | `"drop-outside-element"` | `Element \| null`: the element under the pointer while this tree's pointer drag is outside every tree (the `dropOutside` option), for your own targets to show it; `null` otherwise |
 
 A `DropTarget` is the `item.move` a drop would run and how it reads on screen; a `DropIndicator`
@@ -126,22 +125,23 @@ tree, and where the pointer is over a row), exported for an adapter's tests.
 
 ## Virtualization
 
-`createTreeVirtualizer(options)` describes a virtualizer (a `TreeVirtualizer`) for the `virtual`
-option: the engine then renders only the visible items in view, plus `overscan` rows on each
+The virtualization feature, `virtualization(options)` from `@fragiola/tree/virtualization`, makes
+every engine on its model render only the visible items in view, plus `overscan` rows on each
 side, so a tree of hundreds of thousands of visible items scrolls, moves the focus and drags like
-a small one. It is opt-in and costs nothing without it: a bundle that never imports
-`createTreeVirtualizer` leaves it out. The guide is [Virtualization](/docs/guides/virtualization).
+a small one. It is opt-in and costs nothing without it: a bundle that never imports it leaves it
+out. Each engine on the model gets its own virtualizer. The guide is
+[Virtualization](/docs/guides/virtualization).
 
 ```ts
-import { createTreeEngine, createTreeVirtualizer } from "@fragiola/tree";
+import { createTreeEngine, createTreeModel } from "@fragiola/tree";
+import { virtualization } from "@fragiola/tree/virtualization";
 
-// one virtualizer serves every tree: create it once, not on every render
-const virtual = createTreeVirtualizer({ rowSize: 28 });
-const engine = createTreeEngine(model, { root, virtual });
+const model = createTreeModel(json, { features: [virtualization({ rowSize: 28 })] });
+const engine = createTreeEngine(model, { root });
 engine.get("virtual-window"); // the rows to render
 ```
 
-`TreeVirtualizerOptions`:
+`TreeVirtualizerOptions`, the options of `virtualization(options)`:
 
 | option | type | default | description |
 | --- | --- | --- | --- |
@@ -151,7 +151,6 @@ engine.get("virtual-window"); // the rows to render
 | `scrollElement` | `() => HTMLElement \| null \| undefined` | the nearest scrolling ancestor of the root (the root included), else the document | the element that scrolls the rows |
 | `initialViewportSize` | `number` | `0` | the view's size (px) while the scroll element has none: a server render, a test without layout, a hidden tree |
 
-A `TreeVirtualizer` holds its frozen `options` and `connect(host)`, which only the engine calls.
 `engine.get("virtual-window")` returns a `VirtualWindow`, and each of its rows is a
 `VirtualRow`, a `VisibleItem` with where it goes:
 
@@ -302,3 +301,5 @@ an app never needs it. The adapter forwards events; the core decides.
 | `handleDragEvent(event)` | a native drag event on the root (`dragenter`, `dragover`, `dragleave`, `drop`): foreign content with `foreignDrop`, ignored without it |
 | `subscribe(listener)` | calls `listener` when adapters should re-render; returns its remover |
 | `getSnapshot()` | the render revision: a number that changes whenever adapters should re-render |
+| `itemAttributes(itemId)` | the ARIA and `data-*` the installed features give an item (`selection()`: `aria-selected`, `data-selected`), each a string or `undefined` for an absent attribute |
+| `rootAttributes()` | the ARIA and `data-*` the installed features give the root (`selection()` in `multiple` mode: `aria-multiselectable`) |

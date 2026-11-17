@@ -66,7 +66,7 @@ Every part is `Tree.<Part>`, with the props of its React page except `render`, `
 
 | part | Vue props | slots | events |
 | --- | --- | --- | --- |
-| `Tree.Root` | `model`, `defaultTree`, `expandedItemIds`, `selectedItemIds`, `checkedItemIds`, `loadChildren`, `announce`, `keyMap`, `expandOnClick`, `checkboxes`, `dragThreshold`, `autoExpandDelay`, `indentation`, `indicatorInset`, `typeAheadTimeout`, `virtual`, `dragGroup`, `transfer`, `foreignDrop`, `dropOutside`, `treeRef` | default | `update:expandedItemIds`, `update:selectedItemIds`, `update:checkedItemIds` |
+| `Tree.Root` | `model`, `defaultTree`, `features`, `expandedItemIds`, `selectedItemIds`, `checkedItemIds`, `loadChildren`, `announce`, `keyMap`, `expandOnClick`, `checkboxes`, `dragThreshold`, `autoExpandDelay`, `indentation`, `indicatorInset`, `typeAheadTimeout`, `dragGroup`, `transfer`, `foreignDrop`, `dropOutside`, `treeRef` | default | `update:expandedItemIds`, `update:selectedItemIds`, `update:checkedItemIds` |
 | `Tree.Items` | none | default `{ item }` | none |
 | `Tree.VirtualItems` | none | default `{ item, row }` (`row`: its `VirtualRow`) | none |
 | `Tree.Item` | `item` | default `{ state }` | none |
@@ -92,7 +92,7 @@ The hooks of [the React reference](/docs/api/hooks), as composables. Call them i
 | `useTreeItemRename(item, options?)` | `UseTreeItemRenameResult`: `state` (`TreeItemRenameState`: `renaming`, `invalid`, `error`) and `props` (`TreeItemRenameProps`: the template `ref`, which writes the label and focuses and selects it, `aria-invalid`, `data-invalid`, `onKeydown`, `onBlur`, `onInput`), as computed refs; render your input with `v-if="state.renaming"` and bind `v-bind="props"`. `item` is a value, a ref or a getter; `UseTreeItemRenameOptions`: `onRenameError` |
 | `useTreeRef<T>()` | a `TreeRef<T>`, whose read-only, reactive `value` is the root's `TreeHandle` (`model`, `engine`) while it is mounted, `null` otherwise. It is not a Vue ref, so a template does not unwrap it: `:tree-ref="tree"` passes it, and the template reads `tree.value` |
 | `createTreeRef<T>()` | the same tree ref, anywhere (a module, a test) |
-| `useTreeVirtualWindow()` | a computed ref of the root's `VirtualWindow` (the rows a virtualized tree renders), `null` before it mounts and without `virtual` |
+| `useTreeVirtualWindow()` | a computed ref of the root's `VirtualWindow` (the rows a virtualized tree renders), `null` before it mounts and without the `virtualization()` feature |
 
 A server render (Nuxt, `renderToString`) outputs the tree's markup, never subscribes to the model
 and never runs a command on it: the engine, the controlled lists and the composables' subscriptions

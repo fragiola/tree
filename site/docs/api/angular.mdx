@@ -69,7 +69,7 @@ hold an `<ng-template treeItems>` of its own, for children that look different.
 | template directive | inside | context (`let-…`) |
 | --- | --- | --- |
 | `TreeItemsDirective` (`ng-template[treeItems]`) | `[treeRoot]`, or a `[treeGroup]` | `$implicit` and `item`: the item, a `TreeItemsContext<T>` |
-| `TreeVirtualItemsDirective` (`ng-template[treeVirtualItems]`) | a `[treeRoot]` with `[virtual]` | `$implicit` and `item`: the item, and `row`, its `VirtualRow`: a `TreeVirtualItemsContext<T>` |
+| `TreeVirtualItemsDirective` (`ng-template[treeVirtualItems]`) | a `[treeRoot]` whose model has the `virtualization()` feature | `$implicit` and `item`: the item, and `row`, its `VirtualRow`: a `TreeVirtualItemsContext<T>` |
 
 **Typing by your registry.** A template cannot pass a type argument. Give the template directive
 the model or the document instead (`[treeItems]="model"`, `[treeItems]="json"`; `TypedBy<T>` is
@@ -105,7 +105,7 @@ whose output is not handled keeps the tree on the input.
 
 | directive | selector | `exportAs` | inputs | outputs |
 | --- | --- | --- | --- | --- |
-| `TreeRootDirective` | `[treeRoot]` | `treeRoot` | `treeRoot` (the model), `defaultTree`, `expandedItemIds`, `selectedItemIds`, `checkedItemIds`, `loadChildren`, `announce`, `keyMap`, `expandOnClick`, `checkboxes`, `dragThreshold`, `autoExpandDelay`, `indentation`, `indicatorInset`, `typeAheadTimeout`, `virtual`, `dragGroup`, `transfer`, `foreignDrop`, `dropOutside` | `expandedItemIdsChange`, `selectedItemIdsChange`, `checkedItemIdsChange` |
+| `TreeRootDirective` | `[treeRoot]` | `treeRoot` | `treeRoot` (the model), `defaultTree`, `features`, `expandedItemIds`, `selectedItemIds`, `checkedItemIds`, `loadChildren`, `announce`, `keyMap`, `expandOnClick`, `checkboxes`, `dragThreshold`, `autoExpandDelay`, `indentation`, `indicatorInset`, `typeAheadTimeout`, `dragGroup`, `transfer`, `foreignDrop`, `dropOutside` | `expandedItemIdsChange`, `selectedItemIdsChange`, `checkedItemIdsChange` |
 | `TreeItemsDirective` | `ng-template[treeItems]` | `treeItems` | `treeItems` (typing: the model or the document) | none |
 | `TreeVirtualItemsDirective` | `ng-template[treeVirtualItems]` | `treeVirtualItems` | `treeVirtualItems` (typing: the model or the document) | none |
 | `TreeItemDirective` | `[treeItem]` | `treeItem` | `treeItem` (the item) | none |
@@ -136,7 +136,7 @@ injection context (a field initializer or a constructor) of a component inside t
 | --- | --- |
 | `injectTree<T>()` | `{ model, engine }`, an `InjectTreeResult<T>`: `model` is a signal (`model()`), `engine` the tree on screen |
 | `injectTreeItem<T>()` | `{ item, state }`, an `InjectTreeItemResult<T>`: the enclosing `[treeItem]`'s item and `TreeItemState`, as signals |
-| `injectTreeVirtualWindow()` | a signal of the root's `VirtualWindow` (the rows a virtualized tree renders), `null` before the root created its engine and without `virtual` |
+| `injectTreeVirtualWindow()` | a signal of the root's `VirtualWindow` (the rows a virtualized tree renders), `null` before the root created its engine and without the `virtualization()` feature |
 | `injectTreeState(selector, options?)` | a signal of the selection, changed only when `isEqual` says it changed (`InjectTreeStateOptions`: `model`, a model or a signal of one, and `isEqual`); it selects again when a signal the selector reads changes |
 
 A tree ref is a template reference (`#tree="treeRoot"`) or `viewChild(TreeRootDirective)`: its
