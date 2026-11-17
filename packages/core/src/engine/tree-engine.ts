@@ -614,15 +614,26 @@ class Engine<T extends TreeTypes> implements TreeEngine<T>, EngineHost {
                 const previous = this.items.get(itemId);
                 this.items.set(itemId, element);
                 this.virtual?.observe(itemId, element);
-                // a virtualized tree's row came into the window for the focus it was scrolled for
+                // a virtualized tree's row came into the window for the focus it was scrolled for:
+                // it takes it once the adapter's render is done (a focus in the middle of it would
+                // lay out a list whose spacers are not there yet, and lose the scroll)
                 if (this.pendingFocus === itemId) {
                     this.pendingFocus = undefined;
                     if (itemId === this.model.state.focusedItemId) {
                         this.refocus = false;
-                        element.focus({ preventScroll: true });
-                        element.scrollIntoView?.({
-                            block: "nearest",
-                            inline: "nearest",
+                        void Promise.resolve().then(() => {
+                            if (
+                                this.destroyed ||
+                                this.items.get(itemId) !== element ||
+                                this.model.state.focusedItemId !== itemId
+                            )
+                                return;
+                            element.focus({ preventScroll: true });
+                            this.virtual?.reveal(itemId);
+                            element.scrollIntoView?.({
+                                block: "nearest",
+                                inline: "nearest",
+                            });
                         });
                         return;
                     }

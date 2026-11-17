@@ -192,6 +192,13 @@ class Virtualizer implements VirtualController {
     /** the scroll element is the document's: the window's scroll and size */
     private documentScroll = false;
     private overflowAnchor: string | undefined;
+    /**
+     * the row the last reveal scrolled to: it is revealed again when rows are measured (their
+     * estimates put it elsewhere), until a scroll the engine did not make
+     */
+    private revealing: { itemId: string; align: ScrollAlign } | undefined;
+    /** the scroll offset the engine wrote last: a scroll event elsewhere is the user's */
+    private written: number | undefined;
     private release: (() => void)[] = [];
     private viewObserver: Observer | undefined;
     private rowObserver: Observer | undefined;
@@ -400,6 +407,13 @@ class Virtualizer implements VirtualController {
         this.scroller = element;
         const target: EventTarget = this.documentScroll ? view : element;
         const onScroll = () => {
+            if (
+                this.revealing &&
+                (this.written === undefined ||
+                    Math.abs(element.scrollTop - this.written) > 1)
+            ) {
+                this.revealing = undefined;
+            }
             this.read(false);
             this.update(true);
         };
@@ -496,13 +510,23 @@ class Virtualizer implements VirtualController {
     private scrollTo(offset: number): void {
         this.offset = Math.max(0, offset);
         const element = this.scroller;
-        if (element) element.scrollTop = this.offset + this.start;
+        if (!element) return;
+        element.scrollTop = this.offset + this.start;
+        this.written = element.scrollTop;
     }
 
     reveal(itemId: string, align: ScrollAlign = "nearest"): boolean {
+        this.revealing = { itemId, align };
+        return this.revealNow(itemId, align);
+    }
+
+    private revealNow(itemId: string, align: ScrollAlign): boolean {
         this.sync();
         const index = this.host.visibleIndex().get(itemId);
-        if (index === undefined) return false;
+        if (index === undefined) {
+            this.revealing = undefined;
+            return false;
+        }
         const start = this.sizes.offsetOf(index);
         const target = scrollTargetForSpan(
             start,
@@ -566,6 +590,9 @@ class Virtualizer implements VirtualController {
         if (!changed) return;
         if (anchor !== 0 && this.offset > 0)
             this.scrollTo(this.offset + anchor);
+        // the row a reveal scrolled to stays in view, wherever the measured sizes put it
+        const revealing = this.revealing;
+        if (revealing) this.revealNow(revealing.itemId, revealing.align);
         this.update(false, true);
     }
 }
