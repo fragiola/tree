@@ -257,6 +257,53 @@ describe("a drag group", () => {
         expect(drop?.items.map((item) => item.id)).toEqual(["readme"]);
     });
 
+    it("transfers a subtree with a disabled expanded folder, which stays collapsed", () => {
+        const files = filesModel({ expandedItemIds: ["src", "utils"] });
+        files.run("item.set-flags", { itemId: "utils", disabled: true });
+        const inbox = inboxModel();
+        const a = tree(files, { dragGroup: "g" });
+        const b = tree(inbox, { dragGroup: "g" }, B_LEFT);
+        startDrag(a, "src");
+        pointer(a.content("src"), "pointermove", inB, b.rowY("inbox", 0.5));
+        expect(describeTarget(b)).toBe("inside inbox");
+        pointer(a.content("src"), "pointerup", inB, b.rowY("inbox", 0.5));
+        expect(inbox.state.items.utils?.childItemIds).toEqual(["a", "b"]);
+        expect(inbox.is("item-expanded", { itemId: "src" })).toBe(true);
+        expect(inbox.is("item-expanded", { itemId: "utils" })).toBe(false);
+        expect(files.state.rootItemIds).toEqual(["readme"]);
+    });
+
+    it("a transfer handler that returns nothing at the drop gets the default transfer", () => {
+        const files = filesModel();
+        const inbox = inboxModel();
+        const a = tree(files, { dragGroup: "g" });
+        const b = tree(
+            inbox,
+            { dragGroup: "g", transfer: () => undefined },
+            B_LEFT,
+        );
+        startDrag(a, "readme");
+        pointer(a.content("readme"), "pointermove", inB, b.rowY("inbox", 0.5));
+        pointer(a.content("readme"), "pointerup", inB, b.rowY("inbox", 0.5));
+        expect(inbox.state.items.inbox?.childItemIds).toEqual(["readme"]);
+        expect(files.state.rootItemIds).toEqual(["src"]);
+    });
+
+    it("a source that refuses the removal refuses the transfer", () => {
+        const files = filesModel();
+        files.use((ctx, next) =>
+            ctx.command === "item.remove" ? veto("kept") : next(),
+        );
+        const inbox = inboxModel();
+        const a = tree(files, { dragGroup: "g" });
+        const b = tree(inbox, { dragGroup: "g" }, B_LEFT);
+        startDrag(a, "readme");
+        pointer(a.content("readme"), "pointermove", inB, b.rowY("inbox", 0.5));
+        expect(b.engine.get("drop-target")).toBeNull();
+        pointer(a.content("readme"), "pointerup", inB, b.rowY("inbox", 0.5));
+        expect(inbox.state.items.inbox?.childItemIds).toEqual([]);
+    });
+
     it("hovers a collapsed parent of the other tree long enough: it expands", async () => {
         const model = filesModel({ expandedItemIds: [] });
         const a = tree(model, { dragGroup: "files" });

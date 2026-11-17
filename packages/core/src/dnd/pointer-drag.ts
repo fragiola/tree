@@ -204,7 +204,7 @@ export class PointerDrag {
         if (overRoot(this.host, x, y)) return this.host;
         return session.drag
             .trees()
-            .find((host) => host !== this.host && overRoot(host, x, y));
+            .find((host) => host !== this.host && overRoot(host, x, y, true));
     }
 
     /** Hit-tests the pointer: the drop target, and the auto-expand timer of a hovered parent. */

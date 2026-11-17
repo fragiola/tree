@@ -6,7 +6,7 @@
 // app) before it shows, as a move's is.
 import type { BatchEntry } from "../commands/types";
 import type { EngineHost } from "../engine/host";
-import { itemToJson, type TreeItemInit } from "../state/json";
+import { cloneJson, itemToJson, type TreeItemInit } from "../state/json";
 import type { TreeModel } from "../state/model";
 import type { TreeItem } from "../state/types";
 import type { DropTarget } from "./drop-evaluation";
@@ -55,8 +55,8 @@ export interface TreeTransfer {
     /**
      * true while the drag asks whether this target takes the items: change nothing, return false to
      * refuse it (it never shows), true to accept it, nothing for the default answer (the target
-     * model accepts the `commands`, the source model their removal). False for the drop: run the
-     * transfer, return false when it did not happen
+     * model accepts the `commands`, the source model their removal). False for the drop: run your
+     * commands and return true, false when nothing happened, nothing for the default transfer
      */
     readonly dryRun: boolean;
 }
@@ -180,19 +180,23 @@ function transferLanding(
         },
         drop: (target, modifiers, source) => {
             const transfer = transferOf(target, modifiers, false);
-            if (handler) return handler(transfer) !== false;
+            const answer = handler?.(transfer);
+            // the handler ran its own commands (true) or refused (false); nothing: the default
+            if (answer !== undefined) return answer;
+            // the source must still let them go before the target takes them
+            if (!from.model.check("item.remove", { itemIds: [...outer] }).ok)
+                return false;
             const added = to.model.run(
                 "batch",
                 { commands: [...transfer.commands] },
                 { meta: { source } },
             );
             if (!added.ok) return false;
-            from.model.run(
+            return from.model.run(
                 "item.remove",
                 { itemIds: [...outer] },
                 { meta: { source } },
-            );
-            return true;
+            ).ok;
         },
     };
 }
@@ -247,7 +251,14 @@ function subtreeEntries(
         entries.push({
             item: json,
             parentItemId,
-            expanded: model.is("item-expanded", { itemId: id }),
+            // a disabled item takes no expand, and a folder left to the loader stays closed
+            expanded:
+                status !== "loading" &&
+                status !== "error" &&
+                item.disabled !== true &&
+                (item.childItemIds !== undefined ||
+                    item.childrenStatus !== undefined) &&
+                model.is("item-expanded", { itemId: id }),
         });
         if (status === "loading" || status === "error") return;
         for (const child of item.childItemIds ?? []) visit(child, id);
@@ -286,5 +297,6 @@ function structuredJson(item: TreeItemInit): TreeItemInit {
     return {
         ...item,
         ...(item.childItemIds ? { childItemIds: [...item.childItemIds] } : {}),
+        ...(item.data !== undefined ? { data: cloneJson(item.data) } : {}),
     };
 }

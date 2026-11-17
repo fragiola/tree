@@ -307,40 +307,40 @@ records both commands ([Undo and redo](/docs/guides/undo-redo)).
 
 The `transfer` option (on the receiving root, else the source's) replaces the default: copy
 instead of move, convert kinds, refuse. It is asked first with `dryRun: true` for each target
-(return `false` to hide it, nothing for the default answer), then at the drop. `commands` holds
+(return `false` to hide it, `true` to show it, nothing for the default answer), then at the drop (return `true` once your commands ran, `false` when nothing happened, nothing for the default transfer). `commands` holds
 the default transfer's commands, to map:
 
 ```ts
 // a copy, kept in the source: each added id gets a suffix, and so does a parent an item names
 const transfer: TransferHandler = ({ commands, to, dryRun }) => {
-    if (dryRun) return; // the default answer
     const added = new Set(
         commands.flatMap((entry) =>
             entry.command === "item.add" && entry.payload.item.id ? [entry.payload.item.id] : [],
         ),
     );
     const copy = (id: string) => (added.has(id) ? `${id}-copy` : id);
-    to.model.run("batch", {
-        commands: commands.map((entry) => {
-            if (entry.command === "item.expand")
-                return { ...entry, payload: { itemId: copy(entry.payload.itemId) } };
-            if (entry.command !== "item.add") return entry;
-            const { item, to: place } = entry.payload;
-            return {
-                ...entry,
-                payload: {
-                    item: { ...item, id: item.id && copy(item.id) },
-                    to: { ...place, parentItemId: place.parentItemId && copy(place.parentItemId) },
-                },
-            };
-        }),
+    const copied = commands.map((entry) => {
+        if (entry.command === "item.expand")
+            return { ...entry, payload: { itemId: copy(entry.payload.itemId) } };
+        if (entry.command !== "item.add") return entry;
+        const { item, to: place } = entry.payload;
+        return {
+            ...entry,
+            payload: {
+                item: { ...item, id: item.id && copy(item.id) },
+                to: { ...place, parentItemId: place.parentItemId && copy(place.parentItemId) },
+            },
+        };
     });
+    // the same commands answer the dry run and run at the drop
+    return dryRun
+        ? to.model.can("batch", { commands: copied })
+        : to.model.run("batch", { commands: copied }).ok;
 };
 ```
 
-`modifiers` carries the drop's Alt, Ctrl, Meta and Shift keys: copy on Alt (Option) and move
-otherwise, for example, by returning nothing on a dry run and running the default commands plus
-`from.run("item.remove", { itemIds })` without Alt.
+`modifiers` carries the drop's Alt, Ctrl, Meta and Shift keys: copy on Alt (Option) and return
+nothing otherwise, for example, which keeps the default move.
 
 The keyboard drag steps through the group's trees in document order: Down past the last place of
 one tree reaches the first of the next, and the focus stays in the source tree. `drag-over` and

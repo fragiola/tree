@@ -69,10 +69,24 @@ export function rowAt(
     return last && { index: last.index, fraction: 1 };
 }
 
-/** Whether a point is over a tree's root. */
-export function overRoot(host: EngineHost, x: number, y: number): boolean {
+/** Whether a point is over a tree's root (`inView`: over the part its scroll container shows). */
+export function overRoot(
+    host: EngineHost,
+    x: number,
+    y: number,
+    inView = false,
+): boolean {
     const root = host.root();
-    return root !== undefined && containsPoint(rectOf(root), x, y);
+    if (root === undefined || !containsPoint(rectOf(root), x, y)) return false;
+    if (!inView) return true;
+    // a root inside a scroll container shows only the part of it in the container's view
+    const container = host.scrollContainer();
+    return (
+        container === undefined ||
+        container === root ||
+        !container.contains(root) ||
+        containsPoint(rectOf(container), x, y)
+    );
 }
 
 /**

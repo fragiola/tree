@@ -207,7 +207,7 @@ called with a `TreeTransfer`:
 | `to` | `{ model, parentItemId, index }` | the target model, and where the items go (as `item.add`'s `to`) |
 | `commands` | `readonly BatchEntry[]` | the default transfer's commands for the target: an `item.add` per item, parents first, then an `item.expand` per item expanded in the source; map them to copy with new ids or to convert kinds |
 | `modifiers` | `DragModifiers` | `altKey`, `ctrlKey`, `metaKey`, `shiftKey` of the drop (of the pointer's last move during a dry run) |
-| `dryRun` | `boolean` | true while the drag asks whether a target takes the items: change nothing, return `false` to hide it, `true` to show it, nothing for the default answer; false for the drop: run your commands, return `false` when nothing happened |
+| `dryRun` | `boolean` | true while the drag asks whether a target takes the items: change nothing, return `false` to hide it, `true` to show it, nothing for the default answer; false for the drop: run your commands and return `true`, `false` when nothing happened, nothing for the default transfer |
 
 Announcements name the tree of a target in another tree of the group: `drag-start`,
 `drag-over` and `drop` carry `targetTree` (a `DragTree`: its `root` and `model`), absent when
