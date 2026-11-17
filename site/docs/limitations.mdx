@@ -1,6 +1,6 @@
 ---
 title: Known limitations
-description: What the first release does not do yet - drags between trees, foreign drops, horizontal scrolling - and what stays yours by design.
+description: What the first release does not do yet - foreign drops, horizontal scrolling, other frameworks - and what stays yours by design.
 ---
 
 The first release covers a tree view's behaviour end to end, but not everything a tree can do.
@@ -12,11 +12,10 @@ Here is what it leaves out, on purpose or for a later release.
   windows its rows, not its columns: a tree scrolls on one axis. Its rows are flat siblings, so it
   renders no `Tree.Group`, and a server render of it holds no rows until it is on screen unless
   you give the virtualizer an `initialViewportSize`.
-- **No drag between two trees.** A drag moves items inside its own tree; two trees, even over
-  one model, do not exchange items by dragging. Move them with `item.remove` and `item.add`.
 - **No foreign drops.** Files from the desktop, links, text or another library's elements cannot
-  be dropped on a tree, and a tree's items cannot be dropped elsewhere: the drag uses Pointer
-  Events, not native HTML5 drag and drop.
+  be dropped on a tree, and a tree's items cannot be dropped elsewhere than on another tree of
+  their drag group: the drag uses Pointer Events, not native HTML5 drag and drop. Trees in two
+  documents (an iframe, a popup window) never share a drag.
 - **No built-in app policy.** Undo and redo, persistence, translations and announcement text are
   yours: the examples show each one as code to copy.
 - **React, Vue and Angular.** Another framework needs an adapter of its own, over the same core

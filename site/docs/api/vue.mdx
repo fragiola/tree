@@ -66,7 +66,7 @@ Every part is `Tree.<Part>`, with the props of its React page except `render`, `
 
 | part | Vue props | slots | events |
 | --- | --- | --- | --- |
-| `Tree.Root` | `model`, `defaultTree`, `expandedItemIds`, `selectedItemIds`, `checkedItemIds`, `loadChildren`, `announce`, `keyMap`, `expandOnClick`, `checkboxes`, `dragThreshold`, `autoExpandDelay`, `indentation`, `indicatorInset`, `typeAheadTimeout`, `virtual`, `treeRef` | default | `update:expandedItemIds`, `update:selectedItemIds`, `update:checkedItemIds` |
+| `Tree.Root` | `model`, `defaultTree`, `expandedItemIds`, `selectedItemIds`, `checkedItemIds`, `loadChildren`, `announce`, `keyMap`, `expandOnClick`, `checkboxes`, `dragThreshold`, `autoExpandDelay`, `indentation`, `indicatorInset`, `typeAheadTimeout`, `virtual`, `dragGroup`, `transfer`, `treeRef` | default | `update:expandedItemIds`, `update:selectedItemIds`, `update:checkedItemIds` |
 | `Tree.Items` | none | default `{ item }` | none |
 | `Tree.VirtualItems` | none | default `{ item, row }` (`row`: its `VirtualRow`) | none |
 | `Tree.Item` | `item` | default `{ state }` | none |
