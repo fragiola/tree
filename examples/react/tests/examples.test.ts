@@ -1,0 +1,296 @@
+import { readdirSync, readFileSync, statSync } from "node:fs";
+import { join, relative } from "node:path";
+import {
+    collectFiles,
+    type ExampleEntry,
+    examplesApp,
+    importsOf,
+    listExampleSlugs as listSlugs,
+    loadExamples,
+} from "examples-shared/scripts/examples-lib";
+import { beforeAll, describe, expect, it } from "vitest";
+import {
+    exportedNames,
+    specifierNames,
+} from "../../../scripts/exported-names.ts";
+
+// The React side of the example contract (DD6–DD8, and `#/` imports per §6 of the site export
+// contract): every example is in the manifest, imports only what a consumer can copy, the code
+// panel lists exactly the files it is compiled from, and each example assembles the tree itself
+// (README, "Anatomy of an example"): `_kit/` is shared demo content and app logic only. What every
+// framework shares (the metadata, its categories and its consistency with the folders) is checked
+// in examples/shared/tests.
+
+const APP = examplesApp("react");
+const EXAMPLES_DIR = APP.examplesDir;
+const listExampleSlugs = () => listSlugs(APP);
+
+/**
+ * The names a source imports (or re-exports) from @fragiola/tree-react, as the package
+ * exports them (before any `as`). `opaque` when it also reaches the package in a way whose names
+ * cannot be read: a namespace, a default or a dynamic import, a side-effect import.
+ */
+function kitImportsOfReact(source: string): {
+    names: string[];
+    opaque: boolean;
+} {
+    const lists = [
+        ...source.matchAll(
+            /^\s*(?:import|export)\s+(?:type\s+)?\{([^}]*)\}\s*from\s*["']@fragiola\/tree-react["']/gm,
+        ),
+    ];
+    const uses = importsOf(source).filter(
+        (specifier) => specifier === "@fragiola/tree-react",
+    );
+    return {
+        names: lists.flatMap(([, list = ""]) =>
+            specifierNames(list, "before-as"),
+        ),
+        opaque: uses.length !== lists.length,
+    };
+}
+
+/** What an example file may import, besides relative files inside examples/. */
+const ALLOWED = [
+    /^react$/,
+    /^react-dom$/,
+    /^@fragiola\/tree-react$/,
+    /^lucide-react$/,
+    /^#\/components\/(ui|atoms)\/[a-z-]+$/,
+    /^#\/lib\/cn$/,
+    /^#\/hooks\/[a-z-]+$/,
+];
+
+/** Site files under examples/ that are not example code. */
+const SITE_FILES = [/\.generated\.ts$/, /\.md$/, /\.css$/];
+
+/** What `_kit/` may hold: demo content and app logic, never a tree assembly or a style layer. */
+const KIT_FILES = ["data.ts", "loader.ts", "persist.ts", "undo.ts"];
+
+/**
+ * Where an example's `.tsx` styles itself instead of reading `styles.ts`: a class string on a
+ * `className`, a string inside a `className={…}` expression, or a `cn()` call. Returns each
+ * offending snippet.
+ */
+function inlineClasses(source: string): string[] {
+    const found: string[] = [];
+    for (const match of source.matchAll(/\bcn\(/g)) {
+        found.push(source.slice(match.index, match.index + 40));
+    }
+    for (const match of source.matchAll(/\bclassName=/g)) {
+        const start = match.index + match[0].length;
+        const open = source[start];
+        if (open === '"' || open === "'") {
+            found.push(source.slice(match.index, match.index + 60));
+            continue;
+        }
+        if (open !== "{") continue;
+        // the expression up to its matching brace
+        let depth = 0;
+        let end = start;
+        for (; end < source.length; end++) {
+            if (source[end] === "{") depth++;
+            else if (source[end] === "}" && --depth === 0) break;
+        }
+        const expression = source.slice(start + 1, end);
+        if (/["'`]/.test(expression)) {
+            found.push(`className={${expression.slice(0, 60)}}`);
+        }
+    }
+    return found;
+}
+
+function walk(dir: string): string[] {
+    return readdirSync(dir).flatMap((name) => {
+        const path = join(dir, name);
+        return statSync(path).isDirectory() ? walk(path) : [path];
+    });
+}
+
+let examples: ExampleEntry[] = [];
+
+beforeAll(async () => {
+    examples = await loadExamples(APP);
+});
+
+describe("the examples", () => {
+    it("are all in the manifest, each with a valid metadata file", () => {
+        expect(examples.map((e) => e.slug).sort()).toEqual(listExampleSlugs());
+    });
+
+    it("import only what a consumer can copy (DD8)", () => {
+        const files = walk(EXAMPLES_DIR)
+            .map((file) => relative(EXAMPLES_DIR, file))
+            .filter(
+                (file) => !SITE_FILES.some((pattern) => pattern.test(file)),
+            );
+        expect(files.length).toBeGreaterThan(0);
+        for (const file of files) {
+            const source = readFileSync(join(EXAMPLES_DIR, file), "utf-8");
+            for (const specifier of importsOf(source)) {
+                if (specifier.startsWith(".")) continue;
+                expect(
+                    ALLOWED.some((pattern) => pattern.test(specifier)),
+                    `${file} imports "${specifier}"`,
+                ).toBe(true);
+            }
+        }
+    });
+
+    it("show in the code panel exactly the files they are compiled from (DD7)", () => {
+        for (const example of examples) {
+            const { files } = collectFiles(APP, example.slug);
+            expect(example.files).toEqual(files);
+            expect(files[0]).toBe(`${example.slug}/index.tsx`);
+            // closure: every relative import of a listed file is listed too
+            for (const file of files) {
+                const source = readFileSync(join(EXAMPLES_DIR, file), "utf-8");
+                const relativeImports = importsOf(source).filter((s) =>
+                    s.startsWith("."),
+                );
+                for (const specifier of relativeImports) {
+                    const resolved = files.some((listed) => {
+                        const base = join(file, "..", specifier);
+                        return [base, `${base}.ts`, `${base}.tsx`].some(
+                            (candidate) =>
+                                relative(
+                                    EXAMPLES_DIR,
+                                    join(EXAMPLES_DIR, candidate),
+                                ) === listed,
+                        );
+                    });
+                    expect(resolved, `${file} → ${specifier}`).toBe(true);
+                }
+            }
+        }
+    });
+
+    it("assemble the tree themselves: index.tsx renders <Tree.Root>", () => {
+        for (const slug of listExampleSlugs()) {
+            const source = readFileSync(
+                join(EXAMPLES_DIR, slug, "index.tsx"),
+                "utf-8",
+            );
+            expect(source, `${slug}/index.tsx`).toMatch(/<Tree\.Root\b/);
+        }
+    });
+
+    it("keep their classes in styles.ts: no class string or cn() in a .tsx", () => {
+        for (const slug of listExampleSlugs()) {
+            expect(
+                statSync(join(EXAMPLES_DIR, slug, "styles.ts"), {
+                    throwIfNoEntry: false,
+                })?.isFile(),
+                `${slug}/styles.ts`,
+            ).toBe(true);
+            for (const file of walk(join(EXAMPLES_DIR, slug))) {
+                if (!file.endsWith(".tsx")) continue;
+                const source = readFileSync(file, "utf-8");
+                expect(
+                    inlineClasses(source),
+                    relative(EXAMPLES_DIR, file),
+                ).toEqual([]);
+            }
+        }
+    });
+
+    it("finds inline classes the styles.ts rule forbids", () => {
+        expect(inlineClasses('<div className="flex" />')).toHaveLength(1);
+        expect(inlineClasses("<div className={cn(a, b)} />")).toHaveLength(1);
+        expect(
+            inlineClasses('<div className={on ? "a" : styles.b} />'),
+        ).toHaveLength(1);
+        expect(inlineClasses("<div className={`x`} />")).toHaveLength(1);
+        expect(
+            inlineClasses(
+                "<div className={styles.tab} /><p className={styles.dot(tone)} />",
+            ),
+        ).toEqual([]);
+    });
+
+    it("use the app's API only: never engine.adapter (an adapter's side)", () => {
+        for (const file of walk(EXAMPLES_DIR)) {
+            if (!/\.(ts|tsx)$/.test(file)) continue;
+            const source = readFileSync(file, "utf-8");
+            expect(source, relative(EXAMPLES_DIR, file)).not.toMatch(
+                /\.adapter\b/,
+            );
+        }
+    });
+});
+
+describe("the app", () => {
+    // a React app installs one package: the React package brings the core and re-exports it
+    const APP_ROOT = join(import.meta.dirname, "..");
+    const SOURCES = ["src", "tests", "scripts"];
+
+    it("depends on @fragiola/tree-react only", () => {
+        const manifest = readFileSync(join(APP_ROOT, "package.json"), "utf-8");
+        expect(manifest).toContain('"@fragiola/tree-react"');
+        expect(manifest).not.toContain('"@fragiola/tree"');
+    });
+
+    it("never imports @fragiola/tree", () => {
+        const files = SOURCES.flatMap((dir) => walk(join(APP_ROOT, dir)));
+        expect(files.length).toBeGreaterThan(0);
+        for (const file of files.filter((f) => /\.tsx?$/.test(f))) {
+            expect(
+                importsOf(readFileSync(file, "utf-8")),
+                relative(APP_ROOT, file),
+            ).not.toContain("@fragiola/tree");
+        }
+    });
+});
+
+describe("the kit", () => {
+    it("holds only shared demo content and app logic", () => {
+        expect(readdirSync(join(EXAMPLES_DIR, "_kit")).sort()).toEqual(
+            [...KIT_FILES].sort(),
+        );
+    });
+
+    it("renders no Tree primitive: the examples assemble the tree", () => {
+        // the React package also re-exports the core, which _kit may use (undo.ts): a kit file
+        // imports from it only names the core exports, never a primitive or a hook
+        const coreNames = new Set(
+            exportedNames(
+                readFileSync(
+                    join(
+                        import.meta.dirname,
+                        "../../../packages/core/src/index.ts",
+                    ),
+                    "utf-8",
+                ),
+            ),
+        );
+        expect(coreNames.size).toBeGreaterThan(0);
+        for (const file of KIT_FILES) {
+            const source = readFileSync(
+                join(EXAMPLES_DIR, "_kit", file),
+                "utf-8",
+            );
+            const imported = kitImportsOfReact(source);
+            expect(imported.opaque, `_kit/${file}`).toBe(false);
+            expect(
+                imported.names.filter((name) => !coreNames.has(name)),
+                `_kit/${file}`,
+            ).toEqual([]);
+        }
+    });
+
+    it("finds the React-only names a kit file imports, whatever their alias", () => {
+        const source = [
+            'import { type TreeModel, veto } from "@fragiola/tree-react";',
+            'import { useTree as useIt } from "@fragiola/tree-react";',
+            'import type { RootProps as Props } from "@fragiola/tree-react";',
+        ].join("\n");
+        expect(kitImportsOfReact(source)).toEqual({
+            names: ["TreeModel", "veto", "useTree", "RootProps"],
+            opaque: false,
+        });
+        expect(
+            kitImportsOfReact('import * as T from "@fragiola/tree-react";')
+                .opaque,
+        ).toBe(true);
+    });
+});

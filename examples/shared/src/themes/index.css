@@ -1,0 +1,5 @@
+/* The example themes. Imported by the embed's stylesheet after the Fragiola palettes, which is what
+   lets a theme's palette rules win the tie. */
+
+@import "./light.css";
+@import "./dark.css";

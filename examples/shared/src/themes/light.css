@@ -1,0 +1,110 @@
+/* Theme "light" — Neutral and quiet: the reference look.
+
+   One file per theme, selected by data-example-theme="light" on any element (the embed puts it
+   on <body>, as an app would). A theme only sets values; it styles no markup. It declares:
+     1. shape tokens (--tr-*) that the examples' class names read: the font and its size
+        (--tr-font, --tr-size), the radius of a row and of a frame (--tr-radius), a row's height
+        and one level's indentation (--tr-row-height, --tr-indent), the gap between parts
+        (--tr-gap), the frame's shadow (--tr-shadow) and motion (--tr-motion);
+     2. the Fragiola palettes the examples use, each with all SIX roles (base, soft, line,
+        contrast, accent, ring). A palette that omitted one would inherit it from the page and
+        leak across the theme boundary;
+     3. on every palette, the row colours that depend on it: a selected row (--tr-selected-bg,
+        --tr-selected-fg), a hovered one (--tr-hover-bg) and the drop indicator's line
+        (--tr-indicator). They are declared per palette so that var(--palette-…) resolves
+        against the palette the element sits in.
+
+   Specificity: the palette rules are ":root [data-example-theme="light"] .palette-x", which ties
+   with Fragiola's own ":root[data-theme] .palette-x" and wins by coming later in the cascade, so
+   a theme overrides the page's light/dark. */
+
+[data-example-theme="light"] {
+    color-scheme: light;
+    --palette-state-shift: -0.1;
+    --tr-font: var(--font-sans);
+    --tr-size: 0.875rem;
+    --tr-radius: 6px;
+    --tr-row-height: 1.875rem;
+    --tr-indent: 1rem;
+    --tr-gap: 0.375rem;
+    --tr-shadow: 0 1px 2px oklch(0 0 0 / 0.06);
+    --tr-motion: 150ms;
+}
+
+:root [data-example-theme="light"] .palette-surface,
+:root [data-example-theme="light"].palette-surface {
+    --palette-base: oklch(0.96 0.003 250);
+    --palette-soft: oklch(0.93 0.004 250);
+    --palette-line: oklch(0.86 0.004 250);
+    --palette-contrast: oklch(0.15 0.01 250);
+    --palette-accent: oklch(0.3 0.01 250);
+    --palette-ring: var(--palette-accent);
+}
+
+:root [data-example-theme="light"] .palette-raised,
+:root [data-example-theme="light"].palette-raised {
+    --palette-base: oklch(1 0 0);
+    --palette-soft: oklch(0.955 0.004 250);
+    --palette-line: oklch(0.87 0.005 250);
+    --palette-contrast: oklch(0.15 0.01 250);
+    --palette-accent: oklch(0.28 0.01 250);
+    --palette-ring: var(--palette-accent);
+}
+
+:root [data-example-theme="light"] .palette-blue,
+:root [data-example-theme="light"].palette-blue {
+    --palette-base: oklch(0.55 0.2 250);
+    --palette-soft: oklch(0.94 0.06 250);
+    --palette-line: oklch(0.85 0.08 250);
+    --palette-contrast: oklch(1 0 0);
+    --palette-accent: oklch(0.45 0.18 250);
+    --palette-ring: var(--palette-accent);
+}
+
+:root [data-example-theme="light"] .palette-orange,
+:root [data-example-theme="light"].palette-orange {
+    --palette-base: oklch(0.68 0.17 55);
+    --palette-soft: oklch(0.94 0.08 70);
+    --palette-line: oklch(0.85 0.12 70);
+    --palette-contrast: oklch(0.2 0.05 55);
+    --palette-accent: oklch(0.45 0.15 55);
+    --palette-ring: var(--palette-accent);
+}
+
+:root [data-example-theme="light"] .palette-green,
+:root [data-example-theme="light"].palette-green {
+    --palette-base: oklch(0.52 0.16 150);
+    --palette-soft: oklch(0.94 0.07 150);
+    --palette-line: oklch(0.85 0.1 150);
+    --palette-contrast: oklch(1 0 0);
+    --palette-accent: oklch(0.42 0.14 150);
+    --palette-ring: var(--palette-accent);
+}
+
+:root [data-example-theme="light"] .palette-danger,
+:root [data-example-theme="light"].palette-danger {
+    --palette-base: oklch(0.55 0.2 25);
+    --palette-soft: oklch(0.94 0.07 25);
+    --palette-line: oklch(0.85 0.1 25);
+    --palette-contrast: oklch(1 0 0);
+    --palette-accent: oklch(0.45 0.18 25);
+    --palette-ring: var(--palette-accent);
+}
+
+:root [data-example-theme="light"] .palette-purple,
+:root [data-example-theme="light"].palette-purple {
+    --palette-base: oklch(0.55 0.2 300);
+    --palette-soft: oklch(0.94 0.06 300);
+    --palette-line: oklch(0.85 0.08 300);
+    --palette-contrast: oklch(1 0 0);
+    --palette-accent: oklch(0.45 0.18 300);
+    --palette-ring: var(--palette-accent);
+}
+
+:root [data-example-theme="light"] [class*="palette-"],
+:root [data-example-theme="light"][class*="palette-"] {
+    --tr-selected-bg: oklch(from var(--palette-line) l c h / 0.55);
+    --tr-selected-fg: var(--palette-contrast);
+    --tr-hover-bg: var(--palette-soft);
+    --tr-indicator: oklch(from var(--palette-contrast) l c h / 0.7);
+}
