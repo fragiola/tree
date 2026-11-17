@@ -10,6 +10,7 @@ import { PointerDrag } from "../dnd/pointer-drag";
 import {
     asElement,
     directionOf,
+    isDragExempt,
     PART_ATTRIBUTE,
     schedulerOf,
 } from "../dom/owner";
@@ -588,9 +589,11 @@ class Engine<T extends TreeTypes> implements TreeEngine<T>, EngineHost {
 
     private keyDown(event: KeyEventInput): boolean {
         if (this.destroyed) return false;
-        // the rename input handles its own keys
+        // the rename input, and any control inside an item (a button, a link, an input: the
+        // DRAG_EXEMPT elements), handle their own keys
         const target = asElement(event.target);
-        if (target?.closest(`[${PART_ATTRIBUTE}="rename-input"]`)) return false;
+        const item = target?.closest(`[${PART_ATTRIBUTE}="item"]`);
+        if (target && item && isDragExempt(target, item)) return false;
         if (this.keyboardDrag.active) {
             const handled = this.keyboardDragKey(event.key);
             if (handled) event.preventDefault();

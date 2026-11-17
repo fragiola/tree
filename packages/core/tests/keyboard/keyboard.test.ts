@@ -40,6 +40,25 @@ describe("the APG keyboard: moving", () => {
         expect(focused(m)).toBe("readme");
     });
 
+    it("leaves the keys of a control inside an item to the control", () => {
+        const m = setup();
+        const button = document.createElement("button");
+        m.content("app").append(button);
+        button.focus();
+        const event = new KeyboardEvent("keydown", {
+            key: "Enter",
+            bubbles: true,
+            cancelable: true,
+        });
+        button.dispatchEvent(event);
+        expect(event.defaultPrevented).toBe(false);
+        expect(m.model.state.selectedItemIds).toEqual([]);
+        // the item itself still takes them
+        m.item("app").focus();
+        expect(m.key("Enter")).toBe(true);
+        expect(m.model.state.selectedItemIds).toEqual(["app"]);
+    });
+
     it("a disabled item is focusable", () => {
         const m = setup();
         m.model.run("item.set-flags", { itemId: "app", disabled: true });

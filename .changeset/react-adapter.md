@@ -12,3 +12,6 @@ selection and checks (mapped onto commands), and the engine's options.
 
 The core's engine takes `resetLoadsOnDestroy`: `destroy()` puts the items it was loading back to
 `unloaded`, so a tree that remounts loads them again.
+
+A control inside an item's row (a button, a link, an input: the `DRAG_EXEMPT` elements) keeps its
+keys: the engine no longer selects or toggles the item when Enter or Space is pressed on it.
