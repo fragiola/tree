@@ -1,5 +1,6 @@
 import { Component, DestroyRef, inject, signal } from "@angular/core";
 import { createTreeModel, TREE } from "@fragiola/tree-angular";
+import { rename, TreeItemRenameDirective } from "@fragiola/tree-angular/rename";
 import {
     LucideChevronRight,
     LucideFile,
@@ -12,10 +13,14 @@ import * as styles from "./styles";
 
 let nextId = 0;
 
+/** The opt-in features of the model: the rename. */
+const features = [rename()] as const;
+
 @Component({
     selector: "example-rename",
     imports: [
         TREE,
+        TreeItemRenameDirective,
         LucideChevronRight,
         LucideFile,
         LucideFolder,
@@ -73,7 +78,10 @@ let nextId = 0;
 })
 export default class Rename {
     protected readonly styles = styles;
-    protected readonly model = createTreeModel<FileTypes>(fileSystem());
+    protected readonly model = createTreeModel<FileTypes, typeof features>(
+        fileSystem(),
+        { features },
+    );
     /** the reason the last rename was refused, until the label changes or the rename ends */
     protected readonly error = signal<string | undefined>(undefined);
     protected readonly errorId = `rename-error-${nextId++}`;
@@ -82,8 +90,8 @@ export default class Rename {
         const destroyRef = inject(DestroyRef);
         destroyRef.onDestroy(namingRules(this.model));
         destroyRef.onDestroy(
-            this.model.subscribe((event) => {
-                if (event.after.renamingItemId === null)
+            this.model.subscribe(() => {
+                if (this.model.state.renamingItemId === null)
                     this.error.set(undefined);
             }),
         );

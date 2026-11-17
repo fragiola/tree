@@ -3,6 +3,7 @@ import { injectTree, injectTreeItem } from "@fragiola/tree-angular";
 import { LucideCircleAlert, LucideRotateCcw } from "@lucide/angular";
 import { ClickableButton } from "#/components/atoms/clickable";
 import type { FileTypes } from "../_kit/data";
+import type { features } from "./features";
 import * as styles from "./styles";
 
 /** A failed load stays `error` until the app loads it again: a screen action of the engine. */
@@ -30,6 +31,6 @@ import * as styles from "./styles";
 export class RetryButton {
     protected readonly styles = styles;
     // the engine of the enclosing [treeRoot], and the item of the enclosing [treeItem]
-    protected readonly engine = injectTree<FileTypes>().engine;
+    protected readonly engine = injectTree<FileTypes, typeof features>().engine;
     protected readonly item = injectTreeItem<FileTypes>().item;
 }

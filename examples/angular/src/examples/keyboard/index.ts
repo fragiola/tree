@@ -6,13 +6,16 @@ import {
     TREE,
     type TreeModel,
 } from "@fragiola/tree-angular";
+import { rename, TreeItemRenameDirective } from "@fragiola/tree-angular/rename";
 import { selection } from "@fragiola/tree-angular/selection";
+import { typeAhead } from "@fragiola/tree-angular/type-ahead";
+
 import { LucideChevronRight, LucideFile, LucideFolder } from "@lucide/angular";
 import { type FileTypes, fileSystem } from "../_kit/data";
 import * as styles from "./styles";
 
-/** The opt-in features of the model: the selection. */
-const features = [selection()] as const;
+/** The opt-in features of the model: the selection, the rename (F2) and the type-ahead. */
+const features = [selection(), rename(), typeAhead()] as const;
 
 // Every key is the engine's (the WAI-ARIA APG tree view, `DEFAULT_KEY_MAP`): the example only
 // lists them. `[keyMap]` on the root would change any of them.
@@ -75,7 +78,13 @@ let nextId = 0;
 
 @Component({
     selector: "example-keyboard",
-    imports: [TREE, LucideChevronRight, LucideFile, LucideFolder],
+    imports: [
+        TREE,
+        TreeItemRenameDirective,
+        LucideChevronRight,
+        LucideFile,
+        LucideFolder,
+    ],
     host: { class: "contents" },
     template: `
         <div [class]="styles.frame">

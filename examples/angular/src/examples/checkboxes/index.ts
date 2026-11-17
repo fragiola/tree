@@ -1,12 +1,16 @@
 import { Component, computed } from "@angular/core";
 import { createTreeModel, injectTreeState, TREE } from "@fragiola/tree-angular";
+import { checkboxes } from "@fragiola/tree-angular/checkboxes";
 import { LucideCheck, LucideChevronRight, LucideMinus } from "@lucide/angular";
 import { type PermissionTypes, permissions } from "../_kit/data";
 import * as styles from "./styles";
 
 // The kit's permissions are checked in cascade (`settings.checkMode: "cascade"`): checking a group
-// checks its permissions, and a group with only some of them checked is mixed. `checkboxes` puts
+// checks its permissions, and a group with only some of them checked is mixed. `checkboxes()` puts
 // `aria-checked` on every item, and makes Space toggle the focused item's check.
+
+/** The opt-in features of the model: the checks (Space checks: the tree has no selection). */
+const features = [checkboxes()] as const;
 
 @Component({
     selector: "example-checkboxes",
@@ -14,7 +18,7 @@ import * as styles from "./styles";
     host: { class: "contents" },
     template: `
         <div [class]="styles.frame">
-            <div [treeRoot]="model" checkboxes aria-label="Permissions" [class]="styles.root">
+            <div [treeRoot]="model" aria-label="Permissions" [class]="styles.root">
                 <ng-template [treeItems]="model" let-item>
                     <div [treeItem]="item" #node="treeItem" [class]="styles.item">
                         <div treeItemContent [class]="styles.row">
@@ -62,9 +66,16 @@ import * as styles from "./styles";
 })
 export default class Checkboxes {
     protected readonly styles = styles;
-    protected readonly model = createTreeModel<PermissionTypes>(permissions());
+    protected readonly model = createTreeModel<
+        PermissionTypes,
+        typeof features
+    >(permissions(), { features });
     // the scopes the app would save: the checked permissions (a group is only a shortcut)
-    private readonly scopes = injectTreeState<PermissionTypes, string>(
+    private readonly scopes = injectTreeState<
+        PermissionTypes,
+        string,
+        typeof features
+    >(
         (state) =>
             state.checkedItemIds
                 .flatMap((itemId) => {
