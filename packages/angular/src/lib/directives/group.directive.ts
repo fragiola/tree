@@ -1,13 +1,14 @@
 import {
     computed,
-    contentChild,
     Directive,
+    type DoCheck,
     type EmbeddedViewRef,
     effect,
     forwardRef,
     inject,
     input,
     type Signal,
+    signal,
     type TemplateRef,
     untracked,
 } from "@angular/core";
@@ -36,6 +37,7 @@ import {
     KeyedViews,
     rootNodesOf,
     type SignalContext,
+    sameItems,
     signalContext,
 } from "../utils/views";
 import type { TreeItemsContext } from "./templates.directive";
@@ -62,15 +64,15 @@ import type { TreeItemsContext } from "./templates.directive";
         ...ITEM_DATA_HOST,
     },
 })
-export class TreeGroupDirective implements TreeGroupContext {
+export class TreeGroupDirective implements TreeGroupContext, DoCheck {
     /** render the children while the item is collapsed too, hidden (default false) */
     readonly keepMounted = input(false, { transform: booleanInput });
 
     private readonly context = injectTreeContext("[treeGroup]");
     private readonly item = injectItemContext("[treeGroup]");
     private readonly host = injectHost();
-    /** its own template (an `<ng-template treeItems>` directly inside it) */
-    private readonly own = contentChild(TREE_ITEMS, { descendants: false });
+    /** how many `<ng-template treeItems>` inside it render its children (see `adopt`) */
+    private readonly adopted = signal(0);
     /** the template it renders with when it has none of its own */
     private readonly inherited = inject(TREE_ITEMS, { optional: true });
     private readonly detached = new DetachedViews();
@@ -79,15 +81,21 @@ export class TreeGroupDirective implements TreeGroupContext {
     readonly state: Signal<TreeItemState> = this.item.state;
 
     /** the item's children while the group is open (expanded, or `keepMounted`) */
-    readonly children: Signal<readonly ItemOf<AnyTypes>[]> = computed(() => {
-        const state = this.state();
-        if (!state.expanded && !this.keepMounted()) return [];
-        const items = this.context.state().items;
-        return (this.item.item().childItemIds ?? []).flatMap((itemId) => {
-            const child = items[itemId];
-            return child ? [child] : [];
-        });
-    });
+    readonly children: Signal<readonly ItemOf<AnyTypes>[]> = computed(
+        () => {
+            if (!this.item.state().expanded && !this.keepMounted()) return [];
+            const items = this.context.state().items;
+            return (this.item.item().childItemIds ?? []).flatMap((itemId) => {
+                const child = items[itemId];
+                return child ? [child] : [];
+            });
+        },
+        // a drag step or a focus change keeps the list: no view is synced for it
+        { equal: sameItems },
+    );
+
+    /** the views of the children it renders itself, with the enclosing template */
+    private views: KeyedViews<EmbeddedViewRef<TreeItemsContext>> | undefined;
 
     protected readonly itemData = computed(() => itemData(this.state()));
 
@@ -99,18 +107,17 @@ export class TreeGroupDirective implements TreeGroupContext {
 
         // with no template of its own, the enclosing one renders the children, in no container:
         // their nodes are placed inside the group
-        let views: KeyedViews<EmbeddedViewRef<TreeItemsContext>> | undefined;
         effect(() => {
-            const own = this.own();
+            const own = this.adopted() > 0;
             const children = this.children();
             untracked(() => {
                 if (own || !this.inherited) {
-                    views?.clear();
-                    views = undefined;
+                    this.views?.clear();
+                    this.views = undefined;
                     return;
                 }
-                views ??= new KeyedViews(null);
-                const current = views;
+                this.views ??= new KeyedViews(null);
+                const current = this.views;
                 const template = this.inherited
                     .template as TemplateRef<TreeItemsContext>;
                 current.sync(
@@ -138,13 +145,36 @@ export class TreeGroupDirective implements TreeGroupContext {
                 );
             });
         });
-        onDestroy(() => views?.clear());
+        onDestroy(() => this.views?.clear());
+    }
+
+    adopt(): () => void {
+        this.adopted.update((count) => count + 1);
+        let released = false;
+        return () => {
+            if (released) return;
+            released = true;
+            this.adopted.update((count) => count - 1);
+        };
+    }
+
+    /**
+     * The children's views are in no container: the application checks them on their own, and a
+     * zoneless tick skips them unless they are dirty. When the view the group is in is checked
+     * (the app's template may read plain fields, not only signals), they are checked too.
+     */
+    ngDoCheck(): void {
+        if (!this.views) return;
+        for (const item of untracked(this.children)) {
+            this.views.get(item.id)?.markForCheck();
+        }
     }
 
     /** Puts the views' nodes inside the group, in order, when they are not already. */
     private placeInside(nodes: readonly Node[]): void {
+        const wanted = new Set(nodes);
         const inside = [...this.host.childNodes].filter((node) =>
-            nodes.includes(node),
+            wanted.has(node),
         );
         if (
             inside.length === nodes.length &&

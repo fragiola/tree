@@ -42,6 +42,13 @@ export class SignalContext<V extends object> {
     }
 }
 
+/** Two lists with the same items, in the same order (`Object.is`): a computed list's `equal`. */
+export function sameItems<V>(a: readonly V[], b: readonly V[]): boolean {
+    return (
+        a.length === b.length && a.every((value, i) => Object.is(value, b[i]))
+    );
+}
+
 /** A {@link SignalContext}, seen as the context type its template declares. */
 export function signalContext<V extends object>(
     initial: V,

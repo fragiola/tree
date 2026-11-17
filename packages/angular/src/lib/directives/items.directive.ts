@@ -14,7 +14,12 @@ import {
 import type { AnyTypes, ItemOf, TreeTypes } from "@fragiola/tree";
 import { injectTreeContext, TREE_GROUP, TREE_ITEMS } from "../context";
 import { onDestroy } from "../utils/helpers";
-import { KeyedViews, type SignalContext, signalContext } from "../utils/views";
+import {
+    KeyedViews,
+    type SignalContext,
+    sameItems,
+    signalContext,
+} from "../utils/views";
 import type { TreeItemsContext, TypedBy } from "./templates.directive";
 
 /**
@@ -49,18 +54,25 @@ export class TreeItemsDirective<T extends TreeTypes = AnyTypes> {
     private readonly container = inject(ViewContainerRef);
 
     /** the items it renders now: the root items, or its group's children */
-    readonly items: Signal<readonly ItemOf<T>[]> = computed(() => {
-        if (this.group) {
-            return this.group.children() as unknown as readonly ItemOf<T>[];
-        }
-        const tree = this.context.state();
-        return tree.rootItemIds.flatMap((itemId) => {
-            const item = tree.items[itemId];
-            return item ? [item as unknown as ItemOf<T>] : [];
-        });
-    });
+    readonly items: Signal<readonly ItemOf<T>[]> = computed(
+        () => {
+            if (this.group) {
+                return this.group.children() as unknown as readonly ItemOf<T>[];
+            }
+            const tree = this.context.state();
+            return tree.rootItemIds.flatMap((itemId) => {
+                const item = tree.items[itemId];
+                return item ? [item as unknown as ItemOf<T>] : [];
+            });
+        },
+        // a drag step or a focus change keeps the list: no view is synced for it
+        { equal: sameItems },
+    );
 
     constructor() {
+        // inside a group, this template renders its children: the group renders none itself
+        const release = this.group?.adopt();
+        if (release) onDestroy(release);
         const views = new KeyedViews<EmbeddedViewRef<TreeItemsContext<T>>>(
             this.container,
         );

@@ -50,6 +50,12 @@ export const TREE_ITEM = new InjectionToken<TreeItemContext>("TreeItem");
 export interface TreeGroupContext {
     /** the enclosing item's children while the group is open (expanded, or `keepMounted`) */
     readonly children: Signal<readonly ItemOf<AnyTypes>[]>;
+    /**
+     * an `<ng-template treeItems>` inside the group (at any depth of its content, an `@if`
+     * included) renders its children: the group renders none with the enclosing template. Returns
+     * the release, for when that template goes away
+     */
+    adopt(): () => void;
 }
 
 export const TREE_GROUP = new InjectionToken<TreeGroupContext>("TreeGroup");

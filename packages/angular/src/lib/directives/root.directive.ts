@@ -25,6 +25,7 @@ import {
 import {
     eraseModel,
     TREE_CONTEXT,
+    TREE_GROUP,
     type TreeContext,
     typedEngine,
 } from "../context";
@@ -65,6 +66,8 @@ export interface RootState {
             provide: TREE_CONTEXT,
             useFactory: () => inject(TreeRootDirective).context,
         },
+        // a tree inside another tree's group starts at its own root items
+        { provide: TREE_GROUP, useValue: null },
     ],
     host: {
         role: "tree",
