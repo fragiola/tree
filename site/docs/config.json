@@ -130,7 +130,7 @@
             ]
         },
         {
-            "label": "API: primitives (@fragiola/tree-react)",
+            "label": "API: primitives (@fragiola/tree-react, @fragiola/tree-vue)",
             "collapsible": true,
             "pages": [
                 {
@@ -176,6 +176,10 @@
                 {
                     "label": "Hooks",
                     "path": "api/hooks"
+                },
+                {
+                    "label": "Vue primitives",
+                    "path": "api/vue"
                 }
             ]
         },

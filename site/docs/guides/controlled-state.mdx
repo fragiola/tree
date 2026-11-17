@@ -1,7 +1,9 @@
 ---
 title: Controlled state
-description: Own the expanded, selected and checked items in React state, decide what each change becomes, and keep the tree in step with your app.
+description: Own the expanded, selected and checked items in your app state, decide what each change becomes, and keep the tree in step with your app.
 ---
+
+<Framework name="react">
 
 By default the model owns its state, and you read it with `useTreeState`. When your app wants to
 own a list (to sync it with the URL, a store or another view), the root takes it as a controlled
@@ -15,7 +17,27 @@ prop, with a callback for every change the tree would make:
 
 Each pair is independent: control the selection and leave the expansion to the model.
 
+</Framework>
+
+<Framework name="vue">
+
+By default the model owns its state, and you read it with `useTreeState`. When your app wants to
+own a list (to sync it with the URL, a store or another view), bind it with `v-model` on the
+root: the tree reports every change it would make through the list's `update:` event.
+
+| `v-model` | event |
+| --- | --- |
+| `v-model:expanded-item-ids` | `update:expandedItemIds` |
+| `v-model:selected-item-ids` | `update:selectedItemIds` |
+| `v-model:checked-item-ids` | `update:checkedItemIds` |
+
+Each list is independent: control the selection and leave the expansion to the model.
+
+</Framework>
+
 ## Controlling the expansion
+
+<Framework name="react">
 
 ```tsx
 import { Tree } from "@fragiola/tree-react";
@@ -41,7 +63,36 @@ export function Outline() {
 }
 ```
 
+</Framework>
+
+<Framework name="vue">
+
+```vue title="outline.vue"
+<script setup lang="ts">
+import { ref } from "vue";
+import OutlineItem from "./outline-item.vue";
+import { json, Tree } from "./tree";
+
+const expandedItemIds = ref<string[]>(["src"]);
+</script>
+
+<template>
+    <button type="button" @click="expandedItemIds = []">Collapse all</button>
+    <Tree.Root
+        :default-tree="json"
+        v-model:expanded-item-ids="expandedItemIds"
+        aria-label="Outline"
+    >
+        <Tree.Items v-slot="{ item }"><OutlineItem :item="item" /></Tree.Items>
+    </Tree.Root>
+</template>
+```
+
+</Framework>
+
 ## Deciding what a change becomes
+
+<Framework name="react">
 
 The callback receives the list the tree would have; the prop decides what it has. A change the
 app does not accept is reverted: here a pinned folder stays open.
@@ -59,6 +110,35 @@ const change = (itemIds: string[]) =>
     <Tree.Items<Types>>{(item) => <OutlineItem item={item} />}</Tree.Items>
 </Tree.Root>;
 ```
+
+</Framework>
+
+<Framework name="vue">
+
+The event carries the list the tree would have; the prop decides what it has. Split the
+`v-model` into the prop and the event to decide: a change the app does not accept is reverted,
+here a pinned folder stays open.
+
+```vue
+<script setup lang="ts">
+const change = (itemIds: string[]) => {
+    expandedItemIds.value = itemIds.includes("src") ? itemIds : ["src", ...itemIds];
+};
+</script>
+
+<template>
+    <Tree.Root
+        :default-tree="json"
+        :expanded-item-ids="expandedItemIds"
+        @update:expanded-item-ids="change"
+        aria-label="Outline"
+    >
+        <Tree.Items v-slot="{ item }"><OutlineItem :item="item" /></Tree.Items>
+    </Tree.Root>
+</template>
+```
+
+</Framework>
 
 <Example id="controlled" />
 

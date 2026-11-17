@@ -14,17 +14,28 @@ framework has an adapter, so **every piece of logic that isn't rendering lives i
 |---|---|---|---|
 | `packages/core` | `@fragiola/tree` | the tree model (JSON document v1 and its JSON Schema, the command bus, commands with JSON Schemas, `get`/`is` queries, middleware, events), and the engine (DOM focus, the WAI-ARIA keyboard model with type-ahead, Pointer Events drag and drop with keyboard drag, the async children loader, announcements) | DOM only, zero runtime deps |
 | `packages/react` | `@fragiola/tree-react` | the `Tree.*` primitives (`Root`, `Items`, `Item`, `ItemContent`, `Group`, `Toggle`, `Checkbox`, `RenameInput`, `DropIndicator`, `LiveRegion`) and hooks (`useTree`, `useTreeItem`, `useTreeState`, `useTreeRef`, `createTreeRef`) over the core, and the core re-exported | the core (`workspace:*`, published as the exact version); peer `react`, `react-dom` (^19) |
-| `packages/vue` | `@fragiola/tree-vue` | the same primitives in Vue 3 (Epic #11) | the core; peer `vue` (^3.5) |
+| `packages/vue` | `@fragiola/tree-vue` | the same `Tree.*` primitives as Vue 3.5 components (plain `.ts` render functions, `as` and a `render` scoped slot, default scoped slots for the recursion, `v-model:*-item-ids`), `typedTree<Types>()`, the composables (`useTree`, `useTreeItem`, `useTreeState`, `useTreeRef`, `createTreeRef`), and the core re-exported | the core (`workspace:*`, published as the exact version); peer `vue` (^3.5) |
 | `packages/angular` | `@fragiola/tree-angular` | the same primitives as Angular directives (Epic #14) | the core; peer `@angular/core` |
 | `examples/shared` | `examples-shared`, private | what every framework's examples share: the metadata (`src/meta/<id>.ts`), the two themes, the embed protocol, the manifest builder and loader generator, every Playwright spec | no framework |
 | `examples/react` | `examples-react`, private | the 13 React examples (`src/examples/<id>/`), the vendored Fragiola UI (`src/components`, `scripts/vendor-fragiola.ts`), the embed app | `@fragiola/tree-react`, Fragiola UI's stack |
+| `examples/vue` | `examples-vue`, private | the 13 examples in Vue (`src/examples/<id>/index.vue`, `styles.ts` copied from React's), the Vue kit (Dockable's, over Reka UI, with the React kit's classes; `src/styles` and `src/lib/cn.ts` copied from examples/react, `tests/vendored.test.ts`), the embed app; single-file components checked by `vue-tsc` on TypeScript 6.0.3, pinned in this app only | `@fragiola/tree-vue`, Vue 3.5, Reka UI, `@lucide/vue` |
 | `apps/playground` | `playground`, private | every example live, dev-only scenarios (`src/scenarios/<area>/<id>.tsx`), unstyled fixtures for Playwright (`fixtures/<name>/`), the Inspector | `@fragiola/tree-react` |
 | `site` | `site`, private | the site export (`export.ts`, `contract.ts`, `dev.ts`, `dev-proxy.ts`, `sources.ts`), the pages fragiola.com/tree serves (`site/docs`), the repository's script tests | |
 
-The Vue and Angular adapters come with their Epics (#11, #14), each adding its package, its
+Vue came with Epic #11; the Angular adapter comes with its Epic (#14), adding its package, its
 examples app (porting the 13 examples with the same ids, passing the shared specs unchanged), its
 CI job, its entry in `ADAPTERS` (`scripts/check-package.ts`), its framework in
-`site/project.json` and in `COMPLETE_FRAMEWORKS` (`examples/shared/e2e/available.ts`).
+`site/project.json` and in `COMPLETE_FRAMEWORKS` (`examples/shared/e2e/available.ts`), as Vue
+did.
+
+**The Vue adapter** follows Dockable's (`../dockable/packages/vue`): the same primitive file
+names as `packages/react` (`root.ts`, `item.ts`, …), `utils/render.ts` / `primitive.ts` /
+`registration.ts` from Dockable, behaviour parity with React (`packages/vue/tests/parity.test.ts`
+renders one document with both adapters and compares every element's ARIA, `data-*` and style).
+No function form of `class`/`style` (Dockable's choice): state looks go through `data-*` or the
+`render` slot. The engine is created once mounted; a server render neither subscribes to the
+model nor runs a command on it (`onClient` in `utils/render.ts`). Another `model` remounts the
+root. Biome's React hook rule (`useHookAtTopLevel`) is off for Vue code.
 
 ## Non-negotiable rules
 
@@ -145,20 +156,22 @@ The words never swap meaning, in code, docs and examples.
 | `pnpm check` | Biome lint + format + assist (non-mutating), then the source layout over `git ls-files` (`check:layout`, `scripts/check-layout.ts`), then builds the core and checks that `site/docs/api/commands.mdx` matches the registry (`check:commands`) |
 | `pnpm check:fix` | Biome check with auto-fix |
 | `pnpm typecheck` | `pnpm -r typecheck` (TypeScript 7, no emit) |
-| `pnpm test` | Vitest: `core` (node; the engine's files opt into jsdom), `react` (jsdom, Testing Library), `playground`, `examples-shared`, `examples-react`, `site` (the export, the contract, `docs-reference.test.ts`, the scripts' tests) |
+| `pnpm test` | Vitest: `core` (node; the engine's files opt into jsdom), `react` (jsdom, Testing Library), `vue` (jsdom, `@vue/test-utils`; `parity.test.ts` renders React too), `playground`, `examples-shared`, `examples-react`, `examples-vue`, `site` (the export, the contract, `docs-reference.test.ts`, the scripts' tests) |
 | `pnpm build` | `pnpm -r build` (tsdown), then `scripts/check-dts.ts` (no `any` in the built declarations) |
-| `pnpm check:package` | builds the packages, packs them with pnpm, checks the packed `exports` are the repo's without the source condition, runs `publint` and `attw --profile esm-only` on the tarballs, then the smoke app of each adapter in `ADAPTERS` (React: a Vite + React app that installs only the tarball, typechecks, builds and loads its dev server) |
+| `pnpm check:package` | builds the packages, packs them with pnpm, checks the packed `exports` are the repo's without the source condition, runs `publint` and `attw --profile esm-only` on the tarballs, then the smoke app of each adapter in `ADAPTERS` (React: a Vite + React app that installs only the tarball, typechecks, builds and loads its dev server; Vue: a Vite + Vue app of single-file components checked by `vue-tsc` on examples/vue's TypeScript) |
 | `pnpm changeset` | adds a changeset (`.changeset/*.md`): every PR that changes what a package ships (`changedFilePatterns` in `.changeset/config.json`) carries one, and CI's Changesets job fails one that does not; every package is in one `fixed` group (`@fragiola/*`) |
 | `pnpm release:version` | `changeset version`: only the release workflow runs it (the Version Packages PR); never commit a version bump by hand |
 | `pnpm dev` | the playground (`apps/playground`) on http://localhost:5173 (`PLAYGROUND_PORT` moves it): every example, the scenarios, the fixtures, the Inspector |
 | `pnpm e2e` | Playwright: the playground's suite (fixtures, shell, scenarios), then each examples app's run of the shared specs (`examples/shared/e2e`) against its production embed; build the packages first (`pnpm build`) |
-| `pnpm site:export --base /tree --out <dir>` | the site export (contract v1.2, `../www/CONTRACT.md`): pages, `examples.json`, `project.json` and the React embed, validated by `site/contract.ts` |
+| `pnpm site:export --base /tree --out <dir>` | the site export (contract v1.2, `../www/CONTRACT.md`): pages, `examples.json`, `project.json` and the React and Vue embeds, validated by `site/contract.ts` |
 | `pnpm site:dev --base /tree --port 5183` | every framework's embed with hot reload under `/tree/embed/<framework>/`, for `www`'s dev server |
 
 **Dev ports.** The playground is 5173. The React embed alone (`pnpm --filter examples-react dev`)
 and `pnpm site:dev` default to **5183**, the port `www` registers for `tree` (the next free one
 after ui 5174, dockable 5180, data-grid 5181, grid-layout 5182); fragiola/www#32 adds
-`{ "slug": "tree", "devUrl": "http://localhost:5183" }` to `../www/projects.json`.
+`{ "slug": "tree", "devUrl": "http://localhost:5183" }` to `../www/projects.json`. The Vue embed
+alone (`pnpm --filter examples-vue dev`) defaults to 5184; `site:dev` runs each framework's embed
+on a free port behind its one port.
 
 **Releasing is a merge, and it is disabled today.** `.github/workflows/release.yml` is Dockable's
 (Version Packages PR, then npm trusted publishing with pnpm), gated on the repository variable
@@ -186,8 +199,14 @@ packages/react/     @fragiola/tree-react  src/index.ts, parts.ts (the Tree names
                     src/hooks/          one hook per file; internal.ts for those only the primitives call
                     src/utils/          merge-props.ts, use-render.ts (from Dockable), engine-facade.ts
                     tests/              named after behaviour (aria, contract, keyboard, dnd, …)
+packages/vue/       @fragiola/tree-vue  src/index.ts, parts.ts, typed.ts (typedTree), context.ts, and
+                    src/components/     one primitive per file, named as in React (root.ts, item.ts, …)
+                    src/composables/    one composable per file; internal.ts for those only the primitives call
+                    src/utils/          render.ts, primitive.ts, registration.ts (from Dockable), engine-facade.ts
+                    tests/              the React adapter's behaviour files, parity.test.ts, ssr.test.ts, types/
 examples/shared/    src/meta/, src/themes/, src/embed/, scripts/, e2e/ (every spec), tests/
 examples/react/     src/examples/<id>/ (index.tsx, styles.ts), src/examples/_kit/, src/components/ (vendored), src/embed/
+examples/vue/       src/examples/<id>/ (index.vue, tree.ts, *.vue, styles.ts), src/examples/_kit/ (React's), src/components/ (Vue kit), src/embed/
 apps/playground/    src/shell/, src/scenarios/<area>/, src/inspector/, src/fixture/, fixtures/<name>/, e2e/
 site/               export.ts, contract.ts, dev.ts, dev-proxy.ts, sources.ts, project.json
                     docs/               the pages fragiola.com/tree serves (docs/api/commands.mdx is generated)
@@ -206,8 +225,8 @@ never npm.
 
 The docs and examples are served by `fragiola.com/tree`, built by the `www` repo from this repo's
 site export (`../www/CONTRACT.md` v1.2, `pnpm site:export`). This repo provides the pages
-(`site/docs`, sidebar `site/docs/config.json`), `site/project.json` (`frameworks: ["react"]` until
-the Vue and Angular Epics), the gallery configuration (built from `examples/shared`) and one
+(`site/docs`, sidebar `site/docs/config.json`), `site/project.json` (`frameworks: ["react", "vue"]`; Angular
+joins with its Epic), the gallery configuration (built from `examples/shared`) and one
 examples app per framework; the registration in `www` is fragiola/www#32.
 
 - Pages follow the contract: titles <= 60 characters, descriptions 50-160 characters, no `#` in
@@ -220,12 +239,16 @@ examples app per framework; the registration in `www` is fragiola/www#32.
 - The JSON model is documented in `site/docs/api/json-model.mdx`, the commands in the generated
   `site/docs/api/commands.mdx`. The examples' workarounds and the packages' known gaps are listed
   in `docs/docs-examples-gaps.md` and on `site/docs/limitations.mdx`.
-- **The examples** (`examples/react/src/examples/README.md`): 13 ids, final, that Vue and Angular
-  port in full: `hello-tree`, `file-explorer`, `multi-select`, `checkboxes`, `async-loading`,
+- **The examples** (`examples/react/src/examples/README.md`): 13 ids, final, that Vue (done) and
+  Angular port in full: `hello-tree`, `file-explorer`, `multi-select`, `checkboxes`, `async-loading`,
   `rename`, `drag-and-drop`, `keyboard`, `controlled`, `save-restore`, `undo-redo`,
   `command-console`, `rtl`. The shared specs reach them only through `data-tree-part`,
   `data-tree-path`, roles, accessible names and test ids. Fragiola UI is vendored into the
   examples (committed copies), never a dependency of a package.
+- **Vue in the docs**: `<Framework name="vue">` blocks where the code differs (installation, your
+  first tree, composition, controlled state) and `site/docs/api/vue.mdx`, which maps every React
+  prop of the API pages onto Vue (`docs-reference.test.ts` checks it lists every Vue export and
+  part). The other guides show React code; their examples' Vue code is in the gallery.
 
 ## Provenance
 

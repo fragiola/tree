@@ -1,16 +1,18 @@
 ---
 title: Installation
-description: Add the tree view to a React 19 app with one package, @fragiola/tree-react, which brings the primitives, the hooks and the whole core.
+description: Add the tree view to a React 19 or Vue 3.5 app with one package, the primitives for your framework, which bring the whole core.
 ---
-
-A React app installs one package, `@fragiola/tree-react`: the `Tree.*` primitives, the hooks and
-the whole framework-free core (`@fragiola/tree`), re-exported.
 
 <Callout type="info" title="Not on npm yet">
     The packages are not published on npm yet: these pages describe the upcoming first release,
     and the commands below will work once it is out. Until then, the repository
     (github.com/fragiola/tree) builds them from source.
 </Callout>
+
+<Framework name="react">
+
+A React app installs one package, `@fragiola/tree-react`: the `Tree.*` primitives, the hooks and
+the whole framework-free core (`@fragiola/tree`), re-exported.
 
 <Tabs items={["pnpm", "npm", "yarn"]}>
     <Tab value="pnpm">
@@ -30,16 +32,44 @@ the whole framework-free core (`@fragiola/tree`), re-exported.
     </Tab>
 </Tabs>
 
+</Framework>
+
+<Framework name="vue">
+
+A Vue app installs one package, `@fragiola/tree-vue`: the `Tree.*` primitives, the composables and
+the whole framework-free core (`@fragiola/tree`), re-exported.
+
+<Tabs items={["pnpm", "npm", "yarn"]}>
+    <Tab value="pnpm">
+        ```sh
+        pnpm add @fragiola/tree-vue
+        ```
+    </Tab>
+    <Tab value="npm">
+        ```sh
+        npm install @fragiola/tree-vue
+        ```
+    </Tab>
+    <Tab value="yarn">
+        ```sh
+        yarn add @fragiola/tree-vue
+        ```
+    </Tab>
+</Tabs>
+
+</Framework>
+
 ## Requirements
 
 | requirement | why |
 | --- | --- |
-| `react` and `react-dom` **^19** | peer dependencies of `@fragiola/tree-react`. The primitives use React 19 features: `ref` as a plain prop and ref cleanup functions. |
+| `react` and `react-dom` **^19** (React) | peer dependencies of `@fragiola/tree-react`. The primitives use React 19 features: `ref` as a plain prop and ref cleanup functions. |
+| `vue` **^3.5** (Vue) | the peer dependency of `@fragiola/tree-vue`. The primitives are render functions: no compiler plugin is needed beyond your app's own. |
 | A browser DOM | the engine focuses elements, listens to Pointer Events and measures rows during a drag. The **model** runs in plain Node (tests, server-side JSON handling), but a tree is interactive only on the client. |
 | ES modules | both packages are ESM only (`"type": "module"`). |
 
-`@fragiola/tree` has **zero runtime dependencies**, and `@fragiola/tree-react` depends only on
-the core, at the exact same version, and on its React peers.
+`@fragiola/tree` has **zero runtime dependencies**, and each adapter (`@fragiola/tree-react`,
+`@fragiola/tree-vue`) depends only on the core, at the exact same version, and on its framework.
 
 Both packages ship their types and are best used with TypeScript in `strict` mode: the document,
 the command payloads and each item's data are typed by your registry
@@ -47,6 +77,8 @@ the command payloads and each item's data are typed by your registry
 command's payload at run time either way.
 
 ## What to import from where
+
+<Framework name="react">
 
 Everything comes from `@fragiola/tree-react`:
 
@@ -68,6 +100,33 @@ The React package re-exports the whole core (`createTreeModel`, `TreeModel`, `Tr
 [the core API](/docs/api/model) apply as they are: in a React app, import those names from
 `@fragiola/tree-react` too.
 
+</Framework>
+
+<Framework name="vue">
+
+Everything comes from `@fragiola/tree-vue`:
+
+```ts
+import {
+    // the primitives (one namespace), typed by your registry, and the composables
+    typedTree,
+    useTree,
+    useTreeState,
+    // the core: the model, its types and helpers
+    createTreeModel,
+    type ItemOf,
+    type TreeJson,
+} from "@fragiola/tree-vue";
+```
+
+The Vue package re-exports the whole core (`createTreeModel`, `TreeModel`, `TreeJson`, `ItemOf`,
+`Middleware`, `veto`, `createTreeEngine`, `DEFAULT_KEY_MAP`, …), so the pages on
+[the core API](/docs/api/model) apply as they are: in a Vue app, import those names from
+`@fragiola/tree-vue` too. [Vue primitives](/docs/api/vue) maps each React prop of the API pages
+onto Vue.
+
+</Framework>
+
 ## Without a framework
 
 The core is published on its own as `@fragiola/tree`, for code that renders nothing: handling tree
@@ -81,13 +140,17 @@ pnpm add @fragiola/tree
 import { createTreeModel, type TreeJson } from "@fragiola/tree";
 ```
 
-A React app never needs it: it comes with `@fragiola/tree-react`.
+An app never needs it: it comes with its adapter.
 
 ## Server rendering
 
 The primitives render on the server: `Tree.Root` outputs the tree's markup with its roles and
 state, and creates its engine (focus, keys, drags, the loader) only once it is mounted in the
-browser. In Next.js, the file that renders the tree is a client component:
+browser. A server render neither subscribes to the model nor changes it.
+
+<Framework name="react">
+
+In Next.js, the file that renders the tree is a client component:
 
 ```tsx title="app/files/file-tree.tsx"
 "use client";
@@ -110,6 +173,15 @@ export function FileTree({ json }: { json: TreeJson<Types> }) {
     );
 }
 ```
+
+</Framework>
+
+<Framework name="vue">
+
+In Nuxt, the tree renders on the server as it is, and takes over in the browser: no directive is
+needed. A model shared by every request (created in a module) is never changed by a server render.
+
+</Framework>
 
 ## Next
 

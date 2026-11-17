@@ -10,6 +10,8 @@ renders, the primitives give it the roles, the state and the behaviour.
 
 ## The shape of an item
 
+<Framework name="react">
+
 ```tsx
 import { type ItemOf, Tree } from "@fragiola/tree-react";
 
@@ -28,6 +30,35 @@ function Node({ item }: { item: ItemOf<Types> }) {
 }
 ```
 
+</Framework>
+
+<Framework name="vue">
+
+```vue title="node.vue"
+<script setup lang="ts">
+import type { ItemOf } from "@fragiola/tree-vue";
+import { Tree, type Types } from "./tree"; // Tree = typedTree<Types>()
+
+defineProps<{ item: ItemOf<Types> }>();
+</script>
+
+<template>
+    <Tree.Item :item="item">
+        <!-- the row: what is pressed, selected and dragged -->
+        <Tree.ItemContent>
+            <Tree.Toggle>▸</Tree.Toggle>
+            {{ item.label }}
+        </Tree.ItemContent>
+        <!-- the children, rendered by this same component -->
+        <Tree.Group v-slot="{ item: child }">
+            <Node :item="child" />
+        </Tree.Group>
+    </Tree.Item>
+</template>
+```
+
+</Framework>
+
 - `Tree.Item` is the `role="treeitem"` element, the one DOM focus goes to. It provides the item
   to the parts inside it.
 - `Tree.ItemContent` is the row: a press selects it, a drag starts from it, and the drag
@@ -40,6 +71,8 @@ function Node({ item }: { item: ItemOf<Types> }) {
 
 Since the recursion is yours, each kind of item can render its own row, and `item.data` narrows
 on `item.kind`:
+
+<Framework name="react">
 
 ```tsx
 function Node({ item }: { item: ItemOf<Types> }) {
@@ -63,6 +96,31 @@ function Node({ item }: { item: ItemOf<Types> }) {
 }
 ```
 
+</Framework>
+
+<Framework name="vue">
+
+```vue
+<template>
+    <Tree.Item :item="item">
+        <Tree.ItemContent class="row">
+            <template v-if="item.kind === 'folder'">
+                <Tree.Toggle>▸</Tree.Toggle>
+                <FolderIcon aria-hidden="true" />
+            </template>
+            <FileIcon v-else aria-hidden="true" />
+            <span>{{ item.label }}</span>
+            <small v-if="item.kind === 'file'">{{ formatSize(item.data.size) }}</small>
+        </Tree.ItemContent>
+        <Tree.Group v-slot="{ item: child }">
+            <Node :item="child" />
+        </Tree.Group>
+    </Tree.Item>
+</template>
+```
+
+</Framework>
+
 ## Controls in a row
 
 A button, a link or an input inside `Tree.ItemContent` keeps its own presses and keys: a press on
@@ -70,6 +128,8 @@ it neither selects the row nor starts a drag, and Enter or Space on it is the co
 tree's. To exempt another element (a slider, a custom menu
 trigger), give it the `data-tree-no-drag` attribute (`NO_DRAG_ATTRIBUTE`); the full list is
 `DRAG_EXEMPT`.
+
+<Framework name="react">
 
 ```tsx
 <Tree.ItemContent>
@@ -80,7 +140,22 @@ trigger), give it the `data-tree-no-drag` attribute (`NO_DRAG_ATTRIBUTE`); the f
 </Tree.ItemContent>
 ```
 
+</Framework>
+
+<Framework name="vue">
+
+```vue
+<Tree.ItemContent>
+    <span>{{ item.label }}</span>
+    <button type="button" :aria-label="`Delete ${item.label}`" @click="remove(item.id)">×</button>
+</Tree.ItemContent>
+```
+
+</Framework>
+
 ## Your own elements
+
+<Framework name="react">
 
 Every primitive renders a `div` (a `span` for the toggle and the checkbox, an `input` for the
 rename input) and takes `render` to replace it, never `asChild`. For a list markup:
@@ -98,7 +173,35 @@ rename input) and takes `render` to replace it, never `asChild`. For a list mark
 When a primitive is not enough, `useTreeItem(item)` gives an item's state and the props of its
 element, to build one on anything ([Hooks](/docs/api/hooks)).
 
+</Framework>
+
+<Framework name="vue">
+
+Every primitive renders a `div` (a `span` for the toggle and the checkbox, an `input` for the
+rename input) and takes `as` to replace it (a tag or a component), never `asChild`. For a list
+markup:
+
+```vue
+<Tree.Root :default-tree="json" aria-label="Files" as="ul">
+    <Tree.Items v-slot="{ item }"><Node :item="item" /></Tree.Items>
+</Tree.Root>
+
+<!-- in node.vue -->
+<Tree.Item :item="item" as="li">…</Tree.Item>
+<Tree.Group as="ul" v-slot="{ item: child }"><Node :item="child" /></Tree.Group>
+```
+
+For full control, the `render` scoped slot gives the props to bind and the state:
+`<template #render="{ props, state, children }">`, then `<li v-bind="props">` with
+`<component :is="children" />` inside. When a primitive is not enough, `useTreeItem(item)` gives
+an item's state and the props of its element, to build one on anything
+([Vue primitives](/docs/api/vue)).
+
+</Framework>
+
 ## Reaching the tree from inside
+
+<Framework name="react">
 
 Any component inside `Tree.Root` reads the model and the engine with `useTree<Types>()`, and a
 value of the state with `useTreeState`:
@@ -112,3 +215,27 @@ function SelectionCount() {
 
 From outside the root (a toolbar beside it), use a tree ref: `useTreeRef<Types>()`, passed as
 the root's `treeRef`.
+
+</Framework>
+
+<Framework name="vue">
+
+Any component inside `Tree.Root` reads the model and the engine with `useTree<Types>()`, and a
+value of the state with `useTreeState`, a read-only ref:
+
+```vue
+<script setup lang="ts">
+import { useTreeState } from "@fragiola/tree-vue";
+
+const count = useTreeState<Types, number>((state) => state.selectedItemIds.length);
+</script>
+
+<template>
+    <p>{{ count }} selected</p>
+</template>
+```
+
+From outside the root (a toolbar beside it), use a tree ref: `useTreeRef<Types>()`, passed as
+the root's `tree-ref`, read as `tree.value`.
+
+</Framework>
