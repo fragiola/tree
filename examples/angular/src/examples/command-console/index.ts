@@ -5,7 +5,9 @@ import {
     TREE,
     veto,
 } from "@fragiola/tree-angular";
+import { rename } from "@fragiola/tree-angular/rename";
 import { selection } from "@fragiola/tree-angular/selection";
+
 import {
     LucideChevronRight,
     LucideFile,
@@ -16,8 +18,8 @@ import { ClickableButton } from "#/components/atoms/clickable";
 import { type FileTypes, fileSystem } from "../_kit/data";
 import * as styles from "./styles";
 
-/** The opt-in features of the model: the selection. */
-const features = [selection()] as const;
+/** The opt-in features of the model: the selection and the rename (`item.rename`). */
+const features = [selection(), rename()] as const;
 
 // An assistant, a script or a remote control drives the tree with the same JSON commands a key
 // or a click runs: `model.get("commands")` describes each one (its JSON Schemas are ready to be

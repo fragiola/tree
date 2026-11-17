@@ -30,13 +30,6 @@ export {
     type UseTreeItemResult,
     useTreeItem,
 } from "./hooks/use-tree-item";
-export {
-    type TreeItemRenameProps,
-    type TreeItemRenameState,
-    type UseTreeItemRenameOptions,
-    type UseTreeItemRenameResult,
-    useTreeItemRename,
-} from "./hooks/use-tree-item-rename";
 export { useTreeRef } from "./hooks/use-tree-ref";
 export {
     type UseTreeStateOptions,

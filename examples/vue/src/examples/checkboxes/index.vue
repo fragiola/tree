@@ -3,15 +3,18 @@ import { createTreeModel, useTreeState } from "@fragiola/tree-vue";
 import { type PermissionTypes, permissions } from "../_kit/data";
 import PermissionItem from "./permission-item.vue";
 import * as styles from "./styles";
-import { Tree } from "./tree";
+import { features, Tree } from "./tree";
 
 // The kit's permissions are checked in cascade (`settings.checkMode: "cascade"`): checking a group
-// checks its permissions, and a group with only some of them checked is mixed. `checkboxes` puts
-// `aria-checked` on every item, and makes Space toggle the focused item's check.
+// checks its permissions, and a group with only some of them checked is mixed. `checkboxes()`
+// puts `aria-checked` on every item, and makes Space toggle the focused item's check (the tree
+// has no selection to give Space to).
 
-const model = createTreeModel<PermissionTypes>(permissions());
+const model = createTreeModel<PermissionTypes, typeof features>(permissions(), {
+    features,
+});
 // the scopes the app would save: the checked permissions (a group is only a shortcut)
-const scopes = useTreeState<PermissionTypes, string>(
+const scopes = useTreeState<PermissionTypes, string, typeof features>(
     (state) =>
         state.checkedItemIds
             .flatMap((itemId) => {
@@ -27,7 +30,6 @@ const scopes = useTreeState<PermissionTypes, string>(
     <div :class="styles.frame">
         <Tree.Root
             :model="model"
-            checkboxes
             aria-label="Permissions"
             :class="styles.root"
         >

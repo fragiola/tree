@@ -104,7 +104,6 @@ describe("controlled and uncontrolled state", () => {
         await render(() =>
             fileTree({
                 model,
-                checkboxes: true,
                 checkedItemIds: props.checkedItemIds,
                 "onUpdate:checkedItemIds": onChecked,
             }),
@@ -127,9 +126,7 @@ describe("controlled and uncontrolled state", () => {
         model.subscribe(() => {
             commits += 1;
         });
-        await render(() =>
-            fileTree({ model, checkboxes: true, checkedItemIds: ["utils"] }),
-        );
+        await render(() => fileTree({ model, checkedItemIds: ["utils"] }));
         expect([...model.state.checkedItemIds].sort()).toEqual([
             "a",
             "b",

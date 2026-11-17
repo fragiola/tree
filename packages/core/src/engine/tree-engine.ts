@@ -1,6 +1,6 @@
 // The tree engine: one tree on screen. It owns DOM focus, the keyboard (the WAI-ARIA APG Tree View
-// model with type-ahead), the Pointer Events drag and the keyboard drag, the async children
-// loader and the announcements, behind the same verbs as the model. It changes the tree only by
+// model), the Pointer Events drag and the keyboard drag and the announcements, behind the same
+// verbs as the model; the installed features add theirs (type-ahead, the children loader, …). It changes the tree only by
 // running the model's commands, so every middleware sees what a key, a click or a drop does.
 import { fail, ok } from "../commands/define";
 import type { CommandResult, NoPayload } from "../commands/types";
@@ -42,25 +42,23 @@ import type {
 import {
     actionOf,
     directional,
-    isTypeAheadKey,
     type KeyAction,
     type KeyMap,
     resolveKeyMap,
 } from "../keyboard/key-map";
-import { TypeAhead } from "../keyboard/type-ahead";
 import type { TreeModel } from "../state/model";
 import type { QueryArgs } from "../state/queries";
 import type { AnyTypes, TreeTypes } from "../state/types";
 import { visibleIndex } from "../state/visible-items";
 import type { ScrollAlign } from "../virtual/scroll-target";
 import type { KeyEventInput, PressInput, TreeEngineAdapter } from "./adapter";
-import { ChildrenLoader, type LoadChildren } from "./children-loader";
 import type {
     AnnounceEvent,
     DragState,
     EngineHost,
     ResolvedEngineOptions,
 } from "./host";
+import type { LoadChildren } from "./load-children";
 import type {
     EngineActionKey,
     EngineActionPayload,
@@ -75,7 +73,10 @@ import type {
 export interface TreeEngineOptions<T extends TreeTypes = AnyTypes> {
     /** the root element (`role="tree"`); an adapter may attach it later (`engine.adapter.attachRoot`) */
     root?: HTMLElement | undefined;
-    /** the app's loader of the children of an item with a `childrenStatus` */
+    /**
+     * the app's loader of the children of an item with a `childrenStatus` (`asyncChildren()`:
+     * ignored without it)
+     */
     loadChildren?: LoadChildren<T> | undefined;
     /** the text of the live region for a drag step or a failed load (no text is built in) */
     announce?: ((event: AnnounceEvent) => string | undefined) | undefined;
@@ -83,8 +84,6 @@ export interface TreeEngineOptions<T extends TreeTypes = AnyTypes> {
     keyMap?: Partial<KeyMap> | undefined;
     /** a click on a parent's content also expands or collapses it (default false: only its toggle does) */
     expandOnClick?: boolean | undefined;
-    /** Space toggles the focused item's checkbox instead of its selection (default false) */
-    checkboxes?: boolean | undefined;
     /** how far (px) a press moves before it is a drag (default 4) */
     dragThreshold?: number | undefined;
     /** how long (ms) a drag hovers a collapsed parent before it expands (default 800) */
@@ -100,10 +99,8 @@ export interface TreeEngineOptions<T extends TreeTypes = AnyTypes> {
     indicatorInset?: number | undefined;
     /** how close (px) to a scroll container's edge a drag scrolls it, and how fast (px per frame) */
     autoScroll?: { threshold?: number; speed?: number } | undefined;
-    /** how long (ms) between two typed characters keeps one type-ahead search (default 500) */
-    typeAheadTimeout?: number | undefined;
     /**
-     * `destroy()` puts the items whose children it was loading back to `unloaded`
+     * with `asyncChildren()`: `destroy()` puts the items whose children it was loading back to `unloaded`
      * (`item.reset-children`), so the next engine on the model loads them again (default false:
      * they stay `loading`). Adapters set it: a tree that remounts (React's StrictMode, a route
      * change) must not leave an item loading forever
@@ -200,17 +197,16 @@ class Engine<T extends TreeTypes, F extends TreeFeatures>
     private readonly adapterListeners = new Set<() => void>();
     private readonly pointerDrag: PointerDrag;
     private readonly keyboardDrag: KeyboardDrag;
-    private readonly loader: ChildrenLoader;
-    private readonly typeAhead: TypeAhead;
     private readonly unsubscribeModel: () => void;
-    private readonly actions: Record<EngineActionKey, ActionHandler>;
+    private readonly actions: Record<
+        Exclude<EngineActionKey, OwnedBy<"engineRun">>,
+        ActionHandler
+    >;
     /** what the model's features add to this engine */
     private readonly contributions: readonly FeatureEngine[];
     private readonly virtual: FeatureViewport | undefined;
     /** a virtualized tree focuses this item once its row is rendered */
     private pendingFocus: string | undefined;
-    /** the renaming item as of the last model change, to find its editor once the rename ends */
-    private renamingItemId: string | null = null;
     /** the drag group joined with the root (`dragGroup`) */
     private group: { group: DragGroup; leave: () => void } | undefined;
     private readonly foreign: ForeignDropController | undefined;
@@ -228,7 +224,6 @@ class Engine<T extends TreeTypes, F extends TreeFeatures>
                 threshold: options.autoScroll?.threshold ?? 40,
                 speed: options.autoScroll?.speed ?? 12,
             },
-            typeAheadTimeout: options.typeAheadTimeout ?? 500,
             transfer: options.transfer,
         };
         const host: FeatureEngineHost = {
@@ -239,12 +234,21 @@ class Engine<T extends TreeTypes, F extends TreeFeatures>
             visibleIndex: () => visibleIndex(this.model.state),
             pinnedItemIds: () => [
                 this.current(),
-                this.model.state.renamingItemId,
+                ...this.contributions.map((contribution) =>
+                    contribution.pinnedItemId?.(),
+                ),
                 this.pendingFocus,
                 this.pointerDrag.pressedItemId,
             ],
             changed: () => this.changed(),
             focus: (itemId) => this.focus({ itemId }, false).ok,
+            focusElement: (itemId) => this.focusElement(itemId),
+            itemElement: (itemId) => this.items.get(itemId),
+            current: () => this.current(),
+            scheduler: () => this.scheduler(),
+            announce: (event) => this.announce(event),
+            isDestroyed: () => this.destroyed,
+            options: options as Readonly<Record<string, unknown>>,
         };
         this.contributions = featuresOf(model).list.flatMap((feature) => {
             const contribution = feature.engine?.(host);
@@ -266,45 +270,24 @@ class Engine<T extends TreeTypes, F extends TreeFeatures>
         );
         this.pointerDrag = new PointerDrag(this);
         this.keyboardDrag = new KeyboardDrag(this);
-        this.loader = new ChildrenLoader(
-            this,
-            options.loadChildren as LoadChildren | undefined,
-        );
-        this.typeAhead = new TypeAhead(
-            () => this.scheduler(),
-            this.options.typeAheadTimeout,
-        );
         this.actions = {
             focus: (payload, dryRun) =>
                 this.focus(payload as { itemId: string }, dryRun),
             "scroll-to": (payload, dryRun) =>
                 this.scrollTo(payload as { itemId: string }, dryRun),
-            "load-children": (payload, dryRun) =>
-                this.loadChildren(payload as { itemId: string }, dryRun),
             "start-keyboard-drag": (payload, dryRun) =>
                 this.startKeyboardDrag(
                     payload as { itemIds: string[] },
                     dryRun,
                 ),
             "cancel-drag": (_payload, dryRun) => this.cancelDrag(dryRun),
-            "commit-rename": (payload, dryRun) =>
-                this.commitRename(
-                    payload as EngineActionPayload<"commit-rename">,
-                    dryRun,
-                ),
-            "cancel-rename": (payload, dryRun) =>
-                this.cancelRename(
-                    payload as EngineActionPayload<"cancel-rename">,
-                    dryRun,
-                ),
         };
         this.adapter = this.createAdapter(model as unknown as TreeModel<T>);
         this.foreign = options.foreignDrop?.connect(this);
         this.outside = options.dropOutside?.connect(this, () => this.changed());
-        this.renamingItemId = this.model.state.renamingItemId;
         this.unsubscribeModel = model.subscribe(() => this.modelChanged());
         if (options.root) this.attachRoot(options.root);
-        this.loader.scan();
+        for (const contribution of this.contributions) contribution.settled?.();
     }
 
     // ---------------------------------------------------------------------------------------------
@@ -343,7 +326,7 @@ class Engine<T extends TreeTypes, F extends TreeFeatures>
     ): CommandResult<unknown> {
         if (this.destroyed) return fail("refused", "the engine was destroyed");
         const handler = Object.hasOwn(this.actions, action)
-            ? this.actions[action as EngineActionKey]
+            ? this.actions[action as keyof typeof this.actions]
             : this.contributed("run", action);
         if (!handler) {
             const owner = featuresOf(this.model).missing("engineRun", action);
@@ -438,10 +421,8 @@ class Engine<T extends TreeTypes, F extends TreeFeatures>
         this.foreign?.cancel();
         this.leaveGroup();
         this.destroyed = true;
-        this.loader.destroy(this.settings.resetLoadsOnDestroy === true);
         for (const contribution of this.contributions) contribution.destroy?.();
         this.pendingFocus = undefined;
-        this.typeAhead.reset();
         this.unsubscribeModel();
         this.listeners.clear();
         this.adapterListeners.clear();
@@ -509,26 +490,6 @@ class Engine<T extends TreeTypes, F extends TreeFeatures>
         return ok({ itemId });
     }
 
-    private loadChildren(
-        { itemId }: { itemId: string },
-        dryRun: boolean,
-    ): CommandResult<unknown> {
-        if (!this.model.get("item-by", { id: itemId })) {
-            return fail("not_found", `"${itemId}" is not an item`, "/itemId");
-        }
-        if (!this.loader.canLoad(itemId)) {
-            return fail(
-                "refused",
-                this.loader.enabled
-                    ? `"${itemId}" has no children to load now (none from the loader, or a load is under way)`
-                    : "the engine has no loadChildren",
-                "/itemId",
-            );
-        }
-        if (!dryRun) this.loader.load(itemId);
-        return ok({ itemId });
-    }
-
     private startKeyboardDrag(
         { itemIds }: { itemIds: string[] },
         dryRun: boolean,
@@ -575,32 +536,6 @@ class Engine<T extends TreeTypes, F extends TreeFeatures>
             this.foreign?.cancel();
         }
         return ok({});
-    }
-
-    private commitRename(
-        { itemId, label, focus }: EngineActionPayload<"commit-rename">,
-        dryRun: boolean,
-    ): CommandResult<unknown> {
-        const payload = { itemId, label };
-        const result = dryRun
-            ? this.model.check("item.rename", payload)
-            : this.model.run("item.rename", payload);
-        if (!result.ok) return result;
-        if (!dryRun && focus !== false) this.focusElement(itemId);
-        return ok({ itemId });
-    }
-
-    private cancelRename(
-        { itemId, focus }: EngineActionPayload<"cancel-rename">,
-        dryRun: boolean,
-    ): CommandResult<unknown> {
-        const payload = { itemId };
-        const result = dryRun
-            ? this.model.check("item.cancel-rename", payload)
-            : this.model.run("item.cancel-rename", payload);
-        if (!result.ok) return result;
-        if (!dryRun && focus !== false) this.focusElement(itemId);
-        return ok({ itemId });
     }
 
     // ---------------------------------------------------------------------------------------------
@@ -693,17 +628,22 @@ class Engine<T extends TreeTypes, F extends TreeFeatures>
         // removal moved it): read before the adapters re-render and remove the old element
         const root = this.rootElement;
         const active = root?.ownerDocument.activeElement;
-        // the item whose rename this change ended (a commit, a cancel, another command): its editor
-        // goes away, so focus goes back to the item; while a rename goes on, focus stays in it
-        const previous = this.renamingItemId;
-        this.renamingItemId = this.model.state.renamingItemId;
-        const ended = previous !== this.renamingItemId ? previous : null;
-        const hadFocus =
+        const inside =
             root !== undefined &&
             active !== null &&
             active !== undefined &&
-            root.contains(active) &&
-            (this.isItemElement(active) || this.inRenamingItem(active, ended));
+            root.contains(active)
+                ? active
+                : undefined;
+        // a feature's editor this change ended (a rename): it goes away, so focus goes back to the
+        // item. Every feature hears every change, wherever focus is, so each keeps its own state
+        // current (a rename started from outside the tree ends with focus in its editor)
+        let returns = false;
+        for (const contribution of this.contributions) {
+            if (contribution.modelChanged?.(inside)) returns = true;
+        }
+        const hadFocus =
+            inside !== undefined && (this.isItemElement(inside) || returns);
         // an item moved to another parent is a new element: the adapter registers it after this
         // re-render, and it takes the focus the old one had (registerItem)
         this.refocus = hadFocus || (this.refocus && this.focusLost());
@@ -716,7 +656,7 @@ class Engine<T extends TreeTypes, F extends TreeFeatures>
                 element.focus({ preventScroll: true });
             }
         }
-        this.loader.scan();
+        for (const contribution of this.contributions) contribution.settled?.();
     }
 
     /** Whether DOM focus left the tree for nothing (the body, or an element no longer there). */
@@ -738,16 +678,6 @@ class Engine<T extends TreeTypes, F extends TreeFeatures>
         return false;
     }
 
-    /**
-     * Whether an element is inside the element of the item whose rename just ended: the app's label
-     * editor, whatever element it is. Focus elsewhere inside an item is left where it is.
-     */
-    private inRenamingItem(element: Element, itemId: string | null): boolean {
-        if (itemId === null) return false;
-        const item = this.items.get(itemId);
-        return item !== undefined && item !== element && item.contains(element);
-    }
-
     // ---------------------------------------------------------------------------------------------
     // the adapter
     // ---------------------------------------------------------------------------------------------
@@ -767,7 +697,8 @@ class Engine<T extends TreeTypes, F extends TreeFeatures>
         this.pointerDrag.cancel();
         this.keyboardDrag.cancel();
         this.foreign?.cancel();
-        this.typeAhead.reset();
+        for (const contribution of this.contributions)
+            contribution.keysReset?.();
         this.leaveGroup();
         this.virtual?.detach();
         this.rootElement = undefined;
@@ -873,7 +804,8 @@ class Engine<T extends TreeTypes, F extends TreeFeatures>
     private click(itemId: string, event: PressInput): void {
         if (this.destroyed || this.pointerDrag.consumeClick()) return;
         const { model } = this;
-        if (model.state.renamingItemId === itemId) return;
+        if ((model as unknown as FeatureModel).is("item-renaming", { itemId }))
+            return;
         this.focus({ itemId }, false);
         for (const contribution of this.contributions)
             contribution.click?.(itemId, event);
@@ -909,14 +841,16 @@ class Engine<T extends TreeTypes, F extends TreeFeatures>
             const handled = this.keyAction(action);
             if (handled) {
                 event.preventDefault();
-                this.typeAhead.reset();
+                for (const contribution of this.contributions)
+                    contribution.keysReset?.();
             }
             return handled;
         }
-        if (isTypeAheadKey(event)) {
-            const handled = this.typeAheadKey(event.key);
-            if (handled) event.preventDefault();
-            return handled;
+        for (const contribution of this.contributions) {
+            if (contribution.unboundKey?.(event)) {
+                event.preventDefault();
+                return true;
+            }
         }
         return false;
     }
@@ -938,22 +872,6 @@ class Engine<T extends TreeTypes, F extends TreeFeatures>
             default:
                 return false;
         }
-    }
-
-    private typeAheadKey(character: string): boolean {
-        const { model } = this;
-        const current = this.current();
-        const { text, cycle } = this.typeAhead.type(character);
-        let fromItemId: string | null | undefined = current;
-        if (!cycle && current !== undefined) {
-            // a longer search may stay on the current item: start just before it
-            const visible = model.get("visible-items");
-            const at = visibleIndex(model.state).get(current) ?? -1;
-            fromItemId = at > 0 ? (visible[at - 1]?.itemId ?? null) : null;
-        }
-        const match = model.get("type-ahead-match", { text, fromItemId });
-        if (match) this.focus({ itemId: match.id }, false);
-        return true;
     }
 
     /** Runs a key's action on the focused item; false when it did nothing (the key is not used). */
@@ -1007,14 +925,6 @@ class Engine<T extends TreeTypes, F extends TreeFeatures>
             case "expand-siblings":
                 return model.run("item.expand-siblings", { itemId: current })
                     .ok;
-            case "toggle":
-                if (this.settings.checkboxes === true) {
-                    return model.run("item.toggle-check", { itemId: current })
-                        .ok;
-                }
-                return this.featureKey(action, { current, visible, at });
-            case "rename":
-                return model.run("item.start-rename", { itemId: current }).ok;
             case "start-drag":
                 return this.startKeyboardDrag(
                     { itemIds: dragSetOf(model, current) },
@@ -1027,6 +937,10 @@ class Engine<T extends TreeTypes, F extends TreeFeatures>
 
     /** A key's action the core does not handle: the first installed feature that does. */
     private featureKey(action: KeyAction, context: FeatureKeyContext): boolean {
+        for (const contribution of this.contributions) {
+            const handled = contribution.firstKeyAction?.(action, context);
+            if (handled !== undefined) return handled;
+        }
         for (const contribution of this.contributions) {
             const handled = contribution.keyAction?.(action, context);
             if (handled !== undefined) return handled;

@@ -89,18 +89,12 @@ export interface RootBaseProps<
     features?: F | undefined;
     /** controlled expansion: the expanded items (`v-model:expanded-item-ids`) */
     expandedItemIds?: readonly string[] | undefined;
-    /** controlled checkboxes: the checked items (`v-model:checked-item-ids`) */
-    checkedItemIds?: readonly string[] | undefined;
-    /** the app's loader of the children of an item with a `childrenStatus` */
-    loadChildren?: LoadChildren<T> | undefined;
     /** the live region's text for a drag step or a failed load (no text is built in) */
     announce?: ((event: AnnounceEvent) => string | undefined) | undefined;
     /** the key bindings, over the defaults (`DEFAULT_KEY_MAP`) */
     keyMap?: Partial<KeyMap> | undefined;
     /** a click on a parent's content also expands or collapses it (default false) */
     expandOnClick?: boolean | undefined;
-    /** the items carry `aria-checked`, and Space toggles the focused item's check (default false) */
-    checkboxes?: boolean | undefined;
     /** how far (px) a press moves before it is a drag (default 4) */
     dragThreshold?: number | undefined;
     /** how long (ms) a drag hovers a collapsed parent before it expands (default 800) */
@@ -109,8 +103,6 @@ export interface RootBaseProps<
     indentation?: number | undefined;
     /** how far (px) a drop line starts past its level's inline start: the toggle, a grip or padding before the label (default 0) */
     indicatorInset?: number | undefined;
-    /** how long (ms) between two typed characters keeps one type-ahead search (default 500) */
-    typeAheadTimeout?: number | undefined;
     /**
      * joins the trees of the document with the same group name: items drag between them, by pointer
      * and keyboard (over one model a drop is one `item.move`, over two a transfer)
@@ -139,11 +131,24 @@ export interface RootBaseProps<
     treeRef?: TreeRef<T, F> | undefined;
 }
 
-/** The controlled lists of the features `F`: their props without the `on…Change` callbacks. */
-type FeatureListProps<F extends TreeFeatures> = {
-    [K in keyof FeatureRootPropsOf<F> as K extends `on${string}`
+/**
+ * The props of the features `F`: their root props without the `on…Change` callbacks (a controlled
+ * list is a `v-model`), `loadChildren` typed by the registry `T`.
+ */
+type FeatureListProps<
+    F extends TreeFeatures,
+    T extends TreeTypes = AnyTypes,
+> = {
+    [K in keyof FeatureRootPropsOf<F, T> as K extends `on${string}`
         ? never
-        : K]: FeatureRootPropsOf<F>[K];
+        : K]: FeatureRootPropsOf<F, T>[K];
+};
+
+/** The controlled lists of the features `F`: the props with an `on…Change` callback. */
+type FeatureLists<F extends TreeFeatures> = {
+    [K in keyof FeatureListProps<F> as `on${Capitalize<K & string>}Change` extends keyof FeatureRootPropsOf<F>
+        ? K
+        : never]: FeatureListProps<F>[K];
 };
 
 /**
@@ -154,7 +159,7 @@ type FeatureListProps<F extends TreeFeatures> = {
 export type RootProps<
     T extends TreeTypes = AnyTypes,
     F extends TreeFeatures = readonly [],
-> = RootBaseProps<T, F> & FeatureListProps<F>;
+> = RootBaseProps<T, F> & FeatureListProps<F, T>;
 
 export interface RootSlots extends RenderSlot<RootState> {
     /** the tree: `Tree.Items`, `Tree.DropIndicator`, `Tree.LiveRegion`, … */
@@ -168,17 +173,23 @@ export interface RootSlots extends RenderSlot<RootState> {
 export type RootEmits<F extends TreeFeatures = readonly []> = {
     /** the expanded items, after every command that changes them */
     "update:expandedItemIds": (itemIds: string[]) => void;
-    /** the checked items, after every command that changes them */
-    "update:checkedItemIds": (itemIds: string[]) => void;
 } & {
-    [K in keyof FeatureListProps<F> as `update:${K & string}`]: (
+    [K in keyof FeatureLists<F> as `update:${K & string}`]: (
         itemIds: string[],
     ) => void;
 };
 
-/** The controlled lists a feature ships, by name (`selectedItemIds`): props of every root. */
-const FEATURE_LISTS = Object.keys(FEATURE_ROOT_PROPS).filter(
+/** The props a feature ships, by name (`selectedItemIds`, `loadChildren`): props of every root. */
+const FEATURE_PROPS = Object.keys(FEATURE_ROOT_PROPS).filter(
     (name) => !/^on[A-Z]/.test(name),
+);
+
+/** The controlled lists among them: the props with an `on…Change` (a `v-model`). */
+const FEATURE_LISTS = FEATURE_PROPS.filter((name) =>
+    Object.hasOwn(
+        FEATURE_ROOT_PROPS,
+        `on${name.charAt(0).toUpperCase()}${name.slice(1)}Change`,
+    ),
 );
 
 const ROOT_PROPS = [
@@ -186,17 +197,13 @@ const ROOT_PROPS = [
     "defaultTree",
     "features",
     "expandedItemIds",
-    "checkedItemIds",
-    "loadChildren",
     "announce",
     "keyMap",
     "expandOnClick",
-    "checkboxes",
     "dragThreshold",
     "autoExpandDelay",
     "indentation",
     "indicatorInset",
-    "typeAheadTimeout",
     "dragGroup",
     "transfer",
     "foreignDrop",
@@ -205,20 +212,18 @@ const ROOT_PROPS = [
     "as",
 ] as const satisfies readonly (keyof RootBaseProps)[];
 
-/** the props a bare attribute turns on (`<Tree.Root checkboxes>`) */
+/** the props a bare attribute turns on (`<Tree.Root expand-on-click>`) */
 const ROOT_BOOLEANS = [
     "expandOnClick",
-    "checkboxes",
 ] as const satisfies readonly (keyof RootProps)[];
 
 const ROOT_EMITS: readonly string[] = [
     "update:expandedItemIds",
-    "update:checkedItemIds",
     ...FEATURE_LISTS.map((name) => `update:${name}`),
 ];
 
 /** Every prop of the root: its own, and the features' lists. */
-const ALL_ROOT_PROPS = [...ROOT_PROPS, ...FEATURE_LISTS] as readonly (
+const ALL_ROOT_PROPS = [...ROOT_PROPS, ...FEATURE_PROPS] as readonly (
     | (typeof ROOT_PROPS)[number]
     | string
 )[];
@@ -296,12 +301,10 @@ const RootTree = definePrimitive<RootTreeProps, RootSlots, RootTreeEmits>(
             hasLoader: props.loadChildren !== undefined,
             keyMap: JSON.stringify(props.keyMap ?? null),
             expandOnClick: props.expandOnClick,
-            checkboxes: props.checkboxes,
             dragThreshold: props.dragThreshold,
             autoExpandDelay: props.autoExpandDelay,
             indentation: props.indentation,
             indicatorInset: props.indicatorInset,
-            typeAheadTimeout: props.typeAheadTimeout,
             dragGroup: props.dragGroup,
             hasTransfer: props.transfer !== undefined,
             foreignDrop: keyOfModel(props.foreignDrop),
@@ -324,12 +327,10 @@ const RootTree = definePrimitive<RootTreeProps, RootSlots, RootTreeEmits>(
                 announce: (event) => props.announce?.(event),
                 keyMap: props.keyMap,
                 expandOnClick: props.expandOnClick,
-                checkboxes: props.checkboxes,
                 dragThreshold: props.dragThreshold,
                 autoExpandDelay: props.autoExpandDelay,
                 indentation: props.indentation,
                 indicatorInset: props.indicatorInset,
-                typeAheadTimeout: props.typeAheadTimeout,
                 dragGroup: props.dragGroup,
                 transfer:
                     props.transfer !== undefined
@@ -404,9 +405,9 @@ const RootTree = definePrimitive<RootTreeProps, RootSlots, RootTreeEmits>(
             model.get("features").map(({ name }) => name),
         );
         watch(
-            () => FEATURE_LISTS.map((name) => props[name] !== undefined),
+            () => FEATURE_PROPS.map((name) => props[name] !== undefined),
             () => {
-                for (const name of FEATURE_LISTS) {
+                for (const name of FEATURE_PROPS) {
                     const feature = FEATURE_ROOT_PROPS[name];
                     if (
                         props[name] !== undefined &&
@@ -432,7 +433,6 @@ const RootTree = definePrimitive<RootTreeProps, RootSlots, RootTreeEmits>(
                 state.value;
                 return model.get("tab-stop-item")?.id;
             }),
-            checkboxes: computed(() => props.checkboxes === true),
         };
         provide(TreeKey, context);
         provide(ModelKey, model);

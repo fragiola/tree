@@ -7,9 +7,9 @@ import {
     Tree,
     type TreeModel,
     useTree,
-    useTreeItemRename,
     veto,
 } from "@fragiola/tree-react";
+import { rename, useTreeItemRename } from "@fragiola/tree-react/rename";
 import { ChevronRight, File, Folder, FolderOpen } from "lucide-react";
 import { useEffect, useId, useState } from "react";
 import { type FileTypes, fileSystem } from "../_kit/data";
@@ -44,16 +44,21 @@ function namingRules(model: TreeModel<FileTypes>) {
     });
 }
 
+/** The opt-in features of the model: the rename. */
+const features = [rename()] as const;
+
 export default function Rename() {
-    const [model] = useState(() => createTreeModel<FileTypes>(fileSystem()));
+    const [model] = useState(() =>
+        createTreeModel<FileTypes, typeof features>(fileSystem(), { features }),
+    );
     // the reason the last rename was refused, until the label changes or the rename ends
     const [error, setError] = useState<string>();
     const errorId = useId();
     useEffect(() => namingRules(model), [model]);
     useEffect(
         () =>
-            model.subscribe((event) => {
-                if (event.after.renamingItemId === null) setError(undefined);
+            model.subscribe(() => {
+                if (model.state.renamingItemId === null) setError(undefined);
             }),
         [model],
     );
@@ -65,7 +70,7 @@ export default function Rename() {
                 to rename it; <kbd className={styles.kbd}>Enter</kbd> saves,{" "}
                 <kbd className={styles.kbd}>Esc</kbd> cancels.
             </p>
-            <Tree.Root<FileTypes>
+            <Tree.Root<FileTypes, typeof features>
                 model={model}
                 aria-label="Project files"
                 className={styles.root}
@@ -96,7 +101,7 @@ interface FileItemProps {
 }
 
 function FileItem({ item, ...props }: FileItemProps) {
-    const { model } = useTree<FileTypes>();
+    const { model } = useTree<FileTypes, typeof features>();
     const { errorId, onError, onEdit } = props;
     // the rename wired onto the app's own input: it starts with the label, focused and selected;
     // Enter commits, Escape cancels, and a refused label keeps it open (`aria-invalid`)

@@ -38,13 +38,6 @@ export {
     type UseTreeItemResult,
     useTreeItem,
 } from "./composables/use-tree-item";
-export {
-    type TreeItemRenameProps,
-    type TreeItemRenameState,
-    type UseTreeItemRenameOptions,
-    type UseTreeItemRenameResult,
-    useTreeItemRename,
-} from "./composables/use-tree-item-rename";
 export { useTreeRef } from "./composables/use-tree-ref";
 export {
     type UseTreeStateOptions,

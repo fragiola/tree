@@ -19,5 +19,15 @@
             "defaultCategory": "error"
         }
     },
-    "include": ["src", "selection", "virtualization", "tests", "*.config.ts"]
+    "include": [
+        "src",
+        "selection",
+        "checkboxes",
+        "rename",
+        "async-children",
+        "type-ahead",
+        "virtualization",
+        "tests",
+        "*.config.ts"
+    ]
 }

@@ -3,7 +3,10 @@
 export * from "@fragiola/tree";
 // What the adapter's own feature entries (`@fragiola/tree-angular/virtualization`) build on: an
 // entry imports another only through its public API. Not an app's API: the `ɵ` says so.
-export { injectTreeContext as ɵinjectTreeContext } from "./lib/context";
+export {
+    injectItemContext as ɵinjectItemContext,
+    injectTreeContext as ɵinjectTreeContext,
+} from "./lib/context";
 export {
     type DropIndicatorState,
     TreeDropIndicatorDirective,
@@ -11,10 +14,6 @@ export {
 export { TreeGroupDirective } from "./lib/directives/group.directive";
 export { TreeItemDirective } from "./lib/directives/item.directive";
 export { TreeItemContentDirective } from "./lib/directives/item-content.directive";
-export {
-    TreeItemRenameDirective,
-    type TreeItemRenameState,
-} from "./lib/directives/item-rename.directive";
 export { TreeItemsDirective } from "./lib/directives/items.directive";
 export {
     type LiveRegionState,
@@ -42,7 +41,10 @@ export {
     injectTreeState,
 } from "./lib/inject/inject-tree-state";
 export { TREE } from "./lib/tree";
-export { onDestroy as ɵonDestroy } from "./lib/utils/helpers";
+export {
+    injectHost as ɵinjectHost,
+    onDestroy as ɵonDestroy,
+} from "./lib/utils/helpers";
 export type { TreeItemState } from "./lib/utils/item-state";
 export {
     KeyedViews as ɵKeyedViews,

@@ -1,7 +1,9 @@
 import { act, fireEvent, render } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { Tree } from "../src";
-import { FileTree, filesModel, itemElement } from "./tree";
+import { checkboxes } from "../src/checkboxes";
+import { selection } from "../src/selection";
+import { FileTree, filesModel, filesModelWith, itemElement } from "./tree";
 
 const box = (label: string) => {
     const element = itemElement(label).querySelector(
@@ -14,7 +16,7 @@ const box = (label: string) => {
 describe("tri-state checkboxes", () => {
     it("checks an item and its descendants on a press (cascade), mixing the parent", () => {
         const model = filesModel({ expandedItemIds: ["src", "utils"] });
-        render(<FileTree model={model} checkboxes />);
+        render(<FileTree model={model} />);
         fireEvent.click(box("a.ts"));
         expect(model.state.checkedItemIds).toEqual(["a"]);
         expect(itemElement("utils")).toHaveAttribute("aria-checked", "mixed");
@@ -28,7 +30,7 @@ describe("tri-state checkboxes", () => {
 
     it("does not select on a press of the app's check control", () => {
         const model = filesModel();
-        render(<FileTree model={model} checkboxes />);
+        render(<FileTree model={model} />);
         fireEvent.pointerDown(box("app.ts"), { button: 0, isPrimary: true });
         fireEvent.click(box("app.ts"));
         expect(model.state.selectedItemIds).toEqual([]);
@@ -38,7 +40,7 @@ describe("tri-state checkboxes", () => {
     it("does not select on a press of a control that is not native, with data-tree-no-drag", () => {
         const model = filesModel();
         render(
-            <Tree.Root model={model} checkboxes aria-label="Files">
+            <Tree.Root model={model} aria-label="Files">
                 <Tree.Items>
                     {(item) => (
                         <Tree.Item item={item}>
@@ -65,9 +67,12 @@ describe("tri-state checkboxes", () => {
         expect(model.state.checkedItemIds).toEqual(["readme"]);
     });
 
-    it("toggles the focused item's check with Space when the root has checkboxes", () => {
-        const model = filesModel();
-        render(<FileTree model={model} checkboxes />);
+    it('toggles the focused item\'s check with Space with `checkboxes({ space: "check" })`', () => {
+        const model = filesModelWith([
+            selection(),
+            checkboxes({ space: "check" }),
+        ]);
+        render(<FileTree model={model} />);
         act(() => itemElement("readme.md").focus());
         fireEvent.keyDown(itemElement("readme.md"), { key: " " });
         expect(model.state.checkedItemIds).toEqual(["readme"]);
@@ -78,7 +83,7 @@ describe("tri-state checkboxes", () => {
     });
 
     it("leaves the check control to the app: the item carries the state, and renders no checkbox of its own", () => {
-        render(<FileTree model={filesModel()} checkboxes />);
+        render(<FileTree model={filesModel()} />);
         expect(itemElement("app.ts")).toHaveAttribute("aria-checked", "false");
         expect(document.querySelector('[role="checkbox"]')).toBeNull();
         expect(

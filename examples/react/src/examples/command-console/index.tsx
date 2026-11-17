@@ -7,6 +7,7 @@ import {
     Tree,
     veto,
 } from "@fragiola/tree-react";
+import { rename } from "@fragiola/tree-react/rename";
 import { selection } from "@fragiola/tree-react/selection";
 import { ChevronRight, File, Folder, Play } from "lucide-react";
 import { useEffect, useId, useState } from "react";
@@ -14,8 +15,8 @@ import { Clickable } from "#/components/atoms/clickable";
 import { type FileTypes, fileSystem } from "../_kit/data";
 import * as styles from "./styles";
 
-/** The opt-in features of the model: the selection. */
-const features = [selection()] as const;
+/** The opt-in features of the model: the selection and the rename (`item.rename`). */
+const features = [selection(), rename()] as const;
 
 // An assistant, a script or a remote control drives the tree with the same JSON commands a key
 // or a click runs: `model.get("commands")` describes each one (its JSON Schemas are ready to be
@@ -101,7 +102,7 @@ export default function CommandConsole() {
 
     return (
         <div className={styles.frame}>
-            <Tree.Root<FileTypes>
+            <Tree.Root<FileTypes, typeof features>
                 model={model}
                 aria-label="Project files"
                 className={styles.root}

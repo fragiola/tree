@@ -5,12 +5,13 @@ import { useId } from "vue";
 import { type FileTypes, formatSize } from "../_kit/data";
 import RetryButton from "./retry-button.vue";
 import * as styles from "./styles";
-import { Tree } from "./tree";
+import { type features, Tree } from "./tree";
 
 const props = defineProps<{ item: ItemOf<FileTypes> }>();
 
-const status = useTreeState<FileTypes, string | undefined>((_state, model) =>
-    model.get("children-status-by", { itemId: props.item.id }),
+const status = useTreeState<FileTypes, string | undefined, typeof features>(
+    (_state, model) =>
+        model.get("children-status-by", { itemId: props.item.id }),
 );
 // the size describes a file; the label alone is its accessible name
 const sizeId = useId();

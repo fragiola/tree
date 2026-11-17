@@ -8,7 +8,7 @@ import type { FileTypes } from "../_kit/data";
 import { createFakeLoader } from "../_kit/loader";
 import DriveItem from "./drive-item.vue";
 import * as styles from "./styles";
-import { Tree } from "./tree";
+import { features, Tree } from "./tree";
 
 // Only the root folders are in the document: `childrenStatus: "unloaded"` says their children come
 // from the app's `loadChildren`, called the first time each one is expanded.
@@ -30,7 +30,7 @@ const json: TreeJson<FileTypes> = {
     },
 };
 
-const model = createTreeModel<FileTypes>(json);
+const model = createTreeModel<FileTypes, typeof features>(json, { features });
 // an app's loader fetches from its back-end; this fake answers after 500 ms, and fails the
 // first load of "documents"
 const loadChildren = createFakeLoader({

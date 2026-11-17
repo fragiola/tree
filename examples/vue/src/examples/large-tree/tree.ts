@@ -1,4 +1,5 @@
 import { typedTree } from "@fragiola/tree-vue";
+import { typeAhead } from "@fragiola/tree-vue/type-ahead";
 import { virtualization } from "@fragiola/tree-vue/virtualization";
 
 export type Types = { items: { folder: undefined; file: undefined } };
@@ -7,6 +8,7 @@ export type Types = { items: { folder: undefined; file: undefined } };
 // theme sizes the rows, so they are measured (estimated at 28px until then).
 export const features = [
     virtualization({ estimateRowSize: 28, overscan: 10 }),
+    typeAhead(),
 ] as const;
 
 // The primitives typed by Types (a template cannot pass a type argument).

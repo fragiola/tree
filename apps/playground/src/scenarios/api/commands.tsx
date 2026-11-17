@@ -3,6 +3,7 @@ import {
     createTreeModel,
     type TreeJson,
 } from "@fragiola/tree-react";
+import { type RenameFeature, rename } from "@fragiola/tree-react/rename";
 import {
     type SelectionFeature,
     selection,
@@ -38,9 +39,10 @@ function describe(result: CommandResult<unknown>): string {
 
 export default function CommandsScenario() {
     const [model] = useState(() =>
-        createTreeModel<Types, readonly [SelectionFeature]>(json, {
-            features: [selection()],
-        }),
+        createTreeModel<Types, readonly [SelectionFeature, RenameFeature]>(
+            json,
+            { features: [selection(), rename()] },
+        ),
     );
     const added = useRef(0);
     const [last, setLast] = useState("");

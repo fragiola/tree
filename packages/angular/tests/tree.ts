@@ -9,6 +9,9 @@ import {
     viewChild,
 } from "@angular/core";
 import { type ComponentFixture, TestBed } from "@angular/core/testing";
+import { asyncChildren } from "../async-children/public-api";
+import { checkboxes } from "../checkboxes/public-api";
+import { rename, TreeItemRenameDirective } from "../rename/public-api";
 import { selection } from "../selection/public-api";
 import {
     type AnnounceEvent,
@@ -17,11 +20,13 @@ import {
     type LoadChildren,
     TREE,
     type TreeDropOutside,
+    type TreeFeatures,
     type TreeForeignDrop,
     type TreeJson,
     type TreeModel,
     type TreeRootDirective,
 } from "../src/public-api";
+import { typeAhead } from "../type-ahead/public-api";
 
 export type FileTypes = {
     items: { folder: undefined; file: { size: number } };
@@ -58,13 +63,46 @@ export function files(
     };
 }
 
-/** The features the tests' trees install: the selection. */
-export const FEATURES = [selection()] as const;
+/** The features the tests' trees install: every feature with a model of its own. */
+export const FEATURES = [
+    selection(),
+    checkboxes(),
+    rename(),
+    asyncChildren(),
+    typeAhead(),
+] as const;
 
 export const filesModel = (patch: Partial<TreeJson<FileTypes>> = {}) =>
     createTreeModel<FileTypes, typeof FEATURES>(files(patch), {
         features: FEATURES,
     });
+
+/**
+ * `files()` for a tree without `asyncChildren()`: `lib` is a parent with no children (a document
+ * without the feature has no `childrenStatus`).
+ */
+export function bareFiles(
+    patch: Partial<TreeJson<FileTypes>> = {},
+): TreeJson<FileTypes> {
+    const json = files(patch);
+    const { childrenStatus: _, ...lib } = json.items.lib ?? {
+        kind: "folder",
+        label: "lib",
+    };
+    json.items.lib = { ...lib, childItemIds: [] };
+    return json;
+}
+
+/** A model of `files()` with other features (`bareFiles()` without `asyncChildren()`). */
+export function filesModelWith<const F extends TreeFeatures>(
+    features: F,
+    patch: Partial<TreeJson<FileTypes>> = {},
+) {
+    const json = features.some((feature) => feature.name === "async-children")
+        ? files(patch)
+        : bareFiles(patch);
+    return createTreeModel<FileTypes, F>(json, { features });
+}
 
 /** The inputs of {@link FileTree}: the root's. */
 export interface FileTreeInputs {
@@ -77,12 +115,10 @@ export interface FileTreeInputs {
     announce?: ((event: AnnounceEvent) => string | undefined) | undefined;
     keyMap?: Partial<KeyMap> | undefined;
     expandOnClick?: boolean | undefined;
-    checkboxes?: boolean | undefined;
     dragThreshold?: number | undefined;
     autoExpandDelay?: number | undefined;
     indentation?: number | undefined;
     indicatorInset?: number | undefined;
-    typeAheadTimeout?: number | undefined;
     foreignDrop?: TreeForeignDrop<FileTypes> | undefined;
     dropOutside?: TreeDropOutside<FileTypes> | undefined;
 }
@@ -93,7 +129,7 @@ export type Emitted = [list: string, itemIds: string[]];
 /** `[treeRoot]` with the file items (one recursive template), a drop indicator and a live region. */
 @Component({
     selector: "test-file-tree",
-    imports: [TREE],
+    imports: [TREE, TreeItemRenameDirective],
     template: `
         <div
             [treeRoot]="model()"
@@ -107,12 +143,10 @@ export type Emitted = [list: string, itemIds: string[]];
             [announce]="announce()"
             [keyMap]="keyMap()"
             [expandOnClick]="expandOnClick()"
-            [checkboxes]="checkboxes()"
             [dragThreshold]="dragThreshold()"
             [autoExpandDelay]="autoExpandDelay()"
             [indentation]="indentation()"
             [indicatorInset]="indicatorInset()"
-            [typeAheadTimeout]="typeAheadTimeout()"
             [foreignDrop]="foreignDrop()"
             [dropOutside]="dropOutside()"
             (expandedItemIdsChange)="emitted.push(['expandedItemIds', $event])"
@@ -133,7 +167,7 @@ export type Emitted = [list: string, itemIds: string[]];
                             data-testid="check"
                             [attr.data-checked]="treeItem.state().checked ? '' : null"
                             [attr.data-indeterminate]="treeItem.state().indeterminate ? '' : null"
-                            (click)="tree.model().run('item.toggle-check', { itemId: item.id })"
+                            (click)="toggleCheck(item.id)"
                         ></button>
                         <span>{{ item.label }}</span>
                         @if (treeItem.state().renaming) {
@@ -163,12 +197,10 @@ export class FileTree {
     >(undefined);
     readonly keyMap = input<Partial<KeyMap> | undefined>(undefined);
     readonly expandOnClick = input<boolean | undefined>(undefined);
-    readonly checkboxes = input<boolean | undefined>(undefined);
     readonly dragThreshold = input<number | undefined>(undefined);
     readonly autoExpandDelay = input<number | undefined>(undefined);
     readonly indentation = input<number | undefined>(undefined);
     readonly indicatorInset = input<number | undefined>(undefined);
-    readonly typeAheadTimeout = input<number | undefined>(undefined);
     readonly foreignDrop = input<TreeForeignDrop<FileTypes> | undefined>(
         undefined,
     );
@@ -181,6 +213,15 @@ export class FileTree {
     readonly renameErrors: string[] = [];
     /** the root's handle (`#tree="treeRoot"`): its `model()` and its `engine` */
     readonly root = viewChild.required<TreeRootDirective<FileTypes>>("tree");
+
+    /** the app's own check control runs `item.toggle-check` (`checkboxes()`) */
+    protected toggleCheck(itemId: string): void {
+        const model = this.root().model() as unknown as TreeModel<
+            FileTypes,
+            typeof FEATURES
+        >;
+        model.run("item.toggle-check", { itemId });
+    }
 }
 
 /** A rendered component: its fixture, and how to change its inputs. */

@@ -9,13 +9,13 @@ import { compileScript, compileTemplate, parse } from "vue/compiler-sfc";
 import * as TreeVue from "../src";
 import { createTreeRef, type TreeRef } from "../src";
 import * as fixtures from "./tree";
-import { type FileTypes, files, fire, render, settle, Tree } from "./tree";
+import { bareFiles, type FileTypes, fire, render, settle, Tree } from "./tree";
 
 const TEMPLATE = `
 <button type="button" data-testid="collapse" :disabled="!tree.value"
     @click="tree.value?.model.run('tree.collapse-all', {})">Collapse all</button>
 <button type="button" data-testid="toggle" @click="shown = !shown">Toggle</button>
-<Tree.Root v-if="shown" :tree-ref="tree" :default-tree="files()" aria-label="Files">
+<Tree.Root v-if="shown" :tree-ref="tree" :default-tree="bareFiles()" aria-label="Files">
     <Tree.Items v-slot="{ item }"><FileItem :item="item" /></Tree.Items>
 </Tree.Root>`;
 
@@ -98,7 +98,7 @@ describe("a tree ref in a compiled template", () => {
 <script setup>
 import { ref } from "vue";
 import { useTreeRef } from "@fragiola/tree-vue";
-import { FileItem, files, Tree } from "./tree";
+import { bareFiles, FileItem, Tree } from "./tree";
 
 const tree = useTreeRef();
 const shown = ref(true);
@@ -128,7 +128,7 @@ defineExpose({ tree });
                 "Tree.Root": Tree.Root,
                 "Tree.Items": Tree.Items,
             },
-            setup: () => ({ tree, shown: Vue.ref(true), files }),
+            setup: () => ({ tree, shown: Vue.ref(true), bareFiles }),
             render: compileRender(TEMPLATE),
         });
         await expectTreeRefWorks(App, () => tree);
@@ -142,7 +142,7 @@ defineExpose({ tree });
                     treeRef: Vue.shallowRef(
                         null,
                     ) as unknown as TreeRef<FileTypes>,
-                    defaultTree: files(),
+                    defaultTree: bareFiles(),
                 }),
         });
         await render(() =>

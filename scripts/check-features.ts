@@ -21,6 +21,19 @@ export const FEATURES: readonly FeatureSources[] = [
     // (`packages/angular/selection/`, `../../selection/` from its fesm bundles)
     { subpath: "selection", folders: ["src/selection/", "../../selection/"] },
     {
+        subpath: "checkboxes",
+        folders: ["src/checkboxes/", "../../checkboxes/"],
+    },
+    { subpath: "rename", folders: ["src/rename/", "../../rename/"] },
+    {
+        subpath: "async-children",
+        folders: ["src/async-children/", "../../async-children/"],
+    },
+    {
+        subpath: "type-ahead",
+        folders: ["src/type-ahead/", "../../type-ahead/"],
+    },
+    {
         subpath: "virtualization",
         folders: [
             "src/virtual/",

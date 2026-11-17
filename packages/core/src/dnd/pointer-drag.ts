@@ -10,6 +10,7 @@
 
 import { isDragExempt } from "../dom/owner";
 import type { EngineHost } from "../engine/host";
+import type { FeatureModel } from "../features/types";
 import { rectOf } from "../geometry/rect";
 import { GroupDrag, treeOf } from "./drag-group";
 import { dragSetOf } from "./drag-set";
@@ -80,7 +81,8 @@ export class PointerDrag {
         if (this.press || this.session || this.host.drag()) return;
         if (event.button !== 0 || event.isPrimary === false) return;
         if (isDragExempt(event.target, content)) return;
-        if (model.state.renamingItemId === itemId) return;
+        if ((model as unknown as FeatureModel).is("item-renaming", { itemId }))
+            return;
         const doc = content.ownerDocument;
         this.press = {
             itemId,

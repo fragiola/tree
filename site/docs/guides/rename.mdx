@@ -3,7 +3,10 @@ title: Inline rename
 description: Edit an item's label in place with your own input and useTreeItemRename, validate the name with middleware, and show why it was refused.
 ---
 
-Renaming is a short-lived model state: `item.start-rename` (F2 on the focused item) makes an
+Renaming is an opt-in feature: `rename()`, from `@fragiola/tree/rename` (re-exported, with the
+part hook, by every adapter's `/rename` entry). A tree that never imports it does not ship it, and
+its labels change only through a new document. Installed, renaming is a short-lived model state:
+`item.start-rename` (F2 on the focused item) makes an
 item the **renaming** item, `item.rename` sets its label and ends it, `item.cancel-rename` ends it
 unchanged. The text field is yours: `useTreeItemRename(item)` gives it the editing behaviour, and
 you render it only while the item is renaming. The rules for a good name are yours too.
@@ -15,7 +18,10 @@ Put it in the row, next to (or instead of) the label, and name it:
 <Framework name="react">
 
 ```tsx
-import { type ItemOf, Tree, useTreeItemRename } from "@fragiola/tree-react";
+import { type ItemOf, Tree } from "@fragiola/tree-react";
+import { rename, useTreeItemRename } from "@fragiola/tree-react/rename";
+
+// in the model's features: createTreeModel(json, { features: [rename()] })
 
 function FileItem({ item }: { item: ItemOf<Types> }) {
     const rename = useTreeItemRename(item);
@@ -40,7 +46,8 @@ function FileItem({ item }: { item: ItemOf<Types> }) {
 
 ```vue title="file-item.vue"
 <script setup lang="ts">
-import { type ItemOf, useTreeItemRename } from "@fragiola/tree-vue";
+import type { ItemOf } from "@fragiola/tree-vue";
+import { useTreeItemRename } from "@fragiola/tree-vue/rename";
 import { Tree, type Types } from "./tree";
 
 const props = defineProps<{ item: ItemOf<Types> }>();
@@ -86,7 +93,8 @@ const { state: rename, props: renameProps } = useTreeItemRename(() => props.item
 ```
 
 `treeItemRename` goes on your own input inside an item. It is the Angular form of
-`useTreeItemRename`.
+`useTreeItemRename`: `TreeItemRenameDirective`, from `@fragiola/tree-angular/rename`, in your
+component's `imports` (with `rename()` in the model's features).
 
 </Framework>
 

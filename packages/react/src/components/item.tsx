@@ -14,8 +14,8 @@ export interface ItemProps<T extends TreeTypes = AnyTypes>
 
 /**
  * An item (`role="treeitem"`, the WAI-ARIA APG Tree View): `aria-level`, `aria-posinset`,
- * `aria-setsize`, `aria-expanded` (a parent), `aria-selected` (a tree that selects),
- * `aria-checked` (`checkboxes`), `aria-disabled`, `aria-busy` (loading) and the roving `tabindex`.
+ * `aria-setsize`, `aria-expanded` (a parent), `aria-selected` (`selection()`), `aria-checked`
+ * (`checkboxes()`), `aria-disabled`, `aria-busy` (`asyncChildren()`) and the roving `tabindex`.
  * It is the element DOM focus goes to; its state is in `data-*`, its depth in `--tree-depth`.
  */
 export function Item<T extends TreeTypes = AnyTypes>(props: ItemProps<T>) {

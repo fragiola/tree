@@ -13,6 +13,7 @@ import {
 } from "@lucide/angular";
 import { type FileTypes, formatSize } from "../_kit/data";
 import { createFakeLoader } from "../_kit/loader";
+import { features } from "./features";
 import { RetryButton } from "./retry-button";
 import * as styles from "./styles";
 
@@ -105,7 +106,10 @@ let nextId = 0;
 export default class AsyncLoading {
     protected readonly styles = styles;
     protected readonly formatSize = formatSize;
-    protected readonly model = createTreeModel<FileTypes>(json);
+    protected readonly model = createTreeModel<FileTypes, typeof features>(
+        json,
+        { features },
+    );
     // an app's loader fetches from its back-end; this fake answers after 500 ms, and fails the
     // first load of "documents"
     protected readonly loadChildren = createFakeLoader({

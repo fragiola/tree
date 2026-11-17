@@ -5,6 +5,10 @@ export default defineConfig({
     entry: {
         index: "src/index.ts",
         selection: "src/selection/index.ts",
+        checkboxes: "src/checkboxes/index.ts",
+        rename: "src/rename/index.ts",
+        "async-children": "src/async-children/index.ts",
+        "type-ahead": "src/type-ahead/index.ts",
         virtualization: "src/virtualization/index.ts",
     },
     format: "esm",

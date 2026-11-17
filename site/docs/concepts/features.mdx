@@ -1,16 +1,20 @@
 ---
 title: Features
-description: A minimal core and opt-in features - selection, virtualization - each from its own entry, so a tree ships only what it installs.
+description: A minimal core and opt-in features - selection, checkboxes, rename, async children, type-ahead, virtualization - so a tree ships only what it installs.
 ---
 
 The tree is a **minimal core** and **opt-in features**. With no feature, a tree renders, expands
-and collapses, moves one roving tab stop with the WAI-ARIA keys, drags and renames: it is a
-complete, accessible tree. A feature adds one capability, its state, commands, keys and ARIA,
+and collapses, moves one roving tab stop with the WAI-ARIA keys, and drags: it is a complete,
+accessible tree. A feature adds one capability, its state, commands, keys and ARIA,
 and comes from **its own entry**: an app that never imports it does not ship it.
 
 | feature | entry | adds |
 | --- | --- | --- |
 | `selection(options?)` | `@fragiola/tree-react/selection` | the selected items, the selection mode (`single` by default, `multiple`, `none`), `item.select` and the other selection commands, the keys and clicks that select, `aria-selected`, `data-selected`, `aria-multiselectable`, and the `selectedItemIds` prop |
+| `checkboxes(options?)` | `@fragiola/tree-react/checkboxes` | tri-state checks (`checkedItemIds`, `cascade` by default or `independent`), `item.check`, `item.toggle-check`, `aria-checked`, `data-checked`, `data-indeterminate`, Space to toggle the check (`space`), and the `checkedItemIds` prop; the check control is yours ([Checkboxes](/docs/guides/checkboxes)) |
+| `rename(options?)` | `@fragiola/tree-react/rename` | the renaming item, the `renamable` flag and default, `item.start-rename` (F2), `item.rename`, `item.cancel-rename`, the engine's `commit-rename` and `cancel-rename`, `data-renaming`, and `useTreeItemRename` for your own input ([Rename](/docs/guides/rename)) |
+| `asyncChildren()` | `@fragiola/tree-react/async-children` | parents whose children come from your `loadChildren` (`childrenStatus`), their commands, the engine's `load-children`, `aria-busy`, `data-loading`, `data-load-error`, and the `loadChildren` prop ([Async loading](/docs/guides/async-loading)) |
+| `typeAhead(options?)` | `@fragiola/tree-react/type-ahead` | typed characters focus the next item whose label starts with them (`timeout`), and `model.get("type-ahead-match")` ([Keyboard and type-ahead](/docs/guides/keyboard#type-ahead)) |
 | `virtualization(options?)` | `@fragiola/tree-react/virtualization` | a window of the visible items in view, rendered by `VirtualItems`, for trees of hundreds of thousands of rows ([Virtualization](/docs/guides/virtualization)) |
 
 Each framework's package has the same entries (`@fragiola/tree-vue/selection`,
@@ -105,8 +109,10 @@ in the same way to `Tree.Root`, `useTree`, `useTreeRef`, `useTreeState` and `typ
 
 A document is the same JSON with or without features ([The JSON model](/docs/api/json-model)), and
 a field belongs to its feature: `selectedItemIds`, `selectionAnchorItemId` and
-`settings.selectionMode` load only into a model with `selection()`. Elsewhere they are a
-validation issue (`requires the selection feature`), never dropped silently, and
+`settings.selectionMode` load only into a model with `selection()`; `checkedItemIds` and
+`settings.checkMode` with `checkboxes()`; `renamingItemId`, `settings.renamable` and an item's
+`renamable` with `rename()`; an item's `childrenStatus` with `asyncChildren()`. Elsewhere they
+are a validation issue (`requires the selection feature`), never dropped silently, and
 `model.get("tree-json")` writes only the installed features' fields. Check a saved document
 against the model's features with `validateTree(json, { features })`.
 

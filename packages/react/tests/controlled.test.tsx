@@ -85,7 +85,6 @@ describe("controlled and uncontrolled state", () => {
         const { rerender } = render(
             <FileTree
                 model={model}
-                checkboxes
                 checkedItemIds={[]}
                 onCheckedItemIdsChange={onChecked}
             />,
@@ -93,7 +92,6 @@ describe("controlled and uncontrolled state", () => {
         rerender(
             <FileTree
                 model={model}
-                checkboxes
                 checkedItemIds={["utils", "a", "b"]}
                 onCheckedItemIdsChange={onChecked}
             />,
@@ -114,9 +112,7 @@ describe("controlled and uncontrolled state", () => {
         model.subscribe(() => {
             commits += 1;
         });
-        render(
-            <FileTree model={model} checkboxes checkedItemIds={["utils"]} />,
-        );
+        render(<FileTree model={model} checkedItemIds={["utils"]} />);
         expect([...model.state.checkedItemIds].sort()).toEqual([
             "a",
             "b",

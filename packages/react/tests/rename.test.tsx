@@ -6,8 +6,9 @@ import {
 } from "@fragiola/tree";
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { Tree, useTree, useTreeItem, useTreeItemRename } from "../src";
-import { FileTree, filesModel, itemElement } from "./tree";
+import { Tree, useTree, useTreeItem } from "../src";
+import { useTreeItemRename } from "../src/rename";
+import { type FEATURES, FileTree, filesModel, itemElement } from "./tree";
 
 function start(model = filesModel()) {
     render(<FileTree model={model} />);
@@ -36,7 +37,7 @@ function Editor({
 
 /** Renaming by hand: the item's state and the engine's actions, no hook. */
 function ManualEditor({ item }: { item: ItemOf<AnyTypes> }) {
-    const { engine } = useTree();
+    const { engine } = useTree<AnyTypes, typeof FEATURES>();
     const { state } = useTreeItem(item);
     if (!state.renaming) return null;
     return (

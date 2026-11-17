@@ -65,8 +65,8 @@ export type {
     PressInput,
     TreeEngineAdapter,
 } from "./engine/adapter";
-export type { LoadChildren } from "./engine/children-loader";
 export type { AnnounceEvent, DragTree } from "./engine/host";
+export type { LoadChildren } from "./engine/load-children";
 export {
     createTreeEngine,
     type TreeEngine,

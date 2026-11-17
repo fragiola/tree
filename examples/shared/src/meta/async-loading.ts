@@ -7,6 +7,7 @@ export default {
     category: "data",
     order: 1,
     features: [
+        "asyncChildren()",
         "loadChildren",
         "childrenStatus",
         "load-children",

@@ -4,10 +4,8 @@ import {
     type TreeJson,
     useTree,
 } from "@fragiola/tree-react";
-import {
-    type SelectionFeature,
-    selection,
-} from "@fragiola/tree-react/selection";
+import { asyncChildren } from "@fragiola/tree-react/async-children";
+import { selection } from "@fragiola/tree-react/selection";
 import { useState } from "react";
 import { StyledTree } from "../../fixture/styled";
 import { useInspector } from "../../inspector/context";
@@ -26,6 +24,9 @@ const json: TreeJson<Types> = {
         three: { kind: "folder", label: "three", childrenStatus: "unloaded" },
     },
 };
+
+/** The scenario's features: the selection, and children from the loader. */
+const features = [selection(), asyncChildren()] as const;
 
 let calls = 0;
 
@@ -49,7 +50,7 @@ const loadChildren: LoadChildren<Types> = (item, { signal }) =>
     });
 
 function Retry({ itemId }: { itemId: string }) {
-    const { engine, model } = useTree<Types>();
+    const { engine, model } = useTree<Types, typeof features>();
     if (model.get("children-status-by", { itemId }) !== "error") return null;
     return (
         <button
@@ -64,13 +65,11 @@ function Retry({ itemId }: { itemId: string }) {
 
 export default function FlakyServer() {
     const [model] = useState(() =>
-        createTreeModel<Types, readonly [SelectionFeature]>(json, {
-            features: [selection()],
-        }),
+        createTreeModel<Types, typeof features>(json, { features }),
     );
     useInspector(model);
     return (
-        <StyledTree<Types>
+        <StyledTree<Types, typeof features>
             model={model}
             loadChildren={loadChildren}
             announce={(event) =>

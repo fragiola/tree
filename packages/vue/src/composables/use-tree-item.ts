@@ -40,17 +40,17 @@ export interface TreeItemState {
     focused: boolean;
     /** it is the roving tab stop: the one item with `tabindex` 0 */
     tabStop: boolean;
-    /** its checkbox: checked, unchecked or mixed */
+    /** its check: checked, unchecked or mixed (`checkboxes()`; unchecked without it) */
     checkState: CheckState;
-    /** its checkbox is checked (not mixed) */
+    /** its check is checked, not mixed (`checkboxes()`) */
     checked: boolean;
-    /** its checkbox is mixed: only some of its descendants are checked */
+    /** its check is mixed: only some of its descendants are checked (`checkboxes()`) */
     indeterminate: boolean;
-    /** its label is being edited */
+    /** its label is being edited (`rename()`) */
     renaming: boolean;
-    /** its children are being loaded */
+    /** its children are being loaded (`asyncChildren()`) */
     loading: boolean;
-    /** the last load of its children failed */
+    /** the last load of its children failed (`asyncChildren()`) */
     loadError: boolean;
     /** focusable, not actionable */
     disabled: boolean;
@@ -79,9 +79,7 @@ export interface TreeItemElementProps {
     "aria-posinset": number;
     "aria-setsize": number;
     "aria-expanded": boolean | undefined;
-    "aria-checked": boolean | "mixed" | undefined;
     "aria-disabled": true | undefined;
-    "aria-busy": true | undefined;
     tabindex: 0 | -1;
     "data-tree-part": "item";
     "data-tree-path": string;
@@ -90,7 +88,10 @@ export interface TreeItemElementProps {
     /** `--tree-depth`, for the indentation */
     style: Record<string, string>;
     [dataAttribute: `data-${string}`]: string | undefined;
-    /** the installed features' ARIA (`aria-selected` with `selection()`) */
+    /**
+     * the installed features' ARIA (`aria-selected` with `selection()`, `aria-checked` with
+     * `checkboxes()`, `aria-busy` with `asyncChildren()`)
+     */
     [ariaAttribute: `aria-${string}`]: string | number | boolean | undefined;
 }
 
@@ -104,8 +105,8 @@ export interface UseTreeItemResult {
 /**
  * An item of the enclosing `Tree.Root`: its state, and the props of its element (`role="treeitem"`
  * with `aria-level`, `aria-posinset`, `aria-setsize`, `aria-expanded`, the features' ARIA
- * (`aria-selected` with `selection()`),
- * `aria-checked`, `aria-disabled`, `aria-busy`, the roving `tabindex`, the `data-*` state, the
+ * (`aria-selected` with `selection()`, `aria-checked` with `checkboxes()`, `aria-busy` with
+ * `asyncChildren()`), `aria-disabled`, the roving `tabindex`, the `data-*` state, the
  * part and path attributes, its focus listener and the template ref that registers it with the
  * engine). `Tree.Item` is this composable on a `div`. Call it in `setup`, with the item (a value,
  * a ref or a getter).
@@ -151,13 +152,7 @@ export function useTreeItem<T extends TreeTypes = AnyTypes>(
             "aria-setsize": value.setsize,
             "aria-expanded": value.leaf ? undefined : value.expanded,
             ...featureAttributes(value.attributes, "aria-"),
-            "aria-checked": context.checkboxes.value
-                ? value.indeterminate
-                    ? "mixed"
-                    : value.checked
-                : undefined,
             "aria-disabled": value.disabled || undefined,
-            "aria-busy": value.loading || undefined,
             tabindex: value.tabStop ? 0 : -1,
             "data-tree-part": "item",
             "data-tree-path": value.path,

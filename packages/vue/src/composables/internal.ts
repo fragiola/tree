@@ -34,16 +34,10 @@ export function treeItemState(
         parent === undefined
             ? state.rootItemIds.length
             : (parent.childItemIds?.length ?? 0);
-    // the mixed state walks the item's subtree: only a tree with checkboxes pays for it
-    const checkState: CheckState = context.checkboxes.value
-        ? model.get("check-state-by", { itemId })
-        : model.is("item-checked", { itemId })
-          ? "checked"
-          : "unchecked";
-    const status = item.childrenStatus;
     const dropTarget = engine?.is("item-drop-target", { itemId }) ?? false;
     // the features' ARIA and data-*: model state, so a server render has them
     const attributes = model.get("item-attributes-by", { itemId });
+    const checkState = checkStateOf(attributes);
     return {
         itemId,
         path,
@@ -57,9 +51,9 @@ export function treeItemState(
         checkState,
         checked: checkState === "checked",
         indeterminate: checkState === "mixed",
-        renaming: state.renamingItemId === itemId,
-        loading: status === "loading",
-        loadError: status === "error",
+        renaming: attributes["data-renaming"] !== undefined,
+        loading: attributes["aria-busy"] === "true",
+        loadError: attributes["data-load-error"] !== undefined,
         disabled: item.disabled === true,
         leaf: model.is("item-leaf", { itemId }),
         dragging: engine?.is("item-dragging", { itemId }) ?? false,
@@ -69,6 +63,18 @@ export function treeItemState(
             : undefined,
         attributes,
     };
+}
+
+/** An item's check, as `checkboxes()` says it in `aria-checked` (unchecked without the feature). */
+function checkStateOf(
+    attributes: Readonly<Record<string, string | undefined>>,
+): CheckState {
+    const checked = attributes["aria-checked"];
+    return checked === "true"
+        ? "checked"
+        : checked === "mixed"
+          ? "mixed"
+          : "unchecked";
 }
 
 /** @internal the installed features' attributes whose names start with `prefix` (`data-`, `aria-`) */
@@ -89,11 +95,6 @@ export function itemDataAttributes(state: TreeItemState) {
         ...dataAttributes({
             expanded: state.expanded,
             focused: state.focused,
-            checked: state.checked,
-            indeterminate: state.indeterminate,
-            renaming: state.renaming,
-            loading: state.loading,
-            "load-error": state.loadError,
             disabled: state.disabled,
             leaf: state.leaf,
             dragging: state.dragging,

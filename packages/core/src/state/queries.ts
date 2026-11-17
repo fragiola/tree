@@ -7,7 +7,6 @@ import type { CommandInfo, NoPayload } from "../commands/types";
 import { FEATURE_KEYS, type OwnedBy } from "../features/keys";
 import type { ComposedFeatures } from "../features/registry";
 import type { FeatureState, TreeFeatureInfo } from "../features/types";
-import { checkedSet, checkStateOf } from "./check-state";
 import { deepFreeze } from "./draft";
 import { stateToJson, type TreeJson } from "./json";
 import {
@@ -200,26 +199,6 @@ function tabStop(state: State, features: ComposedFeatures): string | undefined {
     return preferred ?? visibleItems(state)[0]?.itemId;
 }
 
-function typeAheadMatch(
-    state: State,
-    text: string,
-    fromItemId: string | null | undefined,
-): string | undefined {
-    const needle = text.toLocaleLowerCase();
-    if (needle === "") return undefined;
-    const visible = visibleItems(state);
-    const start =
-        fromItemId === null || fromItemId === undefined
-            ? -1
-            : (visibleIndex(state).get(fromItemId) ?? -1);
-    for (let step = 1; step <= visible.length; step++) {
-        const entry = visible[(start + step) % visible.length];
-        const label = entry && itemOf(state, entry.itemId)?.label;
-        if (label?.toLocaleLowerCase().startsWith(needle)) return entry?.itemId;
-    }
-    return undefined;
-}
-
 /** The keys of the core's own `model.get`, without the features'. */
 type CoreGetKey = Exclude<ModelGetKey, OwnedBy<"get">>;
 /** The keys of the core's own `model.is`, without the features'. */
@@ -253,13 +232,6 @@ const GETTERS: Getters = {
     "root-items": (state) => items(state, childIdsOf(state, null)),
     "visible-items": (state) => visibleItems(state),
     "item-path-by": (state, { itemId }) => pathOf(state, itemId),
-    "check-state-by": (state, { itemId }) => checkStateOf(state, itemId),
-    "children-status-by": (state, { itemId }) =>
-        itemOf(state, itemId)?.childrenStatus,
-    "type-ahead-match": (state, { text, fromItemId }) => {
-        const id = typeAheadMatch(state, text, fromItemId);
-        return id === undefined ? undefined : itemOf(state, id);
-    },
     "tab-stop-item": (state, _payload, features) => {
         const id = tabStop(state, features);
         return id === undefined ? undefined : itemOf(state, id);
@@ -277,21 +249,12 @@ type Questions = {
 const QUESTIONS: Questions = {
     "item-expanded": (state, { itemId }) => expandedSet(state).has(itemId),
     "item-focused": (state, { itemId }) => state.focusedItemId === itemId,
-    "item-checked": (state, { itemId }) => checkedSet(state).has(itemId),
-    "item-renaming": (state, { itemId }) => state.renamingItemId === itemId,
-    "item-loading": (state, { itemId }) =>
-        itemOf(state, itemId)?.childrenStatus === "loading",
     "item-disabled": (state, { itemId }) =>
         itemOf(state, itemId)?.disabled === true,
     "item-movable": (state, { itemId }) => {
         const item = itemOf(state, itemId);
         const flags = item && resolveFlags(state.settings, item);
         return flags?.movable === true && !flags.disabled;
-    },
-    "item-renamable": (state, { itemId }) => {
-        const item = itemOf(state, itemId);
-        const flags = item && resolveFlags(state.settings, item);
-        return flags?.renamable === true && !flags.disabled;
     },
     "item-leaf": (state, { itemId }) => {
         const item = itemOf(state, itemId);

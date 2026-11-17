@@ -52,6 +52,13 @@ export interface ComposedFeatures {
     forget(draft: Draft, removed: ReadonlySet<string>): void;
     disabled(draft: Draft, itemId: string): void;
     configured(draft: Draft, before: FeatureState["settings"]): void;
+    loaded(draft: Draft): void;
+    childrenChanged(
+        draft: Draft,
+        parentItemId: string | null,
+        addedItemIds: readonly string[],
+    ): void;
+    flagsChanged(draft: Draft, itemId: string): void;
     tabStop(state: FeatureState): readonly string[];
     /** the installed features' attributes of an item, merged (none: one shared empty object) */
     itemAttributes(
@@ -148,6 +155,9 @@ export function composeFeatures(
     const forgetters = each("forget");
     const disablers = each("disabled");
     const configurers = each("configured");
+    const loaders = each("loaded");
+    const childrenWatchers = each("childrenChanged");
+    const flagWatchers = each("flagsChanged");
     const tabStops = each("tabStop");
     const itemAttributers = each("itemAttributes");
     const rootAttributers = each("rootAttributes");
@@ -196,6 +206,17 @@ export function composeFeatures(
         configured: (draft, before) => {
             for (const feature of configurers)
                 feature.configured?.(draft, before);
+        },
+        loaded: (draft) => {
+            for (const feature of loaders) feature.loaded?.(draft);
+        },
+        childrenChanged: (draft, parentItemId, addedItemIds) => {
+            for (const feature of childrenWatchers)
+                feature.childrenChanged?.(draft, parentItemId, addedItemIds);
+        },
+        flagsChanged: (draft, itemId) => {
+            for (const feature of flagWatchers)
+                feature.flagsChanged?.(draft, itemId);
         },
         tabStop: (state) =>
             tabStops.flatMap((feature) => feature.tabStop?.(state) ?? []),

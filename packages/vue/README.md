@@ -93,6 +93,10 @@ import a feature does not ship it.
 | feature | entry |
 | --- | --- |
 | `selection(options?)`: the selected items, the selection keys and clicks, `aria-selected` | `@fragiola/tree-vue/selection` |
+| `checkboxes(options?)`: tri-state checks, `aria-checked`, Space to check, `checkedItemIds` | `@fragiola/tree-vue/checkboxes` |
+| `rename(options?)`: the renaming item, F2, the rename commands, `useTreeItemRename` | `@fragiola/tree-vue/rename` |
+| `asyncChildren()`: children from your `loadChildren`, `aria-busy` | `@fragiola/tree-vue/async-children` |
+| `typeAhead(options?)`: typed characters focus a matching label | `@fragiola/tree-vue/type-ahead` |
 | `virtualization(options?)`: a window of the rows in view, rendered by `VirtualItems` | `@fragiola/tree-vue/virtualization` |
 
 ```ts
@@ -128,7 +132,7 @@ of Vue's reactivity: never put it in `ref()` or `reactive()`.
 There is no checkbox and no rename input to import: the item carries the state, you render the
 control.
 
-- **Checks.** With `checkboxes` on the root, each item has `aria-checked` and `data-checked` /
+- **Checks.** With `checkboxes()` in the model's features, each item has `aria-checked` and `data-checked` /
   `data-indeterminate`, and Space toggles it. A visible control is yours: read
   `useTreeItem(item).state` (`checked`, `indeterminate`, `checkState`) and run
   `model.run("item.toggle-check", { itemId })`. Make it an element that never takes focus (a

@@ -1,9 +1,13 @@
 import { render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createTreeModel, Tree } from "../src";
+import { Tree } from "../src";
+import { asyncChildren } from "../src/async-children";
+import { checkboxes } from "../src/checkboxes";
+import { rename } from "../src/rename";
 import { selection } from "../src/selection";
+import { typeAhead } from "../src/type-ahead";
 import { virtualization } from "../src/virtualization";
-import { FileTree, files, itemElement } from "./tree";
+import { FileTree, files, filesModelWith, itemElement } from "./tree";
 
 afterEach(() => {
     vi.restoreAllMocks();
@@ -64,7 +68,7 @@ describe("features on the root", () => {
 
     it("warns once, and ignores it, when a feature's prop has no feature", () => {
         const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-        const model = createTreeModel(files());
+        const model = filesModelWith([]);
         const props = { selectedItemIds: ["app"] } as object;
         const { rerender } = render(
             <Tree.Root model={model} aria-label="Files" {...props} />,
@@ -82,7 +86,18 @@ describe("features on the root", () => {
         const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
         const { rerender } = render(<FileTree defaultTree={files()} />);
         // an equal new list (inline `features={[selection()]}`) is the same: no warning
-        rerender(<FileTree defaultTree={files()} features={[selection()]} />);
+        rerender(
+            <FileTree
+                defaultTree={files()}
+                features={[
+                    selection(),
+                    checkboxes(),
+                    rename(),
+                    asyncChildren(),
+                    typeAhead(),
+                ]}
+            />,
+        );
         expect(warn).not.toHaveBeenCalled();
         const other = [selection(), virtualization()] as const;
         rerender(<FileTree defaultTree={files()} features={other as never} />);

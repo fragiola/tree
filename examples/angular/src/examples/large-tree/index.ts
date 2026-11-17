@@ -9,6 +9,7 @@ import {
     type TreeModel,
     TreeRootDirective,
 } from "@fragiola/tree-angular";
+import { typeAhead } from "@fragiola/tree-angular/type-ahead";
 import {
     TreeVirtualItemsDirective,
     virtualization,
@@ -48,6 +49,7 @@ function largeTree(): TreeJson<Types> {
 // theme sizes the rows, so they are measured (estimated at 28px until then).
 const features = [
     virtualization({ estimateRowSize: 28, overscan: 10 }),
+    typeAhead(),
 ] as const;
 
 /** The live region's text for each step of a drag (pointer or keyboard): the package writes none. */

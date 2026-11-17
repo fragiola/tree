@@ -1,8 +1,13 @@
 // Type fixtures (compiled by `pnpm typecheck`, never run): the registry types the items' data, the
 // commands' payloads and the queries. `@ts-expect-error` marks what must not compile.
+import { asyncChildren } from "../../src/async-children/async-children";
+import { checkboxes } from "../../src/checkboxes/checkboxes";
+import { createTreeEngine } from "../../src/engine/tree-engine";
+import { rename } from "../../src/rename/rename";
 import { selection } from "../../src/selection/selection";
 import { createTreeModel, type TreeModel } from "../../src/state/model";
 import type { ItemOf } from "../../src/state/types";
+import { typeAhead } from "../../src/type-ahead/type-ahead";
 import { virtualization } from "../../src/virtual/virtualization";
 
 type Types = { items: { folder: undefined; file: { size: number } } };
@@ -41,6 +46,39 @@ bare.is("item-selected", { itemId: "b" });
 // @ts-expect-error the selection feature is not installed
 void bare.state.selectedItemIds;
 bare.run("item.expand", { itemId: "a" });
+// @ts-expect-error the checkboxes feature is not installed
+bare.run("item.check", { itemId: "b", checked: true });
+// @ts-expect-error the checkboxes feature is not installed
+bare.get("check-state-by", { itemId: "b" });
+// @ts-expect-error the checkboxes feature is not installed
+void bare.state.checkedItemIds;
+// @ts-expect-error the rename feature is not installed
+bare.run("item.start-rename", { itemId: "b" });
+// @ts-expect-error the rename feature is not installed
+bare.is("item-renaming", { itemId: "b" });
+// @ts-expect-error the rename feature is not installed
+void bare.state.renamingItemId;
+// @ts-expect-error the async children feature is not installed
+bare.run("item.reset-children", { itemId: "b" });
+// @ts-expect-error the async children feature is not installed
+bare.get("children-status-by", { itemId: "b" });
+// @ts-expect-error the type-ahead feature is not installed
+bare.get("type-ahead-match", { text: "b" });
+
+// each feature's commands, keys and state with it
+const full = createTreeModel(
+    { version: 1, rootItemIds: [], items: {} },
+    {
+        features: [checkboxes(), rename(), asyncChildren(), typeAhead()],
+    },
+);
+full.run("item.check", { itemId: "b", checked: true });
+full.run("item.start-rename", { itemId: "b" });
+full.run("item.reset-children", { itemId: "b" });
+void full.get("type-ahead-match", { text: "b" });
+const checkedIds: readonly string[] = full.state.checkedItemIds;
+const renaming: string | null = full.state.renamingItemId;
+void [checkedIds, renaming];
 
 // a model with more features is a model with fewer (an adapter's parts take any)
 const anyModel: TreeModel<Types> = model;
@@ -124,3 +162,13 @@ model.use((ctx, next) => {
     }
     return next();
 });
+
+// the engine's actions of a feature: only with it
+const bareEngine = createTreeEngine(bare);
+// @ts-expect-error the async children feature is not installed
+bareEngine.run("load-children", { itemId: "b" });
+// @ts-expect-error the rename feature is not installed
+bareEngine.run("commit-rename", { itemId: "b", label: "c" });
+const fullEngine = createTreeEngine(full);
+fullEngine.run("load-children", { itemId: "b" });
+fullEngine.run("cancel-rename", { itemId: "b" });

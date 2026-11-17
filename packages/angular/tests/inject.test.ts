@@ -19,7 +19,8 @@ import {
     type TreeStateOf,
 } from "../src/public-api";
 import {
-    type FEATURES,
+    bareFiles,
+    FEATURES,
     type FileTypes,
     files,
     filesModel,
@@ -135,7 +136,7 @@ class WithRows {
     template: `<div treeRoot [defaultTree]="json"><test-row-state /></div>`,
 })
 class RowOutside {
-    readonly json = files();
+    readonly json = bareFiles();
 }
 
 /** A button outside the root, reaching it through its handle. */
@@ -155,7 +156,7 @@ class RowOutside {
     `,
 })
 class Handle {
-    readonly json = files();
+    readonly json = bareFiles();
     readonly tree = viewChild.required<TreeRootDirective<FileTypes>>("tree");
 }
 
@@ -334,8 +335,9 @@ describe('the root\'s handle (#tree="treeRoot")', () => {
         const view = await renderFiles({ model: first, loadChildren });
         const engine = view.component.root().engine;
         expect(loads).toHaveLength(1);
-        const second = createTreeModel<FileTypes>(
+        const second = createTreeModel<FileTypes, typeof FEATURES>(
             files({ rootItemIds: ["readme", "src"], expandedItemIds: [] }),
+            { features: FEATURES },
         );
         await view.set("model", second);
         expect(loads[0]?.aborted).toBe(true);

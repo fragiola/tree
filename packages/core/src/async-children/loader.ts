@@ -5,21 +5,16 @@
 // reset, a removal, a new document) is aborted and runs no command, nor does any load after
 // `destroy()` (which, with the engine's `resetLoadsOnDestroy`, puts the items it was loading back to
 // `unloaded`). The package itself never loads anything.
+import type { LoadChildren } from "../engine/load-children";
+import type { FeatureEngineHost } from "../features/types";
 import type { TreeItemJson } from "../state/json";
-import type { AnyTypes, ItemOf, TreeTypes } from "../state/types";
-import type { EngineHost } from "./host";
-
-/** The app's loader: an item's children, as item JSON (their ids generated when omitted). */
-export type LoadChildren<T extends TreeTypes = AnyTypes> = (
-    item: ItemOf<T>,
-    context: { readonly signal: AbortSignal },
-) => Promise<readonly TreeItemJson<T>[]>;
+import type { TreeItem } from "../state/types";
 
 export class ChildrenLoader {
     private readonly loads = new Map<string, AbortController>();
 
     constructor(
-        private readonly host: EngineHost,
+        private readonly host: FeatureEngineHost,
         private readonly loadChildren: LoadChildren | undefined,
     ) {}
 
@@ -90,7 +85,9 @@ export class ChildrenLoader {
         };
         let pending: Promise<readonly TreeItemJson[]>;
         try {
-            pending = loadChildren(item, { signal: controller.signal });
+            pending = loadChildren(item as TreeItem, {
+                signal: controller.signal,
+            });
         } catch (error) {
             pending = Promise.reject(error);
         }

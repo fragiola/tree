@@ -33,8 +33,6 @@ export interface TreeContext {
     readonly revision: Signal<number>;
     /** the roving tab stop of this state (`tab-stop-item`), computed once per state */
     readonly tabStopItemId: Signal<string | undefined>;
-    /** the items carry `aria-checked` and Space toggles the check (`checkboxes` on the root) */
-    readonly checkboxes: Signal<boolean>;
 }
 
 export const TREE_CONTEXT = new InjectionToken<TreeContext>("Tree");

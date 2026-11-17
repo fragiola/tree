@@ -3,8 +3,10 @@ title: Async loading
 description: Load a parent's children the first time it is expanded, show the loading and error states, retry a failed load and refresh loaded children.
 ---
 
-A parent whose children come from your server has a `childrenStatus` instead of
-`childItemIds`. The first time it is expanded and visible, the engine calls your
+Children that come from your server are an opt-in feature: `asyncChildren()`, from
+`@fragiola/tree/async-children` (every adapter's `/async-children` entry). A tree that never imports
+it does not ship it, and a document with a `childrenStatus` does not load without it. Installed, a
+parent whose children come from your server has a `childrenStatus` instead of `childItemIds`. The first time it is expanded and visible, the engine calls your
 `loadChildren(item, { signal })` and gives the model what it returns. The package makes no network
 call: the fetch, the cache and the error message are yours.
 
@@ -34,6 +36,9 @@ unmounts, and an aborted or stale load changes nothing.
 
 ```tsx
 import { type LoadChildren, Tree, type TreeItemJson } from "@fragiola/tree-react";
+import { asyncChildren } from "@fragiola/tree-react/async-children";
+
+const features = [asyncChildren()] as const;
 
 const loadChildren: LoadChildren<Types> = async (item, { signal }) => {
     const response = await fetch(`/api/folders/${item.id}/children`, { signal });
@@ -43,7 +48,12 @@ const loadChildren: LoadChildren<Types> = async (item, { signal }) => {
 
 export function Drive() {
     return (
-        <Tree.Root<Types> defaultTree={json} loadChildren={loadChildren} aria-label="Cloud drive">
+        <Tree.Root<Types, typeof features>
+            defaultTree={json}
+            features={features}
+            loadChildren={loadChildren}
+            aria-label="Cloud drive"
+        >
             <Tree.Items<Types>>{(item) => <DriveItem item={item} />}</Tree.Items>
             <Tree.LiveRegion className="visually-hidden" />
         </Tree.Root>
@@ -59,7 +69,7 @@ export function Drive() {
 <script setup lang="ts">
 import type { LoadChildren, TreeItemJson } from "@fragiola/tree-vue";
 import DriveItem from "./drive-item.vue";
-import { json, Tree, type Types } from "./tree";
+import { features, json, Tree, type Types } from "./tree";
 
 const loadChildren: LoadChildren<Types> = async (item, { signal }) => {
     const response = await fetch(`/api/folders/${item.id}/children`, { signal });
@@ -69,7 +79,12 @@ const loadChildren: LoadChildren<Types> = async (item, { signal }) => {
 </script>
 
 <template>
-    <Tree.Root :default-tree="json" :load-children="loadChildren" aria-label="Cloud drive">
+    <Tree.Root
+        :default-tree="json"
+        :features="features"
+        :load-children="loadChildren"
+        aria-label="Cloud drive"
+    >
         <Tree.Items v-slot="{ item }"><DriveItem :item="item" /></Tree.Items>
         <Tree.LiveRegion class="visually-hidden" />
     </Tree.Root>
@@ -83,6 +98,7 @@ const loadChildren: LoadChildren<Types> = async (item, { signal }) => {
 ```ts title="drive.ts"
 import { Component } from "@angular/core";
 import { createTreeModel, type LoadChildren, TREE, type TreeItemJson } from "@fragiola/tree-angular";
+import { asyncChildren } from "@fragiola/tree-angular/async-children";
 import { json, type Types } from "./tree";
 
 @Component({
@@ -101,7 +117,9 @@ import { json, type Types } from "./tree";
     `,
 })
 export class Drive {
-    protected readonly model = createTreeModel<Types>(json);
+    protected readonly model = createTreeModel(json, {
+        features: [asyncChildren()],
+    });
     protected readonly loadChildren: LoadChildren<Types> = async (item, { signal }) => {
         const response = await fetch(`/api/folders/${item.id}/children`, { signal });
         if (!response.ok) throw new Error(`HTTP ${response.status}`);

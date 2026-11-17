@@ -120,9 +120,15 @@ export class TreeRootDirective<
      * model's features (without it, ignored with a warning)
      */
     readonly selectedItemIds = input<readonly string[] | undefined>(undefined);
-    /** controlled checkboxes: the checked items (`[(checkedItemIds)]`) */
+    /**
+     * controlled checks: the checked items (`[(checkedItemIds)]`), with `checkboxes()` in the
+     * model's features (without it, ignored with a warning)
+     */
     readonly checkedItemIds = input<readonly string[] | undefined>(undefined);
-    /** the app's loader of the children of an item with a `childrenStatus` */
+    /**
+     * the app's loader of the children of an item with a `childrenStatus`, with `asyncChildren()`
+     * in the model's features (without it, ignored with a warning)
+     */
     readonly loadChildren = input<LoadChildren<T> | undefined>(undefined);
     /** the live region's text for a drag step or a failed load (no text is built in) */
     readonly announce = input<
@@ -132,8 +138,6 @@ export class TreeRootDirective<
     readonly keyMap = input<Partial<KeyMap> | undefined>(undefined);
     /** a click on a parent's content also expands or collapses it (default false) */
     readonly expandOnClick = input(undefined, { transform: optionalBoolean });
-    /** the items carry `aria-checked`, and Space toggles the focused item's check (default false) */
-    readonly checkboxes = input(undefined, { transform: optionalBoolean });
     /** how far (px) a press moves before it is a drag (default 4) */
     readonly dragThreshold = input<number | undefined>(undefined);
     /** how long (ms) a drag hovers a collapsed parent before it expands (default 800) */
@@ -142,8 +146,6 @@ export class TreeRootDirective<
     readonly indentation = input<number | undefined>(undefined);
     /** how far (px) a drop line starts past its level's inline start: the toggle, a grip or padding before the label (default 0) */
     readonly indicatorInset = input<number | undefined>(undefined);
-    /** how long (ms) between two typed characters keeps one type-ahead search (default 500) */
-    readonly typeAheadTimeout = input<number | undefined>(undefined);
     /**
      * joins the trees of the document with the same group name: items drag between them, by pointer
      * and keyboard (over one model a drop is one `item.move`, over two a transfer)
@@ -232,7 +234,6 @@ export class TreeRootDirective<
             this.treeState();
             return this.erased().get("tab-stop-item")?.id;
         }),
-        checkboxes: computed(() => this.checkboxes() === true),
     };
 
     /** what the root shows as ARIA and `data-*` */
@@ -268,12 +269,10 @@ export class TreeRootDirective<
             hasLoader: this.loadChildren() !== undefined,
             keyMap: this.keyMap() ?? null,
             expandOnClick: this.expandOnClick(),
-            checkboxes: this.checkboxes(),
             dragThreshold: this.dragThreshold(),
             autoExpandDelay: this.autoExpandDelay(),
             indentation: this.indentation(),
             indicatorInset: this.indicatorInset(),
-            typeAheadTimeout: this.typeAheadTimeout(),
             dragGroup: this.dragGroup(),
             hasTransfer: this.transfer() !== undefined,
         }),
@@ -369,6 +368,8 @@ export class TreeRootDirective<
             );
             const lists: Record<string, unknown> = {
                 selectedItemIds: this.selectedItemIds(),
+                checkedItemIds: this.checkedItemIds(),
+                loadChildren: this.loadChildren(),
             };
             for (const [name, value] of Object.entries(lists)) {
                 const feature = FEATURE_ROOT_PROPS[name];
@@ -401,12 +402,10 @@ export class TreeRootDirective<
             announce: (event) => untracked(this.announce)?.(event),
             keyMap: untracked(this.keyMap),
             expandOnClick: untracked(this.expandOnClick),
-            checkboxes: untracked(this.checkboxes),
             dragThreshold: untracked(this.dragThreshold),
             autoExpandDelay: untracked(this.autoExpandDelay),
             indentation: untracked(this.indentation),
             indicatorInset: untracked(this.indicatorInset),
-            typeAheadTimeout: untracked(this.typeAheadTimeout),
             dragGroup: untracked(this.dragGroup),
             transfer:
                 untracked(this.transfer) === undefined

@@ -58,20 +58,17 @@ export interface ItemFlags {
 
 /**
  * The tree's settings: its modes, and the defaults of the item flags. An installed feature adds its
- * own (`selection()`: `selectionMode`).
+ * own (`selection()`: `selectionMode`; `checkboxes()`: `checkMode`;
+ * `rename()`: `renamable`).
  */
 export interface TreeSettings {
-    readonly checkMode: CheckMode;
     readonly movable: boolean;
-    readonly renamable: boolean;
     readonly droppable: boolean;
 }
 
 /** The settings of a tree whose document gives none. */
 export const DEFAULT_SETTINGS: TreeSettings = Object.freeze({
-    checkMode: "cascade",
     movable: true,
-    renamable: true,
     droppable: true,
 });
 
@@ -108,15 +105,8 @@ export interface TreeState<T extends TreeTypes = AnyTypes> {
     /** every item, by id */
     readonly items: { readonly [id: string]: ItemOf<T> };
     readonly expandedItemIds: readonly string[];
-    /**
-     * the checked items; in `cascade` mode a parent with children is in it exactly when all its
-     * children are
-     */
-    readonly checkedItemIds: readonly string[];
     /** the roving tab stop: the item that takes focus when the tree does (always visible) */
     readonly focusedItemId: string | null;
-    /** the item whose label is being edited */
-    readonly renamingItemId: string | null;
 }
 
 /** An item as it is rendered: its place in the flat render order. */

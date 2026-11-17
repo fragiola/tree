@@ -3,9 +3,11 @@ title: Checkboxes
 description: Tri-state checks for permission pickers and filters - checks that cascade to children and back up as mixed parents, with a check control of your own.
 ---
 
-Checks are model state: `state.checkedItemIds`. The root's `checkboxes` prop puts
-`aria-checked` on every item (`mixed` included), makes Space toggle the focused item's check
-instead of its selection, and gives each item its check state (`checked`, `indeterminate`,
+Checks are an opt-in feature: `checkboxes()`, from `@fragiola/tree/checkboxes` (re-exported by
+every adapter's `/checkboxes` entry). A tree that never imports it does not ship it. Installed, it
+holds the checks in the model (`state.checkedItemIds`), puts `aria-checked` on every item (`mixed`
+included), makes Space toggle the focused item's check (when the tree has no `selection()`, or with
+`checkboxes({ space: "check" })`), and gives each item its check state (`checked`, `indeterminate`,
 `checkState`, and `data-checked` / `data-indeterminate`). The box is yours: any control that reads
 that state and runs `item.toggle-check`. The package renders none. What a check means (a scope to
 grant, a filter to apply) is yours too.
@@ -16,9 +18,12 @@ grant, a filter to apply) is yours too.
 
 ```tsx
 import { type ItemOf, Tree, useTree, useTreeItem } from "@fragiola/tree-react";
+import { checkboxes } from "@fragiola/tree-react/checkboxes";
+
+const features = [checkboxes()] as const;
 
 function CheckBox({ item }: { item: ItemOf<Types> }) {
-    const { model } = useTree<Types>();
+    const { model } = useTree<Types, typeof features>();
     const { state } = useTreeItem(item);
     return (
         <span
@@ -50,7 +55,11 @@ function PermissionItem({ item }: { item: ItemOf<Types> }) {
 
 export function Permissions() {
     return (
-        <Tree.Root<Types> defaultTree={json} checkboxes aria-label="Permissions">
+        <Tree.Root<Types, typeof features>
+            defaultTree={json}
+            features={features}
+            aria-label="Permissions"
+        >
             <Tree.Items<Types>>{(item) => <PermissionItem item={item} />}</Tree.Items>
         </Tree.Root>
     );
@@ -64,10 +73,10 @@ export function Permissions() {
 ```vue title="permission-item.vue"
 <script setup lang="ts">
 import { type ItemOf, useTree, useTreeItem } from "@fragiola/tree-vue";
-import { Tree, type Types } from "./tree";
+import { features, Tree, type Types } from "./tree";
 
 const props = defineProps<{ item: ItemOf<Types> }>();
-const { model } = useTree<Types>();
+const { model } = useTree<Types, typeof features>();
 const { state } = useTreeItem(() => props.item);
 const toggleCheck = () => model.run("item.toggle-check", { itemId: props.item.id });
 </script>
@@ -99,11 +108,11 @@ const toggleCheck = () => model.run("item.toggle-check", { itemId: props.item.id
 ```vue title="permissions.vue"
 <script setup lang="ts">
 import PermissionItem from "./permission-item.vue";
-import { json, Tree } from "./tree";
+import { features, json, Tree } from "./tree";
 </script>
 
 <template>
-    <Tree.Root :default-tree="json" checkboxes aria-label="Permissions">
+    <Tree.Root :default-tree="json" :features="features" aria-label="Permissions">
         <Tree.Items v-slot="{ item }"><PermissionItem :item="item" /></Tree.Items>
     </Tree.Root>
 </template>
@@ -116,6 +125,7 @@ import { json, Tree } from "./tree";
 ```ts title="permissions.ts"
 import { Component } from "@angular/core";
 import { TREE } from "@fragiola/tree-angular";
+import { checkboxes } from "@fragiola/tree-angular/checkboxes";
 import { LucideCheck, LucideMinus } from "@lucide/angular";
 import { json } from "./tree";
 
@@ -123,7 +133,7 @@ import { json } from "./tree";
     selector: "app-permissions",
     imports: [TREE, LucideCheck, LucideMinus],
     template: `
-        <div treeRoot [defaultTree]="json" checkboxes aria-label="Permissions" #tree="treeRoot">
+        <div treeRoot [defaultTree]="json" [features]="features" aria-label="Permissions" #tree="treeRoot">
             <ng-template [treeItems]="json" let-item>
                 <div [treeItem]="item" #node="treeItem">
                     <div treeItemContent class="row">
@@ -149,6 +159,7 @@ import { json } from "./tree";
 })
 export class Permissions {
     protected readonly json = json;
+    protected readonly features = [checkboxes()] as const;
 }
 ```
 
@@ -165,8 +176,9 @@ export class Permissions {
 }
 ```
 
-A press on the box toggles the check (`item.toggle-check`); a press on the rest of the row still
-selects. The item carries `aria-checked` (`true`, `false` or `"mixed"`), and Space acts on it, so
+In Vue, `tree.ts` holds `features = [checkboxes()] as const` (from `@fragiola/tree-vue/checkboxes`)
+and `Tree = typedTree<Types, typeof features>()`. A press on the box toggles the check
+(`item.toggle-check`); a press on the rest of the row still selects (with `selection()`). The item carries `aria-checked` (`true`, `false` or `"mixed"`), and Space acts on it, so
 the box is an element that never takes focus, hidden from assistive technology (`aria-hidden`): a
 screen reader reads the item, not a second checkbox inside it, and a press focuses the item, so the
 arrows keep working. `data-tree-no-drag` keeps a press on it from starting a drag or a selection.

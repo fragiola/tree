@@ -40,6 +40,26 @@
             "types": "./dist/types/fragiola-tree-angular-selection.d.ts",
             "default": "./dist/fesm2022/fragiola-tree-angular-selection.mjs"
         },
+        "./checkboxes": {
+            "@fragiola/source": "./checkboxes/public-api.ts",
+            "types": "./dist/types/fragiola-tree-angular-checkboxes.d.ts",
+            "default": "./dist/fesm2022/fragiola-tree-angular-checkboxes.mjs"
+        },
+        "./rename": {
+            "@fragiola/source": "./rename/public-api.ts",
+            "types": "./dist/types/fragiola-tree-angular-rename.d.ts",
+            "default": "./dist/fesm2022/fragiola-tree-angular-rename.mjs"
+        },
+        "./async-children": {
+            "@fragiola/source": "./async-children/public-api.ts",
+            "types": "./dist/types/fragiola-tree-angular-async-children.d.ts",
+            "default": "./dist/fesm2022/fragiola-tree-angular-async-children.mjs"
+        },
+        "./type-ahead": {
+            "@fragiola/source": "./type-ahead/public-api.ts",
+            "types": "./dist/types/fragiola-tree-angular-type-ahead.d.ts",
+            "default": "./dist/fesm2022/fragiola-tree-angular-type-ahead.mjs"
+        },
         "./virtualization": {
             "@fragiola/source": "./virtualization/public-api.ts",
             "types": "./dist/types/fragiola-tree-angular-virtualization.d.ts",

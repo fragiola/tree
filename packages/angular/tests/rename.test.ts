@@ -2,6 +2,7 @@
 // `[treeItemRename]`; `renameInput()` is the one shown.
 import { Component, input } from "@angular/core";
 import { describe, expect, it } from "vitest";
+import { TreeItemRenameDirective } from "../rename/public-api";
 import { TREE, veto } from "../src/public-api";
 import {
     filesModel,
@@ -184,7 +185,7 @@ describe("inline rename", () => {
 /** The editor's state through `exportAs`, and its `(renameError)`. */
 @Component({
     selector: "test-editor",
-    imports: [TREE],
+    imports: [TREE, TreeItemRenameDirective],
     template: `
         <div [treeRoot]="model()" aria-label="Files">
             <ng-template treeItems let-item>

@@ -47,9 +47,29 @@ interface CommandInfo {
 // the core, loaded at run time from its source: a computed path keeps the site's typecheck from
 // checking the core too (it has its own)
 const core = (await import(join(CORE_SRC, "index.ts"))) as {
-    createTreeModel(): { get(key: "commands"): readonly CommandInfo[] };
+    createTreeModel(
+        json?: undefined,
+        options?: { features: readonly unknown[] },
+    ): { get(key: "commands"): readonly CommandInfo[] };
     DEFAULT_KEY_MAP: Record<string, readonly string[]>;
 };
+/** Every feature with commands, from its entry: the commands page documents them all. */
+const FEATURE_ENTRIES = [
+    ["selection/index.ts", "selection"],
+    ["checkboxes/index.ts", "checkboxes"],
+    ["rename/index.ts", "rename"],
+    ["async-children/index.ts", "asyncChildren"],
+    ["type-ahead/index.ts", "typeAhead"],
+] as const;
+const allFeatures = await Promise.all(
+    FEATURE_ENTRIES.map(async ([entry, factory]) => {
+        const module = (await import(join(CORE_SRC, entry))) as Record<
+            string,
+            () => unknown
+        >;
+        return (module[factory] as () => unknown)();
+    }),
+);
 // the keys of the model's verbs, from their registry
 const queries = (await import(join(CORE_SRC, "state/queries.ts"))) as {
     MODEL_GET_KEYS: readonly string[];
@@ -268,7 +288,7 @@ describe("the React reference", () => {
             }
         }
         // the parser found the props (a formatting change must not silently pass)
-        expect(checked).toBeGreaterThan(25);
+        expect(checked).toBeGreaterThan(20);
     });
 
     it("has a table row for every field of every other exported interface", () => {
@@ -314,12 +334,12 @@ describe("the React reference", () => {
                 "createTreeRef",
                 "useTree",
                 "useTreeItem",
-                "useTreeItemRename",
                 "useTreeRef",
                 "useTreeState",
             ].sort(),
         );
-        for (const { name } of hooks) {
+        // a feature's hook, from its entry (`@fragiola/tree-react/rename`)
+        for (const { name } of [...hooks, { name: "useTreeItemRename" }]) {
             expect(mdx, `## \`${name}\` on api/hooks.mdx`).toMatch(
                 new RegExp(`^## \`${name}\``, "m"),
             );
@@ -464,14 +484,16 @@ describe("the Angular reference", () => {
             .filter((name) => !name.startsWith("ɵ"));
         expect(names.length).toBeGreaterThan(0);
         expect(names.filter((name) => !mentions(mdx, name))).toEqual([]);
-        const virtual = namedExports(
-            read(join(ROOT, "packages/angular/virtualization/public-api.ts")),
-        ).map((entry) => entry.name);
-        expect(virtual.filter((name) => !mentions(mdx, name))).toEqual([]);
+        for (const entry of ["virtualization", "rename"]) {
+            const names = namedExports(
+                read(join(ROOT, `packages/angular/${entry}/public-api.ts`)),
+            ).map((found) => found.name);
+            expect(names.filter((name) => !mentions(mdx, name))).toEqual([]);
+        }
     });
 
     it("lists every directive with its selector and exportAs, and TREE holds them all", () => {
-        expect(directives.length).toBe(9);
+        expect(directives.length).toBe(8);
         for (const { selector, exportAs, name } of directives) {
             expect(mdx, name).toMatch(
                 new RegExp(
@@ -507,7 +529,16 @@ describe("the concept pages", () => {
     const componentSources = readdirSync(join(REACT_SRC, "components"))
         .map((file) => read(join(REACT_SRC, "components", file)))
         .concat(read(join(REACT_SRC, "hooks/use-tree-item.ts")))
-        .concat(read(join(REACT_SRC, "virtualization/virtual-items.tsx")));
+        .concat(read(join(REACT_SRC, "virtualization/virtual-items.tsx")))
+        // the features' attributes (`data-checked` with `checkboxes()`), the core's
+        .concat(
+            [
+                "selection/selection.ts",
+                "checkboxes/checkboxes.ts",
+                "rename/rename.ts",
+                "async-children/async-children.ts",
+            ].map((file) => read(join(CORE_SRC, file))),
+        );
 
     it("list every part name", () => {
         const names = new Set(
@@ -567,7 +598,9 @@ describe("the concept pages", () => {
 });
 
 describe("the core reference", () => {
-    const commands = core.createTreeModel().get("commands");
+    const commands = core
+        .createTreeModel(undefined, { features: allFeatures })
+        .get("commands");
     const commandsPage = page("commands");
 
     /** The part of the commands page about one command: from its `###` to the next heading. */

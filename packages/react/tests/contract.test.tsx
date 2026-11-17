@@ -2,7 +2,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import * as React from "react";
 import { describe, expect, it, vi } from "vitest";
 import { type RenderedProps, Tree, type TreeItemState } from "../src";
-import { files, filesModel, itemElement } from "./tree";
+import { FEATURES, files, filesModel, itemElement } from "./tree";
 
 /** A tree whose items are rendered with `itemProps`, and nothing else. */
 function Bare(props: {
@@ -177,7 +177,7 @@ describe("the primitive contract", () => {
         ).toThrow("Tree.Item must be rendered inside Tree.Root");
         expect(() =>
             render(
-                <Tree.Root defaultTree={files()}>
+                <Tree.Root defaultTree={files()} features={FEATURES}>
                     <Tree.Toggle />
                 </Tree.Root>,
             ),

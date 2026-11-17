@@ -4,10 +4,11 @@ import { CircleAlert, RotateCcw } from "@lucide/vue";
 import { Clickable } from "#/components/atoms/clickable";
 import type { FileTypes } from "../_kit/data";
 import * as styles from "./styles";
+import type { features } from "./tree";
 
 /** A failed load stays `error` until the app loads it again: a screen action of the engine. */
 const props = defineProps<{ itemId: string; label: string }>();
-const { engine } = useTree<FileTypes>();
+const { engine } = useTree<FileTypes, typeof features>();
 </script>
 
 <template>

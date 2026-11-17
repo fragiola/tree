@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { createTreeRef, type TreeItemJson } from "../src";
 import {
+    type FEATURES,
     type FileTypes,
     filesModel,
     fileTree,
@@ -66,7 +67,7 @@ describe("async children", () => {
     it("marks a failed load, announces it, and retries through the engine", async () => {
         const model = filesModel();
         const { loads, loadChildren } = loader();
-        const tree = createTreeRef<FileTypes>();
+        const tree = createTreeRef<FileTypes, typeof FEATURES>();
         await render(() =>
             fileTree({
                 model,

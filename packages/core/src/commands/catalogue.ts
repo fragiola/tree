@@ -1,9 +1,3 @@
-import { itemCheck, itemToggleCheck } from "./check";
-import {
-    itemResetChildren,
-    itemSetChildren,
-    itemSetChildrenStatus,
-} from "./children";
 import type { CommandDefinition } from "./define";
 import {
     itemCollapse,
@@ -21,7 +15,6 @@ import {
     itemSetData,
     itemSetFlags,
 } from "./item";
-import { itemCancelRename, itemRename, itemStartRename } from "./rename";
 import { batch, treeConfigure, treeLoad } from "./tree";
 import type { CommandName } from "./types";
 
@@ -39,14 +32,6 @@ export const COMMANDS: readonly CommandDefinition[] = [
     treeExpandAll,
     treeCollapseAll,
     itemFocus,
-    itemCheck,
-    itemToggleCheck,
-    itemStartRename,
-    itemRename,
-    itemCancelRename,
-    itemSetChildrenStatus,
-    itemSetChildren,
-    itemResetChildren,
     itemAdd,
     itemRemove,
     itemMove,

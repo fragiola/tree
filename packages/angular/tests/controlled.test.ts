@@ -120,7 +120,6 @@ describe("controlled and uncontrolled state", () => {
         const model = filesModel({ expandedItemIds: ["src", "utils"] });
         const view = await renderFiles({
             model,
-            checkboxes: true,
             checkedItemIds: [],
         });
         await view.set("checkedItemIds", ["utils", "a", "b"]);
@@ -142,7 +141,6 @@ describe("controlled and uncontrolled state", () => {
         });
         await renderFiles({
             model,
-            checkboxes: true,
             checkedItemIds: ["utils"],
         });
         expect([...model.state.checkedItemIds].sort()).toEqual([

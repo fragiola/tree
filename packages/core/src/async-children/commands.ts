@@ -2,14 +2,13 @@
 // `item.set-children-status` (loading, error), `item.set-children` (the loaded children: status
 // loaded) and `item.reset-children` (back to unloaded, for a reload). The engine runs them around
 // the app's `loadChildren`; the package itself never loads anything.
+import { defineCommand, type Failure, fail, ok } from "../commands/define";
+import { itemIdPayload } from "../commands/expansion";
+import { newItem, removeSubtrees } from "../commands/item";
+import { isFailure, requireItem } from "../commands/rules";
 import { idListSchema, itemJsonSchema } from "../schema/tree";
-import { inheritCheck, settleAncestors } from "../state/check-state";
 import type { Draft } from "../state/draft";
 import type { TreeItem } from "../state/types";
-import { defineCommand, type Failure, fail, ok } from "./define";
-import { itemIdPayload } from "./expansion";
-import { newItem, removeSubtrees } from "./item";
-import { isFailure, requireItem } from "./rules";
 
 /** An item whose children come from the loader (it has a `childrenStatus`). */
 function requireAsync(draft: Draft, itemId: string): TreeItem | Failure {
@@ -109,8 +108,7 @@ export const itemSetChildren = defineCommand({
         for (const child of children) draft.setItem(child);
         const childItemIds = children.map((child) => child.id);
         draft.patchItem(item.id, { childrenStatus: "loaded", childItemIds });
-        inheritCheck(draft, item.id, childItemIds);
-        settleAncestors(draft, item.id);
+        draft.features.childrenChanged(draft, item.id, childItemIds);
         return ok({ itemId: item.id, childItemIds });
     },
 });

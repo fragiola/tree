@@ -1,18 +1,14 @@
 <script setup lang="ts">
-import {
-    type CommandError,
-    type ItemOf,
-    useTree,
-    useTreeItemRename,
-} from "@fragiola/tree-vue";
+import { type CommandError, type ItemOf, useTree } from "@fragiola/tree-vue";
+import { useTreeItemRename } from "@fragiola/tree-vue/rename";
 import { ChevronRight, File, Folder, FolderOpen } from "@lucide/vue";
 import type { FileTypes } from "../_kit/data";
 import * as styles from "./styles";
-import { Tree } from "./tree";
+import { type features, Tree } from "./tree";
 
 const props = defineProps<{ item: ItemOf<FileTypes>; errorId: string }>();
 const emit = defineEmits<{ error: [error: CommandError]; edit: [] }>();
-const { model } = useTree<FileTypes>();
+const { model } = useTree<FileTypes, typeof features>();
 // the rename wired onto the app's own input: it starts with the label, focused and selected;
 // Enter commits, Escape cancels, and a refused label keeps it open (`aria-invalid`)
 const { state: rename, props: renameProps } = useTreeItemRename(

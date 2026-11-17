@@ -46,7 +46,8 @@ export interface RootState {
 
 /**
  * The props of `Tree.Root` every tree has. `RootProps<T, F>` adds the root props the features `F`
- * ship (`selectedItemIds` with `selection()`).
+ * ship (`selectedItemIds` with `selection()`, `checkedItemIds` with `checkboxes()`, `loadChildren`
+ * with `asyncChildren()`).
  */
 export interface RootBaseProps<
     T extends TreeTypes = AnyTypes,
@@ -69,20 +70,12 @@ export interface RootBaseProps<
     expandedItemIds?: readonly string[] | undefined;
     /** called with the expanded items after every command that changes them */
     onExpandedItemIdsChange?: ((itemIds: string[]) => void) | undefined;
-    /** controlled checkboxes: the checked items (with `onCheckedItemIdsChange`) */
-    checkedItemIds?: readonly string[] | undefined;
-    /** called with the checked items after every command that changes them */
-    onCheckedItemIdsChange?: ((itemIds: string[]) => void) | undefined;
-    /** the app's loader of the children of an item with a `childrenStatus` */
-    loadChildren?: LoadChildren<T> | undefined;
     /** the live region's text for a drag step or a failed load (no text is built in) */
     announce?: ((event: AnnounceEvent) => string | undefined) | undefined;
     /** the key bindings, over the defaults (`DEFAULT_KEY_MAP`) */
     keyMap?: Partial<KeyMap> | undefined;
     /** a click on a parent's content also expands or collapses it (default false) */
     expandOnClick?: boolean | undefined;
-    /** the items carry `aria-checked`, and Space toggles the focused item's check (default false) */
-    checkboxes?: boolean | undefined;
     /** how far (px) a press moves before it is a drag (default 4) */
     dragThreshold?: number | undefined;
     /** how long (ms) a drag hovers a collapsed parent before it expands (default 800) */
@@ -91,8 +84,6 @@ export interface RootBaseProps<
     indentation?: number | undefined;
     /** how far (px) a drop line starts past its level's inline start: the toggle, a grip or padding before the label (default 0) */
     indicatorInset?: number | undefined;
-    /** how long (ms) between two typed characters keeps one type-ahead search (default 500) */
-    typeAheadTimeout?: number | undefined;
     /**
      * joins the trees of the document with the same group name: items drag between them, by pointer
      * and keyboard (over one model a drop is one `item.move`, over two a transfer)
@@ -130,7 +121,7 @@ export interface RootBaseProps<
 export type RootProps<
     T extends TreeTypes = AnyTypes,
     F extends TreeFeatures = readonly [],
-> = RootBaseProps<T, F> & FeatureRootPropsOf<F>;
+> = RootBaseProps<T, F> & FeatureRootPropsOf<F, T>;
 
 /** Splits the features' root props (by name: `FEATURE_ROOT_PROPS`) from the element's props. */
 function splitFeatureProps(props: Record<string, unknown>) {
@@ -176,18 +167,13 @@ export function Root<
         features,
         expandedItemIds,
         onExpandedItemIdsChange,
-        checkedItemIds,
-        onCheckedItemIdsChange,
-        loadChildren,
         announce,
         keyMap,
         expandOnClick,
-        checkboxes,
         dragThreshold,
         autoExpandDelay,
         indentation,
         indicatorInset,
-        typeAheadTimeout,
         dragGroup,
         transfer,
         foreignDrop,
@@ -197,6 +183,8 @@ export function Root<
         ...others
     } = props as RootBaseProps<T, F>;
     const { featureProps, rest } = splitFeatureProps(others);
+    // `asyncChildren()`'s loader: a feature prop, read when called
+    const loadChildren = featureProps.loadChildren as LoadChildren | undefined;
     const [ownModel] = React.useState(() =>
         modelProp ? null : createTreeModel<T, F>(defaultTree, { features }),
     );
@@ -248,12 +236,10 @@ export function Root<
             announce: (event) => latest.current.announce?.(event),
             keyMap,
             expandOnClick,
-            checkboxes,
             dragThreshold,
             autoExpandDelay,
             indentation,
             indicatorInset,
-            typeAheadTimeout,
             dragGroup,
             transfer: hasTransfer
                 ? (event) => latest.current.transfer?.(event)
@@ -275,12 +261,10 @@ export function Root<
         hasLoader,
         keyMapKey,
         expandOnClick,
-        checkboxes,
         dragThreshold,
         autoExpandDelay,
         indentation,
         indicatorInset,
-        typeAheadTimeout,
         dragGroup,
         hasTransfer,
         foreignDrop,
@@ -301,8 +285,6 @@ export function Root<
     const controlled: ControlledProps = {
         expandedItemIds,
         onExpandedItemIdsChange,
-        checkedItemIds,
-        onCheckedItemIdsChange,
         ...featureProps,
     };
     useControlledState(model, controlled);
@@ -344,7 +326,6 @@ export function Root<
         () => model.get("tab-stop-item")?.id,
         [model, state],
     );
-    const isCheckboxes = checkboxes === true;
     const context = React.useMemo<TreeContextValue>(
         () => ({
             model,
@@ -353,9 +334,8 @@ export function Root<
             state,
             revision,
             tabStopItemId,
-            checkboxes: isCheckboxes,
         }),
-        [model, live, facade, state, revision, tabStopItemId, isCheckboxes],
+        [model, live, facade, state, revision, tabStopItemId],
     );
 
     // the installed features' ARIA and data-* (`aria-multiselectable` with `selection()`)

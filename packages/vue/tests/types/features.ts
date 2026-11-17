@@ -7,7 +7,11 @@ import {
     useTreeRef,
     useTreeState,
 } from "../../src";
+import { asyncChildren } from "../../src/async-children";
+import { checkboxes } from "../../src/checkboxes";
+import { rename } from "../../src/rename";
 import { selection } from "../../src/selection";
+import { typeAhead } from "../../src/type-ahead";
 import { virtualization } from "../../src/virtualization";
 
 type Types = { items: { file: undefined } };
@@ -53,4 +57,41 @@ export function composables() {
     // @ts-expect-error the virtualization feature is not installed
     void bareTree.value?.engine.get("virtual-window");
     return n;
+}
+
+const stateFeatures = [
+    checkboxes(),
+    rename(),
+    asyncChildren(),
+    typeAhead(),
+] as const;
+const StateTree = typedTree<Types, typeof stateFeatures>();
+const withChecks: RootPropsOf<typeof StateTree.Root> = {
+    checkedItemIds: [],
+    // the loader is typed by the registry
+    loadChildren: async (item) =>
+        item.kind === "file" ? [{ kind: "file", label: "x" }] : [],
+};
+void withChecks;
+const withoutChecks: RootPropsOf<typeof BareTree.Root> = {
+    // @ts-expect-error checkedItemIds needs the checkboxes feature
+    checkedItemIds: [],
+};
+void withoutChecks;
+const withoutLoader: RootPropsOf<typeof BareTree.Root> = {
+    // @ts-expect-error loadChildren needs the async children feature
+    loadChildren: async () => [],
+};
+void withoutLoader;
+h(StateTree.Root, {
+    checkedItemIds: [],
+    "onUpdate:checkedItemIds": (itemIds: string[]) => itemIds.length,
+});
+
+export function stateComposables() {
+    const tree = useTreeRef<Types, typeof stateFeatures>();
+    tree.value?.engine.run("load-children", { itemId: "a" });
+    const bareTree = useTreeRef<Types>();
+    // @ts-expect-error the rename feature is not installed
+    bareTree.value?.engine.run("commit-rename", { itemId: "a", label: "b" });
 }

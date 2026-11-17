@@ -7,6 +7,7 @@ export default {
     category: "editing",
     order: 1,
     features: [
+        "rename()",
         "useTreeItemRename",
         "item.start-rename",
         "model.use",

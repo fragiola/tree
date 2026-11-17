@@ -22,8 +22,8 @@ tab stop), and every binding can be changed with the root's `keyMap`.
 | `"expand-or-focus-child"` | ArrowRight | expands a collapsed parent, else focuses its first child |
 | `"collapse-or-focus-parent"` | ArrowLeft | collapses an expanded parent, else focuses the parent |
 | `"expand-siblings"` | `*` | expands the focused item's siblings |
-| `"select"` | Enter | selects the focused item |
-| `"toggle"` | Space | toggles its selection (`multiple`), selects it (`single`), or toggles its checkbox when the root has `checkboxes` |
+| `"select"` | Enter | selects the focused item (`selection()`) |
+| `"toggle"` | Space | toggles its selection (`multiple`), selects it (`single`), or toggles its check with `checkboxes()` when the tree has no `selection()` (or with `checkboxes({ space: "check" })`) |
 | `"toggle-selection"` | Ctrl/Cmd + Space | toggles its selection without moving |
 | `"extend-next"` | Shift + ArrowDown | moves down and extends the selection |
 | `"extend-previous"` | Shift + ArrowUp | moves up and extends the selection |
@@ -31,7 +31,7 @@ tab stop), and every binding can be changed with the root's `keyMap`.
 | `"extend-to-first"` | Ctrl/Cmd + Shift + Home | extends to the first visible item |
 | `"extend-to-last"` | Ctrl/Cmd + Shift + End | extends to the last visible item |
 | `"select-all"` | Ctrl/Cmd + A | selects every visible item |
-| `"rename"` | F2 | starts renaming the focused item |
+| `"rename"` | F2 | starts renaming the focused item (`rename()`) |
 | `"start-drag"` | Ctrl/Cmd + Shift + D | starts a keyboard drag of the selection, or of the focused item |
 
 In a right-to-left tree, ArrowRight and ArrowLeft swap ([Right-to-left trees](/docs/guides/rtl)).
@@ -40,8 +40,10 @@ In a right-to-left tree, ArrowRight and ArrowLeft swap ([Right-to-left trees](/d
 
 ## Type-ahead
 
-Typing a printable character focuses the next visible item whose label starts with it, ignoring
-case; characters typed within `typeAheadTimeout` milliseconds (default `500`) extend one search
+Type-ahead is an opt-in feature: `typeAhead()`, from `@fragiola/tree/type-ahead` (every adapter's
+`/type-ahead` entry); a tree without it leaves typed characters alone. Installed, typing a
+printable character focuses the next visible item whose label starts with it, ignoring case;
+characters typed within `typeAhead({ timeout })` milliseconds (default `500`) extend one search
 ("re" finds "README.md"). The model answers the same question with no screen:
 
 ```ts

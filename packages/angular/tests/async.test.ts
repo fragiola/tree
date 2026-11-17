@@ -3,10 +3,12 @@ import { describe, expect, it, vi } from "vitest";
 import {
     type LoadChildren,
     TREE,
+    type TreeEngine,
     type TreeItemJson,
     type TreeModel,
 } from "../src/public-api";
 import {
+    type FEATURES,
     type FileTypes,
     filesModel,
     itemElement,
@@ -107,7 +109,12 @@ describe("async children", () => {
         await settle();
         expect(itemElement("lib")).toHaveAttribute("data-load-error", "");
         expect(status()).toHaveTextContent("Could not load lib");
-        view.component.root().engine.run("load-children", { itemId: "lib" });
+        (
+            view.component.root().engine as TreeEngine<
+                FileTypes,
+                typeof FEATURES
+            >
+        ).run("load-children", { itemId: "lib" });
         await settle();
         expect(loadChildren).toHaveBeenCalledTimes(2);
         expect(itemElement("lib")).toHaveAttribute("data-loading", "");

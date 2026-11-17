@@ -1,12 +1,12 @@
 // Type fixtures (compiled by `pnpm typecheck`, never run): each command's hand-written JSON Schema,
 // read back as a type with FromSchema, is the command's payload type (and result type), and the
 // document schema is `TreeJson`. A schema that drifts from its type fails the typecheck.
-import type { itemCheck, itemToggleCheck } from "../../src/commands/check";
 import type {
     itemResetChildren,
     itemSetChildren,
     itemSetChildrenStatus,
-} from "../../src/commands/children";
+} from "../../src/async-children/commands";
+import type { itemCheck, itemToggleCheck } from "../../src/checkboxes/commands";
 import type {
     itemCollapse,
     itemExpand,
@@ -23,17 +23,17 @@ import type {
     itemSetData,
     itemSetFlags,
 } from "../../src/commands/item";
-import type {
-    itemCancelRename,
-    itemRename,
-    itemStartRename,
-} from "../../src/commands/rename";
 import type { treeConfigure, treeLoad } from "../../src/commands/tree";
 import type {
     CommandName,
     PayloadOf,
     ResultOf,
 } from "../../src/commands/types";
+import type {
+    itemCancelRename,
+    itemRename,
+    itemStartRename,
+} from "../../src/rename/commands";
 import type { FromSchema } from "../../src/schema/from-schema";
 import type { treeSchema } from "../../src/schema/tree";
 import type {
