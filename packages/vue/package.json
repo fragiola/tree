@@ -1,0 +1,83 @@
+{
+    "name": "@fragiola/tree-vue",
+    "version": "0.0.0",
+    "description": "Composable, headless Vue 3 primitives and composables for @fragiola/tree: an accessible tree view you assemble and style yourself.",
+    "keywords": [
+        "vue",
+        "tree",
+        "treeview",
+        "tree-view",
+        "headless",
+        "accessibility",
+        "aria",
+        "drag-and-drop"
+    ],
+    "license": "MIT",
+    "type": "module",
+    "author": {
+        "name": "Mauro de Souza",
+        "email": "maurodesouza.me@gmail.com",
+        "url": "https://github.com/maurodesouza"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/fragiola/tree.git",
+        "directory": "packages/vue"
+    },
+    "homepage": "https://fragiola.com/tree",
+    "bugs": {
+        "url": "https://github.com/fragiola/tree/issues"
+    },
+    "sideEffects": false,
+    "exports": {
+        ".": {
+            "@fragiola/source": "./src/index.ts",
+            "types": "./dist/index.d.ts",
+            "import": "./dist/index.js",
+            "default": "./dist/index.js"
+        },
+        "./package.json": "./package.json"
+    },
+    "files": [
+        "dist",
+        "README.md",
+        "CHANGELOG.md",
+        "LICENSE"
+    ],
+    "publishConfig": {
+        "exports": {
+            ".": {
+                "types": "./dist/index.d.ts",
+                "import": "./dist/index.js",
+                "default": "./dist/index.js"
+            },
+            "./package.json": "./package.json"
+        }
+    },
+    "scripts": {
+        "build": "tsdown",
+        "typecheck": "tsc --noEmit",
+        "test": "vitest run"
+    },
+    "dependencies": {
+        "@fragiola/tree": "workspace:*"
+    },
+    "peerDependencies": {
+        "vue": "^3.5.0"
+    },
+    "devDependencies": {
+        "@fragiola/tree-react": "workspace:*",
+        "@testing-library/jest-dom": "7.0.1",
+        "@types/react": "19.2.18",
+        "@types/react-dom": "19.2.7",
+        "@vue/test-utils": "2.5.1",
+        "jsdom": "30.1.1",
+        "react": "19.2.9",
+        "react-dom": "19.2.9",
+        "tsdown": "0.23.0",
+        "typescript": "7.0.2",
+        "vite": "8.3.0",
+        "vitest": "5.0.2",
+        "vue": "3.5.45"
+    }
+}
