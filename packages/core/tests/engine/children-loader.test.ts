@@ -173,6 +173,33 @@ describe("async children", () => {
         expect(loader.calls).toHaveLength(1);
     });
 
+    it("with resetLoadsOnDestroy, destroy puts the items it was loading back to unloaded", async () => {
+        const model = filesModel();
+        const loader = deferredLoader();
+        engine = createTreeEngine(model, {
+            loadChildren: loader.loadChildren,
+            resetLoadsOnDestroy: true,
+        });
+        model.run("item.expand", { itemId: "lib" });
+        const events: CommandEvent<FileTypes>[] = [];
+        model.subscribe((event) => events.push(event));
+        engine.destroy();
+        expect(loader.calls[0]?.signal.aborted).toBe(true);
+        expect(events.map((event) => [event.command, event.meta])).toEqual([
+            ["item.reset-children", { source: "loader" }],
+        ]);
+        expect(model.get("children-status-by", { itemId: "lib" })).toBe(
+            "unloaded",
+        );
+        // the next engine loads it again: the item is still expanded
+        const next = deferredLoader();
+        engine = createTreeEngine(model, { loadChildren: next.loadChildren });
+        expect(next.calls).toHaveLength(1);
+        loader.calls[0]?.resolve([]);
+        await flush();
+        expect(model.is("item-loading", { itemId: "lib" })).toBe(true);
+    });
+
     it("without a loader nothing loads, and load-children says why", () => {
         const model = filesModel();
         engine = createTreeEngine(model);

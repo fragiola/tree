@@ -68,6 +68,13 @@ export interface TreeEngineOptions<T extends TreeTypes = AnyTypes> {
     autoScroll?: { threshold?: number; speed?: number } | undefined;
     /** how long (ms) between two typed characters keeps one type-ahead search (default 500) */
     typeAheadTimeout?: number | undefined;
+    /**
+     * `destroy()` puts the items whose children it was loading back to `unloaded`
+     * (`item.reset-children`), so the next engine on the model loads them again (default false:
+     * they stay `loading`). Adapters set it: a tree that remounts (React's StrictMode, a route
+     * change) must not leave an item loading forever
+     */
+    resetLoadsOnDestroy?: boolean | undefined;
 }
 
 /**
@@ -277,7 +284,7 @@ class Engine<T extends TreeTypes> implements TreeEngine<T>, EngineHost {
         this.pointerDrag.cancel();
         this.keyboardDrag.cancel();
         this.destroyed = true;
-        this.loader.destroy();
+        this.loader.destroy(this.settings.resetLoadsOnDestroy === true);
         this.typeAhead.reset();
         this.unsubscribeModel();
         this.listeners.clear();

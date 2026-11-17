@@ -3,7 +3,8 @@
 // `loadChildren(item, { signal })`, then `item.set-children` (or `status: error`). Collapsing
 // during a load aborts nothing: the children still arrive. A load whose item leaves `loading` (a
 // reset, a removal, a new document) is aborted and runs no command, nor does any load after
-// `destroy()`. The package itself never loads anything.
+// `destroy()` (which, with the engine's `resetLoadsOnDestroy`, puts the items it was loading back to
+// `unloaded`). The package itself never loads anything.
 import type { TreeItemJson } from "../state/json";
 import type { AnyTypes, ItemOf, TreeTypes } from "../state/types";
 import type { EngineHost } from "./host";
@@ -117,9 +118,25 @@ export class ChildrenLoader {
         this.host.announce({ type: "load-error", itemId, error });
     }
 
-    /** Aborts every load: none of them runs a command afterwards. */
-    destroy(): void {
+    /**
+     * Aborts every load: none of them runs a command afterwards. With `reset`, the items still
+     * loading go back to `unloaded` (`item.reset-children`), so the next engine on the model (a
+     * remount) loads them again; without it they stay `loading`.
+     */
+    destroy(reset = false): void {
+        const itemIds = [...this.loads.keys()];
         for (const controller of this.loads.values()) controller.abort();
         this.loads.clear();
+        if (!reset) return;
+        const { model } = this.host;
+        for (const itemId of itemIds) {
+            if (model.get("children-status-by", { itemId }) === "loading") {
+                model.run(
+                    "item.reset-children",
+                    { itemId },
+                    { meta: { source: "loader" } },
+                );
+            }
+        }
     }
 }
