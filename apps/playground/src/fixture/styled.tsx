@@ -2,6 +2,7 @@ import {
     type ItemOf,
     type RootProps,
     Tree,
+    type TreeFeatures,
     type TreeTypes,
 } from "@fragiola/tree-react";
 import type { ReactNode } from "react";
@@ -35,15 +36,19 @@ function Item<T extends TreeTypes>({
     );
 }
 
-export function StyledTree<T extends TreeTypes>({
+export function StyledTree<
+    T extends TreeTypes,
+    F extends TreeFeatures = readonly [],
+>({
     after,
     ...props
-}: RootProps<T> & { after?: (item: ItemOf<T>) => ReactNode }) {
+}: RootProps<T, F> & { after?: (item: ItemOf<T>) => ReactNode }) {
     return (
-        <Tree.Root<T>
+        <Tree.Root<T, F>
             aria-label="Files"
             className="palette-raised m-4 min-h-0 flex-1 overflow-auto rounded-md border border-palette-line bg-palette-base p-1 text-sm text-palette-contrast"
-            {...props}
+            // the rest of the props, the after prop taken out: a generic spread TypeScript cannot narrow
+            {...(props as RootProps<T, F>)}
         >
             <Tree.Items<T>>
                 {(item) => <Item item={item} after={after} />}

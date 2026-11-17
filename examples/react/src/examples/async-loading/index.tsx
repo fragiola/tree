@@ -9,6 +9,7 @@ import {
     useTree,
     useTreeState,
 } from "@fragiola/tree-react";
+import { asyncChildren } from "@fragiola/tree-react/async-children";
 import {
     ChevronRight,
     CircleAlert,
@@ -43,8 +44,13 @@ const json: TreeJson<FileTypes> = {
     },
 };
 
+/** The opt-in features of the model: children that come from the app's loader. */
+const features = [asyncChildren()] as const;
+
 export default function AsyncLoading() {
-    const [model] = useState(() => createTreeModel<FileTypes>(json));
+    const [model] = useState(() =>
+        createTreeModel<FileTypes, typeof features>(json, { features }),
+    );
     // an app's loader fetches from its back-end; this fake answers after 500 ms, and fails the
     // first load of "documents"
     const [loadChildren] = useState(() =>
@@ -62,7 +68,7 @@ export default function AsyncLoading() {
                 Open a folder: its contents come from the server. The first load
                 of Documents fails.
             </p>
-            <Tree.Root<FileTypes>
+            <Tree.Root<FileTypes, typeof features>
                 model={model}
                 loadChildren={loadChildren}
                 announce={announce}
@@ -80,7 +86,7 @@ export default function AsyncLoading() {
 }
 
 function DriveItem({ item }: { item: ItemOf<FileTypes> }) {
-    const status = useTreeState<FileTypes, string | undefined>(
+    const status = useTreeState<FileTypes, string | undefined, typeof features>(
         (_state, model) => model.get("children-status-by", { itemId: item.id }),
     );
     // the size describes a file; the label alone is its accessible name
@@ -123,7 +129,7 @@ function DriveItem({ item }: { item: ItemOf<FileTypes> }) {
 
 /** A failed load stays `error` until the app loads it again: a screen action of the engine. */
 function RetryButton({ itemId, label }: { itemId: string; label: string }) {
-    const { engine } = useTree<FileTypes>();
+    const { engine } = useTree<FileTypes, typeof features>();
     return (
         <span className={styles.error}>
             <CircleAlert aria-hidden className={styles.errorIcon} />

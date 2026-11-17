@@ -9,7 +9,7 @@ export default {
     features: [
         "selection()",
         "keyMap",
-        "type-ahead",
+        "typeAhead()",
         "start-keyboard-drag",
         "announce",
         "LiveRegion",

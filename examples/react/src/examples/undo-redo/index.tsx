@@ -4,9 +4,9 @@ import {
     createTreeModel,
     type ItemOf,
     Tree,
-    useTreeItemRename,
     useTreeState,
 } from "@fragiola/tree-react";
+import { rename, useTreeItemRename } from "@fragiola/tree-react/rename";
 import { selection } from "@fragiola/tree-react/selection";
 import { ChevronRight, File, Folder, Redo2, Trash2, Undo2 } from "lucide-react";
 import { type KeyboardEvent, useState, useSyncExternalStore } from "react";
@@ -15,8 +15,8 @@ import { type FileTypes, fileSystem } from "../_kit/data";
 import { UndoManager } from "../_kit/undo";
 import * as styles from "./styles";
 
-/** The opt-in features of the model: the selection. */
-const features = [selection()] as const;
+/** The opt-in features of the model: the selection and the rename (F2). */
+const features = [selection(), rename()] as const;
 
 // Undo/redo is app code (`_kit/undo.ts`): it listens to the model's commits, keeps the document
 // before each step, and puts it back with `tree.load`. The package ships no history.
@@ -99,7 +99,7 @@ export default function UndoRedo() {
                 </Clickable.Button>
             </div>
             <div className={styles.body}>
-                <Tree.Root<FileTypes>
+                <Tree.Root<FileTypes, typeof features>
                     indicatorInset={styles.indicatorInset}
                     model={model}
                     onKeyDown={onKeyDown}

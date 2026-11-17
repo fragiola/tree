@@ -11,6 +11,7 @@ import {
     useTreeRef,
     useTreeState,
 } from "@fragiola/tree-react";
+import { typeAhead } from "@fragiola/tree-react/type-ahead";
 import {
     VirtualItems,
     virtualization,
@@ -48,9 +49,11 @@ function largeTree(): TreeJson<Types> {
 }
 
 // The virtualization feature: the engine renders only the rows in view, plus 10 on each side. Each
-// theme sizes the rows, so they are measured (estimated at 28px until then).
+// theme sizes the rows, so they are measured (estimated at 28px until then). The type-ahead finds a
+// row outside the window.
 const features = [
     virtualization({ estimateRowSize: 28, overscan: 10 }),
+    typeAhead(),
 ] as const;
 
 /** The live region's text for each step of a drag (pointer or keyboard): the package writes none. */

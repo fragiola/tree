@@ -5,10 +5,10 @@ import {
     type ItemOf,
     Tree,
     type TreeModel,
-    useTreeItemRename,
     useTreeState,
     validateTree,
 } from "@fragiola/tree-react";
+import { rename, useTreeItemRename } from "@fragiola/tree-react/rename";
 import { selection } from "@fragiola/tree-react/selection";
 import { ChevronRight, File, Folder, RotateCcw, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -17,8 +17,8 @@ import { type FileTypes, fileSystem } from "../_kit/data";
 import { persistTree, restoreTree } from "../_kit/persist";
 import * as styles from "./styles";
 
-/** The opt-in features of the model: the selection. */
-const features = [selection()] as const;
+/** The opt-in features of the model: the selection and the rename (F2). */
+const features = [selection(), rename()] as const;
 
 /** Where the document is saved: one key per tree. */
 const STORAGE_KEY = "fragiola-tree:examples:save-restore";
@@ -91,7 +91,7 @@ export default function SaveRestore() {
                     Reset
                 </Clickable.Button>
             </div>
-            <Tree.Root<FileTypes>
+            <Tree.Root<FileTypes, typeof features>
                 indicatorInset={styles.indicatorInset}
                 model={model}
                 aria-label="Project files"

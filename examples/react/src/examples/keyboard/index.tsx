@@ -7,16 +7,17 @@ import {
     type ItemOf,
     Tree,
     type TreeModel,
-    useTreeItemRename,
 } from "@fragiola/tree-react";
+import { rename, useTreeItemRename } from "@fragiola/tree-react/rename";
 import { selection } from "@fragiola/tree-react/selection";
+import { typeAhead } from "@fragiola/tree-react/type-ahead";
 import { ChevronRight, File, Folder } from "lucide-react";
 import { Fragment, useId, useState } from "react";
 import { type FileTypes, fileSystem } from "../_kit/data";
 import * as styles from "./styles";
 
-/** The opt-in features of the model: the selection. */
-const features = [selection()] as const;
+/** The opt-in features of the model: the selection, the rename (F2) and the type-ahead. */
+const features = [selection(), rename(), typeAhead()] as const;
 
 // Every key is the engine's (the WAI-ARIA APG tree view, `DEFAULT_KEY_MAP`): the example only
 // lists them. `keyMap` on the root would change any of them.
@@ -90,7 +91,7 @@ export default function Keyboard() {
     return (
         <div className={styles.frame}>
             <div className={styles.treeColumn}>
-                <Tree.Root<FileTypes>
+                <Tree.Root<FileTypes, typeof features>
                     indicatorInset={styles.indicatorInset}
                     model={model}
                     announce={announce}

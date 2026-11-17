@@ -3,9 +3,12 @@ import {
     type RootProps,
     Tree,
     type TreeJson,
-    useTreeItemRename,
 } from "@fragiola/tree-react";
+import { asyncChildren } from "@fragiola/tree-react/async-children";
+import { checkboxes } from "@fragiola/tree-react/checkboxes";
+import { rename, useTreeItemRename } from "@fragiola/tree-react/rename";
 import { selection } from "@fragiola/tree-react/selection";
+import { typeAhead } from "@fragiola/tree-react/type-ahead";
 
 // The unstyled tree every fixture renders: each primitive, the labels as text, the names inline.
 
@@ -54,8 +57,14 @@ export function Item({ item }: { item: ItemOf<Types> }) {
     );
 }
 
-/** The fixtures' features: the selection. */
-const FEATURES = [selection()] as const;
+/** The fixtures' features: every feature with a model of its own. */
+const FEATURES = [
+    selection(),
+    checkboxes(),
+    rename(),
+    asyncChildren(),
+    typeAhead(),
+] as const;
 
 export function FixtureTree(props: RootProps<Types, typeof FEATURES>) {
     return (
