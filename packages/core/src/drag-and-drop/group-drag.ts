@@ -4,6 +4,7 @@
 
 import type { DropTarget } from "../drop-target/drop-evaluation";
 import type {
+    DragGroupLike,
     DragHost,
     DragState,
     GroupDragLike,
@@ -23,6 +24,11 @@ export class GroupDrag implements GroupDragLike {
     /** the tree whose target shows */
     private shownIn: DragHost;
     private ended = false;
+    /**
+     * the group the drag started in: kept, so the drag ends there whatever leaves first (a source
+     * whose `dragGroup()` feature detached before its drag did)
+     */
+    private readonly group: DragGroupLike | undefined;
 
     constructor(
         readonly source: DragHost,
@@ -34,11 +40,12 @@ export class GroupDrag implements GroupDragLike {
         private readonly onCancel: () => void,
     ) {
         this.shownIn = source;
+        this.group = source.dragGroup();
     }
 
     /** The trees of the drag, in document order: the source alone without a group. */
     trees(): DragHost[] {
-        const group = this.source.dragGroup();
+        const { group } = this;
         return group ? group.trees() : [this.source];
     }
 
@@ -54,7 +61,7 @@ export class GroupDrag implements GroupDragLike {
 
     /** Starts the drag: the source shows it, and the other trees of its group know of it. */
     begin(target: DropTarget | null): void {
-        const group = this.source.dragGroup();
+        const { group } = this;
         if (group) {
             group.drag?.cancelFromGroup();
             group.drag = this;
@@ -129,7 +136,7 @@ export class GroupDrag implements GroupDragLike {
         for (const host of this.told)
             if (host.drag()?.origin) host.setDrag(null);
         this.told.clear();
-        const group = this.source.dragGroup();
+        const { group } = this;
         if (group?.drag === this) group.drag = undefined;
     }
 }

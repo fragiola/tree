@@ -2,9 +2,13 @@
 import { afterEach, describe, expect, it } from "vitest";
 import type { CommandEvent } from "../../src/commands/types";
 import { veto } from "../../src/commands/types";
-import { dragGroup } from "../../src/drag-group/drag-group";
+import {
+    type DragGroupFeature,
+    dragGroup,
+} from "../../src/drag-group/drag-group";
 import { dropOutside } from "../../src/drop-outside/drop-outside";
 import type { TransferHandler, TreeTransfer } from "../../src/drop-target/host";
+import { type DragSession, dragSessionOf } from "../../src/drop-target/session";
 import type { AnnounceEvent } from "../../src/engine/host";
 import type { TreeEngineOptions } from "../../src/engine/tree-engine";
 import type { TreeFeatures } from "../../src/features/types";
@@ -541,4 +545,59 @@ describe("the drag extensions' requirements", () => {
             ),
         ).toThrow(/drag-and-drop/);
     });
+});
+
+describe("a drag ended by its source's destroy, in either order of features", () => {
+    for (const order of ["drag-and-drop first", "drag-group first"] as const) {
+        /** the drag sessions of the engines, in creation order (the group they joined) */
+        const sessions: DragSession[] = [];
+        const group = (name: string): DragGroupFeature => {
+            const feature = dragGroup({ name });
+            return {
+                ...feature,
+                engine: (host) => {
+                    sessions.push(dragSessionOf(host));
+                    return feature.engine?.(host) ?? {};
+                },
+            };
+        };
+        const model = (name: string) =>
+            filesModel<TreeFeatures>(
+                {},
+                {
+                    features:
+                        order === "drag-group first"
+                            ? [group(name), ...allFeatures()]
+                            : [...allFeatures(), group(name)],
+                },
+            );
+
+        for (const kind of ["pointer", "keyboard"] as const) {
+            it(`${order}: a ${kind} drag ends in the group, which keeps no ended drag`, () => {
+                sessions.length = 0;
+                const name = `${kind}-${order}`;
+                const a = tree(model(name), {});
+                const b = tree(model(name), {}, B_LEFT);
+                if (kind === "pointer") {
+                    startDrag(a, "readme");
+                    pointer(
+                        a.content("readme"),
+                        "pointermove",
+                        inB,
+                        b.rowY("app", 0.1),
+                    );
+                } else {
+                    a.engine.run("start-keyboard-drag", {
+                        itemIds: ["readme"],
+                    });
+                }
+                expect(b.engine.is("dragging")).toBe(true);
+                expect(sessions[1]?.group?.drag).toBeDefined();
+                a.engine.destroy();
+                expect(b.engine.is("dragging")).toBe(false);
+                // the other tree's group lets the ended drag (and the destroyed engine) go
+                expect(sessions[1]?.group?.drag).toBeUndefined();
+            });
+        }
+    }
 });
