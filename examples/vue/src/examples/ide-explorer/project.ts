@@ -104,7 +104,7 @@ export const CONTENTS: Readonly<Record<string, string>> = {
     ci: "name: CI\non: [push, pull_request]\njobs:\n  test:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n      - run: pnpm install\n      - run: pnpm test",
     button: 'export function Button(props: ButtonProps) {\n    return <button type="button" {...props} />;\n}',
     "tree-view":
-        'import { Tree } from "@fragiola/tree-vue";\n\nexport function TreeView({ json }: { json: TreeJson }) {\n    return (\n        <Tree.Root defaultTree={json} aria-label="Files">\n            <Tree.Items>{(item) => <Row item={item} />}</Tree.Items>\n        </Tree.Root>\n    );\n}',
+        'import { Tree } from "@fragiola/tree-react";\n\nexport function TreeView({ json }: { json: TreeJson }) {\n    return (\n        <Tree.Root defaultTree={json} aria-label="Files">\n            <Tree.Items>{(item) => <Row item={item} />}</Tree.Items>\n        </Tree.Root>\n    );\n}',
     tabs: 'export function Tabs({ children }: { children: ReactNode }) {\n    return <div role="tablist">{children}</div>;\n}',
     "use-theme":
         'export function useTheme() {\n    const [theme, setTheme] = useState<"light" | "dark">("light");\n    return { theme, toggle: () => setTheme((t) => (t === "light" ? "dark" : "light")) };\n}',
@@ -119,7 +119,7 @@ export const CONTENTS: Readonly<Record<string, string>> = {
     env: "VITE_API_URL=http://localhost:3000",
     gitignore: "node_modules\ndist\n.env.local",
     package:
-        '{\n    "name": "fragiola-app",\n    "type": "module",\n    "scripts": {\n        "dev": "vite",\n        "build": "vite build",\n        "test": "vitest"\n    },\n    "dependencies": {\n        "@fragiola/tree-vue": "0.1.0",\n        "react": "19.2.0"\n    }\n}',
+        '{\n    "name": "fragiola-app",\n    "type": "module",\n    "scripts": {\n        "dev": "vite",\n        "build": "vite build",\n        "test": "vitest"\n    },\n    "dependencies": {\n        "@fragiola/tree-react": "0.1.0",\n        "react": "19.2.0"\n    }\n}',
     lock: "lockfileVersion: '9.0'\n\nimporters:\n  .:\n    dependencies:\n      react:\n        specifier: 19.2.0",
     readme: "# fragiola-app\n\nA file explorer built with Fragiola Tree.\n\n## Scripts\n\n- `pnpm dev`\n- `pnpm test`",
     tsconfig:

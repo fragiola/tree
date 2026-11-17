@@ -142,7 +142,8 @@ export const tabClose =
 export const breadcrumb =
     "flex h-7 shrink-0 items-center gap-1 overflow-hidden px-3 text-palette-accent/85 text-xs [&_svg]:size-3 [&_svg]:shrink-0";
 
-export const crumb = "flex min-w-0 items-center gap-1 truncate last:text-palette-contrast";
+export const crumb =
+    "flex min-w-0 items-center gap-1 truncate last:text-palette-contrast";
 
 /** The code: line numbers in a gutter, the text in the theme's font, scrolled in place. */
 export const code =
