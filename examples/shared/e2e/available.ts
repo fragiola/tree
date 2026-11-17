@@ -4,15 +4,15 @@
 // One suite for every framework: each app's playwright.config.ts (`examplesE2eConfig`) sets
 // `EXAMPLES_FRAMEWORK`, and a spec that opens an example the framework does not have is skipped,
 // not failed: a framework may ship a subset of the examples (contract §5) while it is being
-// written. A framework of `COMPLETE_FRAMEWORKS` (React) ships every example: a missing one fails.
+// written. A framework of `COMPLETE_FRAMEWORKS` (React, Vue) ships every example: a missing one fails.
 
 import { FRAMEWORKS, type Framework, isFramework } from "../src/framework.ts";
 
 /**
- * The frameworks whose app has every example: for them, a spec never skips. Vue and Angular join
- * when their Epics port the examples.
+ * The frameworks whose app has every example: for them, a spec never skips. Angular joins when
+ * its Epic ports the examples.
  */
-export const COMPLETE_FRAMEWORKS: readonly Framework[] = ["react"];
+export const COMPLETE_FRAMEWORKS: readonly Framework[] = ["react", "vue"];
 
 /** The framework of `EXAMPLES_FRAMEWORK`; anything else throws (a config that forgot to set it). */
 export function frameworkOf(value: string | undefined): Framework {
