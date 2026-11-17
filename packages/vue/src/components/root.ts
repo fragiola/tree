@@ -90,6 +90,8 @@ export interface RootProps<T extends TreeTypes = AnyTypes>
     autoExpandDelay?: number | undefined;
     /** the indentation of one level (px), for the drop level at the end of a sublist (default 16) */
     indentation?: number | undefined;
+    /** how far (px) a drop line starts past its level's inline start: the toggle, a grip or padding before the label (default 0) */
+    indicatorInset?: number | undefined;
     /** how long (ms) between two typed characters keeps one type-ahead search (default 500) */
     typeAheadTimeout?: number | undefined;
     /** access to the model and the engine from outside the root (`useTreeRef`, `createTreeRef`) */
@@ -125,6 +127,7 @@ const ROOT_PROPS = [
     "dragThreshold",
     "autoExpandDelay",
     "indentation",
+    "indicatorInset",
     "typeAheadTimeout",
     "treeRef",
     "as",
@@ -194,6 +197,7 @@ const RootTree = definePrimitive<RootProps, RootSlots, RootEmits>(
             dragThreshold: props.dragThreshold,
             autoExpandDelay: props.autoExpandDelay,
             indentation: props.indentation,
+            indicatorInset: props.indicatorInset,
             typeAheadTimeout: props.typeAheadTimeout,
         });
         const create = () => {
@@ -217,6 +221,7 @@ const RootTree = definePrimitive<RootProps, RootSlots, RootEmits>(
                 dragThreshold: props.dragThreshold,
                 autoExpandDelay: props.autoExpandDelay,
                 indentation: props.indentation,
+                indicatorInset: props.indicatorInset,
                 typeAheadTimeout: props.typeAheadTimeout,
                 // a remount (a route change, a `v-if`) loads what this engine was loading
                 resetLoadsOnDestroy: true,

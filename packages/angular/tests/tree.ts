@@ -73,6 +73,7 @@ export interface FileTreeInputs {
     dragThreshold?: number | undefined;
     autoExpandDelay?: number | undefined;
     indentation?: number | undefined;
+    indicatorInset?: number | undefined;
     typeAheadTimeout?: number | undefined;
 }
 
@@ -99,6 +100,7 @@ export type Emitted = [list: string, itemIds: string[]];
             [dragThreshold]="dragThreshold()"
             [autoExpandDelay]="autoExpandDelay()"
             [indentation]="indentation()"
+            [indicatorInset]="indicatorInset()"
             [typeAheadTimeout]="typeAheadTimeout()"
             (expandedItemIdsChange)="emitted.push(['expandedItemIds', $event])"
             (selectedItemIdsChange)="emitted.push(['selectedItemIds', $event])"
@@ -139,6 +141,7 @@ export class FileTree {
     readonly dragThreshold = input<number | undefined>(undefined);
     readonly autoExpandDelay = input<number | undefined>(undefined);
     readonly indentation = input<number | undefined>(undefined);
+    readonly indicatorInset = input<number | undefined>(undefined);
     readonly typeAheadTimeout = input<number | undefined>(undefined);
     /** what the change outputs reported */
     readonly emitted: Emitted[] = [];

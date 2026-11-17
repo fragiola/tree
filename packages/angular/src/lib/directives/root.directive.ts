@@ -112,6 +112,8 @@ export class TreeRootDirective<T extends TreeTypes = AnyTypes> {
     readonly autoExpandDelay = input<number | undefined>(undefined);
     /** the indentation of one level (px), for the drop level at the end of a sublist (default 16) */
     readonly indentation = input<number | undefined>(undefined);
+    /** how far (px) a drop line starts past its level's inline start: the toggle, a grip or padding before the label (default 0) */
+    readonly indicatorInset = input<number | undefined>(undefined);
     /** how long (ms) between two typed characters keeps one type-ahead search (default 500) */
     readonly typeAheadTimeout = input<number | undefined>(undefined);
 
@@ -207,6 +209,7 @@ export class TreeRootDirective<T extends TreeTypes = AnyTypes> {
             dragThreshold: this.dragThreshold(),
             autoExpandDelay: this.autoExpandDelay(),
             indentation: this.indentation(),
+            indicatorInset: this.indicatorInset(),
             typeAheadTimeout: this.typeAheadTimeout(),
         }),
     );
@@ -291,6 +294,7 @@ export class TreeRootDirective<T extends TreeTypes = AnyTypes> {
             dragThreshold: untracked(this.dragThreshold),
             autoExpandDelay: untracked(this.autoExpandDelay),
             indentation: untracked(this.indentation),
+            indicatorInset: untracked(this.indicatorInset),
             typeAheadTimeout: untracked(this.typeAheadTimeout),
             // a new engine (a new model or option, a re-render) loads what this one was loading
             resetLoadsOnDestroy: true,
