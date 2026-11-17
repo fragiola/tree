@@ -17,16 +17,16 @@ const REACT_FILES = readdirSync(
     .sort();
 
 /**
- * The React part hooks that are a directive here (`use-tree-item-rename` → `item-rename`): they
- * wire an element of the app's own, as an attribute directive does.
+ * The React part hooks of a feature that are a directive of its entry here
+ * (`react/src/rename/use-tree-item-rename.ts` → `rename/item-rename.directive.ts`): they wire an
+ * element of the app's own, as an attribute directive does.
  */
-const REACT_PART_HOOKS = ["use-tree-item-rename"];
-const PART_HOOK_FILES = REACT_PART_HOOKS.map((hook) =>
-    hook.slice("use-tree-".length),
-);
+const FEATURE_PART_HOOKS = [
+    { entry: "rename", hook: "use-tree-item-rename" },
+] as const;
 
-/** Every directive's file name (`src/lib/directives/<name>.directive.ts`). */
-const DIRECTIVE_FILES = [...REACT_FILES, ...PART_HOOK_FILES].sort();
+/** Every directive's file name of the main entry (`src/lib/directives/<name>.directive.ts`). */
+const DIRECTIVE_FILES = [...REACT_FILES].sort();
 
 /** `item-content` → `TreeItemContentDirective`. */
 const directiveOf = (file: string) =>
@@ -76,10 +76,17 @@ describe("@fragiola/tree-angular", () => {
 
     it("exports exactly the documented runtime API besides the core", () => {
         expect(REACT_FILES).toHaveLength(8);
-        for (const hook of REACT_PART_HOOKS) {
+        for (const { entry, hook } of FEATURE_PART_HOOKS) {
             expect(
-                readdirSync(join(import.meta.dirname, "../../react/src/hooks")),
+                readdirSync(
+                    join(import.meta.dirname, `../../react/src/${entry}`),
+                ),
             ).toContain(`${hook}.ts`);
+            const name = hook.slice("use-tree-".length);
+            expect(read(`${entry}/${name}.directive.ts`), name).toContain(
+                `export class ${directiveOf(name)}`,
+            );
+            expect(name in angular, name).toBe(false);
         }
         // `ɵ` names are what the feature entries build on, not an app's API
         const own = Object.keys(angular).filter(

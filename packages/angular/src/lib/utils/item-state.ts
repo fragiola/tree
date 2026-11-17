@@ -87,6 +87,18 @@ export const UNSET_ITEM_STATE: TreeItemState = Object.freeze({
     attributes: NO_ATTRIBUTES,
 });
 
+/** An item's check, as `checkboxes()` says it in `aria-checked` (unchecked without the feature). */
+function checkStateOf(
+    attributes: Readonly<Record<string, string | undefined>>,
+): CheckState {
+    const checked = attributes["aria-checked"];
+    return checked === "true"
+        ? "checked"
+        : checked === "mixed"
+          ? "mixed"
+          : "unchecked";
+}
+
 /**
  * The state of an item of `context`'s tree. Call it in a computed: it reads the context's state,
  * revision and engine, so it is computed again when the tree changes.
@@ -107,16 +119,10 @@ export function treeItemState(
         parent === undefined
             ? state.rootItemIds.length
             : (parent.childItemIds?.length ?? 0);
-    // the mixed state walks the item's subtree: only a tree with checkboxes pays for it
-    const checkState: CheckState = context.checkboxes()
-        ? model.get("check-state-by", { itemId })
-        : model.is("item-checked", { itemId })
-          ? "checked"
-          : "unchecked";
-    const status = item.childrenStatus;
     const dropTarget = engine?.is("item-drop-target", { itemId }) ?? false;
     // the features' ARIA and data-*: model state, so the first render (and a server's) has them
     const attributes = model.get("item-attributes-by", { itemId });
+    const checkState = checkStateOf(attributes);
     return {
         itemId,
         path,
@@ -130,9 +136,9 @@ export function treeItemState(
         checkState,
         checked: checkState === "checked",
         indeterminate: checkState === "mixed",
-        renaming: state.renamingItemId === itemId,
-        loading: status === "loading",
-        loadError: status === "error",
+        renaming: attributes["data-renaming"] !== undefined,
+        loading: attributes["aria-busy"] === "true",
+        loadError: attributes["data-load-error"] !== undefined,
         disabled: item.disabled === true,
         leaf: model.is("item-leaf", { itemId }),
         dragging: engine?.is("item-dragging", { itemId }) ?? false,
@@ -151,11 +157,6 @@ export function treeItemState(
 export interface ItemData {
     expanded: string | null;
     focused: string | null;
-    checked: string | null;
-    indeterminate: string | null;
-    renaming: string | null;
-    loading: string | null;
-    loadError: string | null;
     disabled: string | null;
     leaf: string | null;
     dragging: string | null;
@@ -168,11 +169,6 @@ export function itemData(state: TreeItemState): ItemData {
     return {
         expanded: dataAttr(state.expanded),
         focused: dataAttr(state.focused),
-        checked: dataAttr(state.checked),
-        indeterminate: dataAttr(state.indeterminate),
-        renaming: dataAttr(state.renaming),
-        loading: dataAttr(state.loading),
-        loadError: dataAttr(state.loadError),
         disabled: dataAttr(state.disabled),
         leaf: dataAttr(state.leaf),
         dragging: dataAttr(state.dragging),
@@ -189,11 +185,6 @@ export function itemData(state: TreeItemState): ItemData {
 export const ITEM_DATA_HOST = {
     "[attr.data-expanded]": "itemData().expanded",
     "[attr.data-focused]": "itemData().focused",
-    "[attr.data-checked]": "itemData().checked",
-    "[attr.data-indeterminate]": "itemData().indeterminate",
-    "[attr.data-renaming]": "itemData().renaming",
-    "[attr.data-loading]": "itemData().loading",
-    "[attr.data-load-error]": "itemData().loadError",
     "[attr.data-disabled]": "itemData().disabled",
     "[attr.data-leaf]": "itemData().leaf",
     "[attr.data-dragging]": "itemData().dragging",

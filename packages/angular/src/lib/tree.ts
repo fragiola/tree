@@ -2,7 +2,6 @@ import { TreeDropIndicatorDirective } from "./directives/drop-indicator.directiv
 import { TreeGroupDirective } from "./directives/group.directive";
 import { TreeItemDirective } from "./directives/item.directive";
 import { TreeItemContentDirective } from "./directives/item-content.directive";
-import { TreeItemRenameDirective } from "./directives/item-rename.directive";
 import { TreeItemsDirective } from "./directives/items.directive";
 import { TreeLiveRegionDirective } from "./directives/live-region.directive";
 import { TreeRootDirective } from "./directives/root.directive";
@@ -19,7 +18,6 @@ export const TREE = [
     TreeItemContentDirective,
     TreeGroupDirective,
     TreeToggleDirective,
-    TreeItemRenameDirective,
     TreeDropIndicatorDirective,
     TreeLiveRegionDirective,
 ] as const;

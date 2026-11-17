@@ -1,10 +1,12 @@
 import { Component, input } from "@angular/core";
 import { describe, expect, it } from "vitest";
+import { selection } from "../selection/public-api";
 import { TREE, type TreeModel } from "../src/public-api";
 import {
     byPath,
     type FileTypes,
     filesModel,
+    filesModelWith,
     itemElement,
     items,
     render,
@@ -103,7 +105,7 @@ describe("the WAI-ARIA Tree View roles and states", () => {
             expandedItemIds: ["src", "utils"],
             checkedItemIds: ["a"],
         });
-        await renderFiles({ model, checkboxes: true });
+        await renderFiles({ model });
         expect(itemElement("a.ts")).toHaveAttribute("aria-checked", "true");
         expect(itemElement("b.ts")).toHaveAttribute("aria-checked", "false");
         expect(itemElement("utils")).toHaveAttribute("aria-checked", "mixed");
@@ -111,7 +113,9 @@ describe("the WAI-ARIA Tree View roles and states", () => {
     });
 
     it("sets no aria-checked without checkboxes", async () => {
-        await renderFiles({ model: filesModel({ checkedItemIds: ["app"] }) });
+        await renderFiles({
+            model: filesModelWith([selection()]) as TreeModel<FileTypes>,
+        });
         expect(itemElement("app.ts")).not.toHaveAttribute("aria-checked");
     });
 

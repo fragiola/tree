@@ -1,8 +1,11 @@
 import { Component, input } from "@angular/core";
 import { describe, expect, it } from "vitest";
+import { checkboxes } from "../checkboxes/public-api";
+import { selection } from "../selection/public-api";
 import { TREE } from "../src/public-api";
 import {
     filesModel,
+    filesModelWith,
     fire,
     focus,
     itemElement,
@@ -21,7 +24,7 @@ const box = (label: string) => {
 describe("tri-state checkboxes", () => {
     it("checks an item and its descendants on a press (cascade), mixing the parent", async () => {
         const model = filesModel({ expandedItemIds: ["src", "utils"] });
-        await renderFiles({ model, checkboxes: true });
+        await renderFiles({ model });
         await fire(box("a.ts"), "click");
         expect(model.state.checkedItemIds).toEqual(["a"]);
         expect(itemElement("utils")).toHaveAttribute("aria-checked", "mixed");
@@ -35,7 +38,7 @@ describe("tri-state checkboxes", () => {
 
     it("does not select on a press of the app's check control", async () => {
         const model = filesModel();
-        await renderFiles({ model, checkboxes: true });
+        await renderFiles({ model });
         await fire(box("app.ts"), "pointerdown", {
             button: 0,
             isPrimary: true,
@@ -53,9 +56,12 @@ describe("tri-state checkboxes", () => {
         expect(model.state.checkedItemIds).toEqual(["readme"]);
     });
 
-    it("toggles the focused item's check with Space when the root has checkboxes", async () => {
-        const model = filesModel();
-        await renderFiles({ model, checkboxes: true });
+    it('toggles the focused item\'s check with Space with `checkboxes({ space: "check" })`', async () => {
+        const model = filesModelWith([
+            selection(),
+            checkboxes({ space: "check" }),
+        ]);
+        await renderFiles({ model });
         await focus(itemElement("readme.md"));
         await fire(itemElement("readme.md"), "keydown", { key: " " });
         expect(model.state.checkedItemIds).toEqual(["readme"]);
@@ -66,7 +72,7 @@ describe("tri-state checkboxes", () => {
     });
 
     it("leaves the check control to the app: the item carries the state, and renders no checkbox of its own", async () => {
-        await renderFiles({ model: filesModel(), checkboxes: true });
+        await renderFiles({ model: filesModel() });
         expect(itemElement("app.ts")).toHaveAttribute("aria-checked", "false");
         expect(document.querySelector('[role="checkbox"]')).toBeNull();
         expect(
@@ -80,7 +86,7 @@ describe("tri-state checkboxes", () => {
     selector: "test-not-native",
     imports: [TREE],
     template: `
-        <div [treeRoot]="model()" checkboxes aria-label="Files">
+        <div [treeRoot]="model()" aria-label="Files">
             <ng-template treeItems let-item>
                 <div [treeItem]="item">
                     <div treeItemContent>
@@ -88,7 +94,7 @@ describe("tri-state checkboxes", () => {
                         <span
                             data-tree-no-drag=""
                             data-testid="check"
-                            (click)="model().run('item.toggle-check', { itemId: item.id })"
+                            (click)="toggleCheck(item.id)"
                         ></span>
                     </div>
                 </div>
@@ -98,4 +104,8 @@ describe("tri-state checkboxes", () => {
 })
 class NotNative {
     readonly model = input(filesModel());
+
+    protected toggleCheck(itemId: string): void {
+        this.model().run("item.toggle-check", { itemId });
+    }
 }

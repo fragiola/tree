@@ -6,29 +6,30 @@
 // drop indicator with no drop target); the directive hides it (`display: none`), and the
 // comparison leaves those hidden elements out.
 import { Component, input } from "@angular/core";
-import {
-    Tree as ReactTree,
-    useTree,
-    useTreeItem,
-    useTreeItemRename,
-} from "@fragiola/tree-react";
+import { Tree as ReactTree, useTree, useTreeItem } from "@fragiola/tree-react";
+import { useTreeItemRename } from "@fragiola/tree-react/rename";
 import { VirtualItems as ReactVirtualItems } from "@fragiola/tree-react/virtualization";
 import * as React from "react";
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { describe, expect, it } from "vitest";
+import { TreeItemRenameDirective } from "../rename/public-api";
+import { selection } from "../selection/public-api";
 import {
     createTreeForeignDrop,
     createTreeModel,
     TREE,
+    type TreeFeatures,
     type TreeJson,
     type TreeModel,
 } from "../src/public-api";
 import { BigTree, virtualModel } from "./big-tree";
 import {
+    FEATURES,
     type FileTypes,
     files,
     filesModel,
+    filesModelWith,
     focus,
     itemElement,
     press,
@@ -43,7 +44,7 @@ const r = React.createElement;
 
 /** The app's check control, as tests/tree.ts renders it. */
 function Check({ item }: { item: Item }) {
-    const { model } = useTree();
+    const { model } = useTree<FileTypes, typeof FEATURES>();
     const { state } = useTreeItem(item as never);
     return r("button", {
         type: "button",
@@ -126,9 +127,11 @@ type Snapshot = ReturnType<typeof snapshot>;
 
 async function both(
     json: TreeJson<FileTypes>,
-    inputs: { checkboxes?: boolean } = {},
+    features: TreeFeatures = FEATURES,
 ) {
-    await renderFiles({ model: filesModel(json), ...inputs });
+    await renderFiles({
+        model: filesModelWith(features, json) as TreeModel<FileTypes>,
+    });
     const angular = snapshot(
         document.querySelector('[role="tree"]') as Element,
         true,
@@ -140,12 +143,12 @@ async function both(
     (
         globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
     ).IS_REACT_ACT_ENVIRONMENT = true;
-    const model = filesModel(json);
+    const model = filesModelWith(features, json);
     await act(async () => {
         root.render(
             r(
                 ReactTree.Root,
-                { model: model as never, "aria-label": "Files", ...inputs },
+                { model: model as never, "aria-label": "Files" },
                 r(ReactTree.Items, {
                     children: (item: Item) => reactItem(item),
                 } as never),
@@ -170,7 +173,7 @@ describe("parity with @fragiola/tree-react", () => {
         });
         const app = json.items.app;
         if (app) json.items.app = { ...app, disabled: true };
-        const { angular, react } = await both(json, { checkboxes: true });
+        const { angular, react } = await both(json);
         expect(angular.length).toBeGreaterThan(20);
         expect(angular).toEqual(react);
     });
@@ -178,6 +181,7 @@ describe("parity with @fragiola/tree-react", () => {
     it("renders the same without checkboxes and with no selection", async () => {
         const { angular, react } = await both(
             files({ settings: { selectionMode: "none" } }),
+            [selection()],
         );
         expect(angular).toEqual(react);
     });
@@ -187,7 +191,7 @@ describe("parity with @fragiola/tree-react", () => {
             expandedItemIds: ["src", "utils"],
             checkedItemIds: ["a"],
         });
-        const { angular, react } = await both(json, { checkboxes: true });
+        const { angular, react } = await both(json);
         const checks = angular.filter(
             (part) => part.attributes["data-testid"] === "check",
         );
@@ -262,7 +266,7 @@ describe("parity with @fragiola/tree-react in a virtualized tree", () => {
 /** Two trees of the drag group "files": the files, and an inbox over another model. */
 @Component({
     selector: "test-two-trees",
-    imports: [TREE],
+    imports: [TREE, TreeItemRenameDirective],
     template: `
         @for (tree of trees(); track tree.name) {
             <div [treeRoot]="tree.model" dragGroup="files" [attr.aria-label]="tree.name">
@@ -277,7 +281,7 @@ describe("parity with @fragiola/tree-react in a virtualized tree", () => {
                                 data-testid="check"
                                 [attr.data-checked]="treeItem.state().checked ? '' : null"
                                 [attr.data-indeterminate]="treeItem.state().indeterminate ? '' : null"
-                                (click)="tree.model.run('item.toggle-check', { itemId: item.id })"
+                                (click)="toggleCheck(tree.model, item.id)"
                             ></button>
                             <span>{{ item.label }}</span>
                             @if (treeItem.state().renaming) {
@@ -296,14 +300,26 @@ describe("parity with @fragiola/tree-react in a virtualized tree", () => {
 class TwoTrees {
     readonly trees =
         input.required<{ name: string; model: TreeModel<FileTypes> }[]>();
+
+    protected toggleCheck(model: TreeModel<FileTypes>, itemId: string): void {
+        (model as TreeModel<FileTypes, typeof FEATURES>).run(
+            "item.toggle-check",
+            { itemId },
+        );
+    }
 }
 
 const inboxModel = () =>
-    createTreeModel<FileTypes>({
-        version: 1,
-        rootItemIds: ["inbox"],
-        items: { inbox: { kind: "folder", label: "inbox", childItemIds: [] } },
-    });
+    createTreeModel<FileTypes, typeof FEATURES>(
+        {
+            version: 1,
+            rootItemIds: ["inbox"],
+            items: {
+                inbox: { kind: "folder", label: "inbox", childItemIds: [] },
+            },
+        },
+        { features: FEATURES },
+    );
 
 /** Whether the keyboard drag reached the inbox folder, a drop into it. */
 const intoInbox = () =>

@@ -3,7 +3,14 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { selection } from "../selection/public-api";
 import { createTreeModel, TREE, type TreeModel } from "../src/public-api";
 import { virtualization } from "../virtualization/public-api";
-import { FileTree, type FileTypes, files, itemElement, render } from "./tree";
+import {
+    bareFiles,
+    FileTree,
+    type FileTypes,
+    files,
+    itemElement,
+    render,
+} from "./tree";
 
 afterEach(() => {
     vi.restoreAllMocks();
@@ -27,7 +34,7 @@ class Bare {
 
 describe("features on the root", () => {
     it("a bare tree says nothing about a selection", async () => {
-        await render(Bare, { model: createTreeModel<FileTypes>(files()) });
+        await render(Bare, { model: createTreeModel<FileTypes>(bareFiles()) });
         expect(document.querySelector('[role="tree"]')).not.toHaveAttribute(
             "aria-multiselectable",
         );
@@ -82,7 +89,7 @@ describe("features on the root", () => {
 
     it("warns once, and ignores it, when a feature's input has no feature", async () => {
         const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-        const model = createTreeModel<FileTypes>(files());
+        const model = createTreeModel<FileTypes>(bareFiles());
         const rendered = await render(Bare, { model, selected: ["app"] });
         await rendered.set("selected", ["readme"]);
         expect(warn).toHaveBeenCalledTimes(1);
@@ -100,7 +107,7 @@ describe("features on the root", () => {
             template: `<div treeRoot [defaultTree]="json" [features]="features()" aria-label="Files"></div>`,
         })
         class Host {
-            readonly json = files();
+            readonly json = bareFiles();
             readonly features = input([selection()]);
         }
         const rendered = await render(Host);

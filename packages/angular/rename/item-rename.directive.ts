@@ -10,9 +10,19 @@ import {
     signal,
     untracked,
 } from "@angular/core";
-import type { CommandError } from "@fragiola/tree";
-import { injectItemContext, injectTreeContext } from "../context";
-import { injectHost } from "../utils/helpers";
+// The rename's directive (`@fragiola/tree-angular/rename`): it wires the app's own input onto an
+// item's rename (`rename()`). A tree that never imports it does not ship it.
+import type {
+    AnyFeatures,
+    AnyTypes,
+    CommandError,
+    TreeEngine,
+} from "@fragiola/tree";
+import {
+    ɵinjectHost as injectHost,
+    ɵinjectItemContext as injectItemContext,
+    ɵinjectTreeContext as injectTreeContext,
+} from "@fragiola/tree-angular";
 
 /** What `[treeItemRename]` says about its item's rename. */
 export interface TreeItemRenameState {
@@ -102,9 +112,17 @@ export class TreeItemRenameDirective {
         });
     }
 
+    /** the engine, with the rename's actions (a model without `rename()` refuses them) */
+    private engine(): TreeEngine<AnyTypes, AnyFeatures> | null {
+        return this.context.engine() as TreeEngine<
+            AnyTypes,
+            AnyFeatures
+        > | null;
+    }
+
     /** `focus: false` on a blur: focus went elsewhere, and stays there */
     private commit(focus: boolean): boolean {
-        const engine = this.context.engine();
+        const engine = this.engine();
         if (this.done || !engine) return true;
         this.done = true;
         const result = engine.run("commit-rename", {
@@ -120,7 +138,7 @@ export class TreeItemRenameDirective {
     }
 
     private cancel(focus: boolean): void {
-        const engine = this.context.engine();
+        const engine = this.engine();
         if (this.done || !engine) return;
         this.done = true;
         engine.run("cancel-rename", { itemId: this.item.item().id, focus });
