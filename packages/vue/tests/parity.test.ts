@@ -5,7 +5,7 @@ import * as React from "react";
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { describe, expect, it } from "vitest";
-import { createTreeModel, type TreeJson } from "../src";
+import { createTreeForeignDrop, createTreeModel, type TreeJson } from "../src";
 import { bigFileTree, bigTree, virtual } from "./big-tree";
 import {
     type FileTypes,
@@ -279,6 +279,78 @@ describe("parity with @fragiola/tree-react in a virtualized tree", () => {
         expect(
             vue.some((part) => part.attributes["data-tree-part"] === "spacer"),
         ).toBe(true);
+        expect(vue).toEqual(react);
+    });
+});
+
+describe("parity with @fragiola/tree-react in a foreign drag", () => {
+    it("renders the same target for files dragged on the tree", async () => {
+        const foreignDrop = createTreeForeignDrop<FileTypes>({
+            onDrop: () => {},
+        });
+        // the top of app.ts (the second row, 20px each): before it
+        const over = {
+            clientX: 40,
+            clientY: 22,
+            dataTransfer: { types: ["Files"], dropEffect: "none" },
+        };
+        await render(() => fileTree({ model: filesModel(), foreignDrop }));
+        await fire(
+            document.querySelector('[role="tree"]') as Element,
+            "dragover",
+            over,
+        );
+        const vue = snapshot(document.body);
+        document.body.innerHTML = "";
+
+        const host = document.createElement("div");
+        document.body.append(host);
+        const root = createRoot(host);
+        (
+            globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
+        ).IS_REACT_ACT_ENVIRONMENT = true;
+        await act(async () => {
+            root.render(
+                r(
+                    ReactTree.Root,
+                    {
+                        model: filesModel() as never,
+                        "aria-label": "Files",
+                        foreignDrop: foreignDrop as never,
+                    },
+                    r(ReactTree.Items, {
+                        children: (item: Item) => reactItem(item),
+                    } as never),
+                    r(ReactTree.DropIndicator),
+                    r(ReactTree.LiveRegion),
+                ),
+            );
+        });
+        await act(async () => {
+            const event = new MouseEvent("dragover", {
+                bubbles: true,
+                cancelable: true,
+                clientX: over.clientX,
+                clientY: over.clientY,
+            });
+            Object.defineProperty(event, "dataTransfer", {
+                value: { ...over.dataTransfer },
+            });
+            host.firstElementChild?.dispatchEvent(event);
+        });
+        const react = snapshot(document.body);
+        act(() => root.unmount());
+
+        expect(vue[0]?.attributes["data-dragging"]).toBe("");
+        expect(
+            vue.find((part) => part.attributes["data-drop-target"] === ""),
+        ).toBeDefined();
+        expect(
+            vue.find(
+                (part) =>
+                    part.attributes["data-tree-part"] === "drop-indicator",
+            )?.attributes["data-drop-position"],
+        ).toBe("before");
         expect(vue).toEqual(react);
     });
 });

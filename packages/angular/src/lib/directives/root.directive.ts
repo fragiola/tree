@@ -18,7 +18,9 @@ import {
     type KeyMap,
     type LoadChildren,
     type TransferHandler,
+    type TreeDropOutside,
     type TreeEngine,
+    type TreeForeignDrop,
     type TreeJson,
     type TreeModel,
     type TreeTypes,
@@ -82,6 +84,10 @@ export interface RootState {
         "[attr.data-dragging-from-other-tree]": "data().draggingFromOtherTree",
         "[attr.data-empty]": "data().empty",
         "(keydown)": "onKeyDown($event)",
+        "(dragenter)": "onDrag($event)",
+        "(dragover)": "onDrag($event)",
+        "(dragleave)": "onDrag($event)",
+        "(drop)": "onDrag($event)",
     },
 })
 export class TreeRootDirective<T extends TreeTypes = AnyTypes> {
@@ -138,6 +144,18 @@ export class TreeRootDirective<T extends TreeTypes = AnyTypes> {
      * model adds the dragged subtrees and the source model removes them
      */
     readonly transfer = input<TransferHandler | undefined>(undefined);
+    /**
+     * takes files, links and text dragged on the tree from the desktop or another window
+     * (`createTreeForeignDrop(options)`): the target shows as for a tree drag, and its `onDrop`
+     * runs your commands. Create it once (a field): another one makes another engine
+     */
+    readonly foreignDrop = input<TreeForeignDrop<T> | undefined>(undefined);
+    /**
+     * hands your `onDrop` the items of a pointer drag released outside every tree of the group
+     * (`createTreeDropOutside(options)`), for your own targets. Create it once (a field): another
+     * one makes another engine
+     */
+    readonly dropOutside = input<TreeDropOutside<T> | undefined>(undefined);
 
     /** the expanded items, after every command that changes them */
     readonly expandedItemIdsChange = output<string[]>();
@@ -253,8 +271,11 @@ export class TreeRootDirective<T extends TreeTypes = AnyTypes> {
             if (!rendered()) return;
             const model = this.erased();
             this.options();
-            // a virtualizer by identity (it holds functions JSON leaves out)
+            // a virtualizer, a foreign drop, a drop outside by identity (they hold functions JSON
+            // leaves out)
             this.virtual();
+            this.foreignDrop();
+            this.dropOutside();
             untracked(() => {
                 const engine = this.create(model);
                 engine.adapter.attachRoot(this.host);
@@ -331,6 +352,12 @@ export class TreeRootDirective<T extends TreeTypes = AnyTypes> {
                 untracked(this.transfer) === undefined
                     ? undefined
                     : (event) => untracked(this.transfer)?.(event),
+            foreignDrop: untracked(this.foreignDrop) as
+                | TreeForeignDrop
+                | undefined,
+            dropOutside: untracked(this.dropOutside) as
+                | TreeDropOutside
+                | undefined,
             // a new engine (a new model or option, a re-render) loads what this one was loading
             resetLoadsOnDestroy: true,
         });
@@ -339,5 +366,10 @@ export class TreeRootDirective<T extends TreeTypes = AnyTypes> {
     /** the keys go to the engine (the APG Tree View model, type-ahead, the keyboard drag) */
     protected onKeyDown(event: KeyboardEvent): void {
         untracked(this.current)?.adapter.handleKeyDown(event);
+    }
+
+    /** native drags bring foreign content (`foreignDrop`); the engine ignores them without it */
+    protected onDrag(event: DragEvent): void {
+        untracked(this.current)?.adapter.handleDragEvent(event);
     }
 }

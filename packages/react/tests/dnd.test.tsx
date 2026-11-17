@@ -1,4 +1,10 @@
-import { type CommandEvent, createTreeModel, veto } from "@fragiola/tree";
+import {
+    type CommandEvent,
+    createTreeDropOutside,
+    createTreeForeignDrop,
+    createTreeModel,
+    veto,
+} from "@fragiola/tree";
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { ROW } from "./setup";
@@ -226,5 +232,122 @@ describe("drag between trees", () => {
         key(readme, "d", { ctrlKey: true, shiftKey: true });
         expect(inboxRoot).not.toHaveAttribute("data-dragging");
         key(readme, "Escape");
+    });
+});
+
+/** A native drag event (jsdom has no `DragEvent`) with a `DataTransfer` of `types`. */
+function nativeDrag(
+    target: Element,
+    type: "dragenter" | "dragover" | "dragleave" | "drop",
+    y: number,
+    types: string[] = ["Files"],
+): boolean {
+    const event = new MouseEvent(type, {
+        bubbles: true,
+        cancelable: true,
+        clientX: 40,
+        clientY: y,
+    });
+    Object.defineProperty(event, "dataTransfer", {
+        value: { types, files: [], dropEffect: "none", getData: () => "" },
+    });
+    act(() => {
+        target.dispatchEvent(event);
+    });
+    return event.defaultPrevented;
+}
+
+describe("foreign drops", () => {
+    it("shows the target of files dragged on the tree and hands the drop to foreignDrop", () => {
+        const model = filesModel();
+        const dropped: unknown[] = [];
+        const foreignDrop = createTreeForeignDrop<FileTypes>({
+            accept: ({ types }) => types.includes("Files"),
+            onDrop: ({ to }) => dropped.push(to),
+        });
+        render(
+            <FileTree
+                model={model}
+                foreignDrop={foreignDrop}
+                announce={(event) => event.type}
+            />,
+        );
+        const tree = screen.getByRole("tree");
+        expect(nativeDrag(tree, "dragover", rowY("app.ts", 0.1))).toBe(true);
+        expect(tree).toHaveAttribute("data-dragging", "");
+        expect(content("app.ts")).toHaveAttribute("data-drop-target", "");
+        expect(
+            document.querySelector('[data-tree-part="drop-indicator"]'),
+        ).toHaveAttribute("data-drop-position", "before");
+        expect(nativeDrag(tree, "drop", rowY("app.ts", 0.1))).toBe(true);
+        expect(dropped).toEqual([
+            expect.objectContaining({ parentItemId: "src", index: 0 }),
+        ]);
+        expect(tree).not.toHaveAttribute("data-dragging");
+        expect(screen.getByRole("status")).toHaveTextContent("foreign-drop");
+    });
+
+    it("a refused type shows nothing, and a tree without foreignDrop ignores native drags", () => {
+        const foreignDrop = createTreeForeignDrop<FileTypes>({
+            accept: ({ types }) => types.includes("Files"),
+            onDrop: () => {},
+        });
+        const { unmount } = render(
+            <FileTree model={filesModel()} foreignDrop={foreignDrop} />,
+        );
+        const tree = screen.getByRole("tree");
+        expect(
+            nativeDrag(tree, "dragover", rowY("app.ts", 0.1), ["text/plain"]),
+        ).toBe(false);
+        expect(content("app.ts")).not.toHaveAttribute("data-drop-target");
+        unmount();
+        render(<FileTree model={filesModel()} />);
+        expect(
+            nativeDrag(screen.getByRole("tree"), "dragover", rowY("app.ts")),
+        ).toBe(false);
+        expect(screen.getByRole("tree")).not.toHaveAttribute("data-dragging");
+    });
+});
+
+describe("drops outside the tree", () => {
+    it("hands a pointer drag released outside the tree to dropOutside", () => {
+        const model = filesModel();
+        const trash = document.createElement("div");
+        document.body.append(trash);
+        Object.defineProperty(document, "elementFromPoint", {
+            configurable: true,
+            value: () => trash,
+        });
+        const dropOutside = createTreeDropOutside<FileTypes>({
+            onDrop: ({ itemIds, element }) =>
+                element === trash &&
+                model.run("item.remove", { itemIds: [...itemIds] }).ok,
+        });
+        try {
+            render(<FileTree model={model} dropOutside={dropOutside} />);
+            press("readme.md");
+            act(() => {
+                fireEvent.pointerMove(document, {
+                    clientX: 600,
+                    clientY: 40,
+                    pointerId: 1,
+                    isPrimary: true,
+                });
+            });
+            act(() => {
+                fireEvent.pointerUp(document, {
+                    clientX: 600,
+                    clientY: 40,
+                    pointerId: 1,
+                });
+            });
+            expect(model.state.rootItemIds).toEqual(["src"]);
+            expect(screen.getByRole("tree")).not.toHaveAttribute(
+                "data-dragging",
+            );
+        } finally {
+            Reflect.deleteProperty(document, "elementFromPoint");
+            trash.remove();
+        }
     });
 });
