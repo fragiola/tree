@@ -81,6 +81,10 @@ import a feature does not ship it.
 | feature | entry |
 | --- | --- |
 | `selection(options?)`: the selected items, the selection keys and clicks, `aria-selected` | `@fragiola/tree-angular/selection` |
+| `checkboxes(options?)`: tri-state checks, `aria-checked`, Space to check, `checkedItemIds` | `@fragiola/tree-angular/checkboxes` |
+| `rename(options?)`: the renaming item, F2, the rename commands, `TreeItemRenameDirective` (`input[treeItemRename]`) | `@fragiola/tree-angular/rename` |
+| `asyncChildren()`: children from your `loadChildren`, `aria-busy` | `@fragiola/tree-angular/async-children` |
+| `typeAhead(options?)`: typed characters focus a matching label | `@fragiola/tree-angular/type-ahead` |
 | `virtualization(options?)`: a window of the rows in view, rendered by `TreeVirtualItemsDirective` (`ng-template[treeVirtualItems]`) | `@fragiola/tree-angular/virtualization` |
 
 ```ts
@@ -111,7 +115,7 @@ focus, keys, drags, the async loader) is the root's.
 
 ## Checks and rename: your own controls
 
-With `checkboxes` on the root, every item carries `aria-checked` (`mixed` included),
+With `checkboxes()` in the model's features, every item carries `aria-checked` (`mixed` included),
 `data-checked` / `data-indeterminate`, and Space toggles its check. The check control is yours:
 read the item's state and run the command. Make it an element that never takes focus (a press then
 focuses the item, and the arrows keep working), hidden from assistive technology, with

@@ -100,10 +100,10 @@ root (`TreeRootDirective<T>`).
 | children functions (`Tree.Items`, `Tree.Group`) | `<ng-template treeItems let-item>`, and `[treeGroup]` with no template of its own |
 | `expandedItemIds` + `onExpandedItemIdsChange` | `[(expandedItemIds)]` (or `[expandedItemIds]` with `(expandedItemIdsChange)`) |
 | `selectedItemIds` + `onSelectedItemIdsChange` | `[(selectedItemIds)]` |
-| `checkedItemIds` + `onCheckedItemIdsChange` | `[(checkedItemIds)]` |
-| `useTreeItemRename(item, { onRenameError })` | `input[treeItemRename]` on your own input inside an item, rendered with `@if`, and its output `(renameError)` |
+| `checkedItemIds` + `onCheckedItemIdsChange` (`checkboxes()`) | `[(checkedItemIds)]`: an input of every root, ignored with a warning without the feature |
+| `useTreeItemRename(item, { onRenameError })` (`@fragiola/tree-react/rename`) | `input[treeItemRename]` (`TreeItemRenameDirective`, from `@fragiola/tree-angular/rename`, in your component's `imports`) on your own input inside an item, rendered with `@if`, and its output `(renameError)` |
 | `treeRef={tree}` | `#tree="treeRoot"` in the template, `viewChild(TreeRootDirective)` in the class: `model()` and `engine` |
-| `defaultTree`, `expandOnClick`, `keyMap`, … | the same inputs (`[defaultTree]`, `expandOnClick`, `[keyMap]`); a boolean input takes a bare attribute (`checkboxes`) |
+| `defaultTree`, `expandOnClick`, `keyMap`, … | the same inputs (`[defaultTree]`, `expandOnClick`, `[keyMap]`); a boolean input takes a bare attribute (`expandOnClick`) |
 | `<Tree.Items<Types>>` and the other type arguments | `[treeItems]="model"` (or the document) |
 | a part that renders nothing (`Tree.Group` while collapsed, `Tree.DropIndicator` with no target) | the element stays, hidden (`display: none`); a collapsed group is also empty |
 
@@ -114,19 +114,24 @@ whose output is not handled keeps the tree on the input.
 
 | directive | selector | `exportAs` | inputs | outputs |
 | --- | --- | --- | --- | --- |
-| `TreeRootDirective` | `[treeRoot]` | `treeRoot` | `treeRoot` (the model), `defaultTree`, `features`, `expandedItemIds`, `selectedItemIds`, `checkedItemIds`, `loadChildren`, `announce`, `keyMap`, `expandOnClick`, `checkboxes`, `dragThreshold`, `autoExpandDelay`, `indentation`, `indicatorInset`, `typeAheadTimeout`, `dragGroup`, `transfer`, `foreignDrop`, `dropOutside` | `expandedItemIdsChange`, `selectedItemIdsChange`, `checkedItemIdsChange` |
+| `TreeRootDirective` | `[treeRoot]` | `treeRoot` | `treeRoot` (the model), `defaultTree`, `features`, `expandedItemIds`, `selectedItemIds`, `checkedItemIds`, `loadChildren`, `announce`, `keyMap`, `expandOnClick`, `dragThreshold`, `autoExpandDelay`, `indentation`, `indicatorInset`, `dragGroup`, `transfer`, `foreignDrop`, `dropOutside` | `expandedItemIdsChange`, `selectedItemIdsChange`, `checkedItemIdsChange` |
 | `TreeItemsDirective` | `ng-template[treeItems]` | `treeItems` | `treeItems` (typing: the model or the document) | none |
 | `TreeVirtualItemsDirective` | `ng-template[treeVirtualItems]` | `treeVirtualItems` | `treeVirtualItems` (typing: the model or the document) | none |
 | `TreeItemDirective` | `[treeItem]` | `treeItem` | `treeItem` (the item) | none |
 | `TreeItemContentDirective` | `[treeItemContent]` | `treeItemContent` | none | none |
 | `TreeGroupDirective` | `[treeGroup]` | `treeGroup` | `keepMounted` | none |
 | `TreeToggleDirective` | `[treeToggle]` | `treeToggle` | none | none |
-| `TreeItemRenameDirective` | `input[treeItemRename]` | `treeItemRename` | none | `renameError` |
 | `TreeDropIndicatorDirective` | `[treeDropIndicator]` | `treeDropIndicator` | none | none |
 | `TreeLiveRegionDirective` | `[treeLiveRegion]` | `treeLiveRegion` | none | none |
 
+`TREE` holds them all. A feature's directive comes from its entry, in your component's `imports`:
+
+| directive | selector | `exportAs` | inputs | outputs |
+| --- | --- | --- | --- | --- |
+| `TreeItemRenameDirective` (`@fragiola/tree-angular/rename`) | `input[treeItemRename]` | `treeItemRename` | none | `renameError` |
+
 The classes end in `Directive` because the core, re-exported, already has a `TreeItem` type.
-Another model, or another engine option (`keyMap`, `checkboxes`, …), makes another engine.
+Another model, or another engine option (`keyMap`, `dragGroup`, …), makes another engine.
 Create the model once, in a field (`readonly model = createTreeModel<Types>(json)`).
 
 Through `exportAs`, every directive has `state()`: `RootState` on the root (with `model()`,

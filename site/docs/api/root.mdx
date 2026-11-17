@@ -83,7 +83,7 @@ export class Files {
 </Framework>
 
 `Root` is generic over the model's registry (`RootProps<T>`): `model: TreeModel<Types>` types
-`loadChildren` and `treeRef`. The parts that hand you items through a function (`Tree.Items`,
+`treeRef`, and `loadChildren` with `asyncChildren()`. The parts that hand you items through a function (`Tree.Items`,
 `Tree.Group`) cannot infer it through context: pass it as their type argument (in Vue, take the
 parts from `typedTree<Types>()`: [Vue primitives](/docs/api/vue); in Angular, give the model to
 `[treeItems]`: [Angular primitives](/docs/api/angular)).
@@ -106,18 +106,13 @@ ship ([Feature props](#feature-props)). `F` comes from the `model` (`TreeModel<T
 | `features` | `F` (`TreeFeatures`) | none | the opt-in features of the model the root creates from `defaultTree` (`[selection()]`, from `@fragiola/tree-react/selection`), read once at mount: a later change is ignored, with a warning. A `model` has its own ([Features](/docs/concepts/features)) |
 | `expandedItemIds` | `readonly string[]` | uncontrolled | controlled expansion ([Controlled state](/docs/guides/controlled-state)) |
 | `onExpandedItemIdsChange` | `(itemIds: string[]) => void` | none | called with the expanded items after every command that changes them |
-| `checkedItemIds` | `readonly string[]` | uncontrolled | controlled checks |
-| `onCheckedItemIdsChange` | `(itemIds: string[]) => void` | none | called with the checked items after every command that changes them |
-| `loadChildren` | `LoadChildren<T>`: `(item, { signal }) => Promise<readonly TreeItemJson<T>[]>` | none | your loader of the children of an item with a `childrenStatus` ([Async loading](/docs/guides/async-loading)) |
 | `announce` | `(event: AnnounceEvent) => string \| undefined` | none | the live region's text for a drag step or a failed load; no text is built in |
 | `keyMap` | `Partial<KeyMap>` | `DEFAULT_KEY_MAP` | key bindings, over the defaults ([Keyboard and type-ahead](/docs/guides/keyboard)) |
 | `expandOnClick` | `boolean` | `false` | a click on a parent's row also expands or collapses it |
-| `checkboxes` | `boolean` | `false` | the items carry `aria-checked`, and Space toggles the focused item's check |
 | `dragThreshold` | `number` | `4` | how far (px) a press moves before it is a drag |
 | `autoExpandDelay` | `number` | `800` | how long (ms) a drag hovers a collapsed parent before it expands |
 | `indentation` | `number` | `16` | the indentation of one level (px): the drop level at the end of a sublist, and the drop indicator's inline offset |
 | `indicatorInset` | `number` | `0` | how far (px) a drop line (`before`, `after`) starts past its level's inline start: the toggle, a grip or padding before the label ([Keeping drops in line](/docs/getting-started/depth#keeping-drops-in-line)) |
-| `typeAheadTimeout` | `number` | `500` | how long (ms) between two typed characters keeps one type-ahead search |
 | `dragGroup` | `string` | none | joins the trees of the document with the same group name: items drag between them by pointer and keyboard ([Between trees](/docs/guides/drag-and-drop#between-trees)). Another group creates another engine |
 | `transfer` | `TransferHandler` | the default transfer | what a drop from a tree of another model does here: run your commands (copy, convert kinds) and return `false` to refuse; asked first with `dryRun` for each target. Default: the target model adds the dragged subtrees, the source model removes them |
 | `foreignDrop` | `TreeForeignDrop<T>` | none | takes files, links and text dragged on the tree from the desktop or another window (`createTreeForeignDrop(options)`, [Foreign content](/docs/guides/drag-and-drop#foreign-content)): the target shows as for a tree drag, and its `onDrop` runs your commands. Create it once: another one creates another engine |
@@ -130,14 +125,19 @@ The root names nothing: give it `aria-label` or `aria-labelledby`
 
 ## Feature props
 
-A feature ships its controlled list and its change callback; they compile only when the feature is
-installed, and the root maps them as it maps `expandedItemIds`. Given without the feature, a prop is
-ignored with a warning.
+A feature ships its root props: a controlled list and its change callback, or the loader of
+`asyncChildren()`. They compile only when the feature is installed, and the root maps a list as it
+maps `expandedItemIds`. Given without the feature, a prop is ignored with a warning. Space toggles
+the focused item's check with `checkboxes()` (`checkboxes({ space })`), and the type-ahead's delay
+is `typeAhead({ timeout })`: options of the features, not props.
 
 | prop | feature | description |
 | --- | --- | --- |
 | `selectedItemIds` | `selection()` | controlled selection: the selected items ([Controlled state](/docs/guides/controlled-state)) |
 | `onSelectedItemIdsChange` | `selection()` | called with the selection after every command that changes it |
+| `checkedItemIds` | `checkboxes()` | controlled checks: the checked items ([Checkboxes](/docs/guides/checkboxes)) |
+| `onCheckedItemIdsChange` | `checkboxes()` | called with the checked items after every command that changes them |
+| `loadChildren` | `asyncChildren()` | your loader of the children of an item with a `childrenStatus`: `LoadChildren<T>`, `(item, { signal }) => Promise<readonly TreeItemJson<T>[]>` ([Async loading](/docs/guides/async-loading)) |
 
 ## State
 

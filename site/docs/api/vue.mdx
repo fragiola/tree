@@ -64,10 +64,10 @@ export const Tree = typedTree<Types, typeof features>();
 | children functions (`Tree.Items`, `Tree.Group`) | the default scoped slot: `v-slot="{ item }"` |
 | `expandedItemIds` + `onExpandedItemIdsChange` | `v-model:expanded-item-ids` (or `:expanded-item-ids` with `@update:expanded-item-ids`) |
 | `selectedItemIds` + `onSelectedItemIdsChange` | `v-model:selected-item-ids` (with `selection()`) |
-| `checkedItemIds` + `onCheckedItemIdsChange` | `v-model:checked-item-ids` |
-| `useTreeItemRename(item, { onRenameError })` | the same composable and option; `@input` of your own runs next to its listener |
+| `checkedItemIds` + `onCheckedItemIdsChange` (`checkboxes()`) | `v-model:checked-item-ids` |
+| `useTreeItemRename(item, { onRenameError })` (`@fragiola/tree-react/rename`) | the same composable and option, from `@fragiola/tree-vue/rename`; `@input` of your own runs next to its listener |
 | `treeRef={tree}` | `:tree-ref="tree"`; the handle is `tree.value`, in the template too (React: `tree.current`) |
-| `defaultTree`, `expandOnClick`, `keyMap`, … | the same props in kebab-case (`default-tree`, `expand-on-click`, `key-map`); a boolean prop takes a bare attribute (`checkboxes`) |
+| `defaultTree`, `expandOnClick`, `keyMap`, … | the same props in kebab-case (`default-tree`, `expand-on-click`, `key-map`); a boolean prop takes a bare attribute (`expand-on-click`) |
 | `<Tree.Items<Types>>` and the other type arguments | `typedTree<Types, typeof features>().Items` |
 | `<VirtualItems<Types>>` | `typedVirtualItems<Types>()`, from `@fragiola/tree-vue/virtualization` |
 
@@ -78,7 +78,7 @@ Every part is `Tree.<Part>`, with the props of its React page except `render`, `
 
 | part | Vue props | slots | events |
 | --- | --- | --- | --- |
-| `Tree.Root` | `model`, `defaultTree`, `features`, `expandedItemIds`, `selectedItemIds`, `checkedItemIds`, `loadChildren`, `announce`, `keyMap`, `expandOnClick`, `checkboxes`, `dragThreshold`, `autoExpandDelay`, `indentation`, `indicatorInset`, `typeAheadTimeout`, `dragGroup`, `transfer`, `foreignDrop`, `dropOutside`, `treeRef` | default | `update:expandedItemIds`, `update:selectedItemIds`, `update:checkedItemIds` |
+| `Tree.Root` | `model`, `defaultTree`, `features`, `expandedItemIds`, `selectedItemIds`, `checkedItemIds`, `loadChildren`, `announce`, `keyMap`, `expandOnClick`, `dragThreshold`, `autoExpandDelay`, `indentation`, `indicatorInset`, `dragGroup`, `transfer`, `foreignDrop`, `dropOutside`, `treeRef` | default | `update:expandedItemIds`, `update:selectedItemIds`, `update:checkedItemIds` |
 | `Tree.Items` | none | default `{ item }` | none |
 | `Tree.Item` | `item` | default `{ state }` | none |
 | `Tree.ItemContent` | none | default `{ state }` | none |

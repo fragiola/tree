@@ -7,7 +7,7 @@ children, inline rename and tri-state checkboxes.
 
 Fragiola Tree is **headless**. It ships the behaviour, the accessibility and the primitives
 (`Tree.Root`, `Items`, `Item`, `ItemContent`, `Group`, `Toggle`, `DropIndicator`, `LiveRegion`,
-and `VirtualItems` with the virtualization feature) and the hooks below them (`useTreeItem`, `useTreeItemRename`, …), and **no CSS, no
+and `VirtualItems` with the virtualization feature) and the hooks below them (`useTreeItem`, `useTreeItemRename` from `/rename`, …), and **no CSS, no
 icons and no text**: you style every part with
 `className`, `style` and the `data-*` attributes it exposes, and every visible word and accessible
 name comes from you.
@@ -77,6 +77,10 @@ import a feature does not ship it.
 | feature | entry |
 | --- | --- |
 | `selection(options?)`: the selected items, the selection keys and clicks, `aria-selected` | `@fragiola/tree-react/selection` |
+| `checkboxes(options?)`: tri-state checks, `aria-checked`, Space to check, `checkedItemIds` | `@fragiola/tree-react/checkboxes` |
+| `rename(options?)`: the renaming item, F2, the rename commands, `useTreeItemRename` | `@fragiola/tree-react/rename` |
+| `asyncChildren()`: children from your `loadChildren`, `aria-busy` | `@fragiola/tree-react/async-children` |
+| `typeAhead(options?)`: typed characters focus a matching label | `@fragiola/tree-react/type-ahead` |
 | `virtualization(options?)`: a window of the rows in view, rendered by `VirtualItems` | `@fragiola/tree-react/virtualization` |
 
 ```ts

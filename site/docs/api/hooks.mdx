@@ -232,7 +232,7 @@ functions):
 | `selected` | `boolean` | it is part of the selection (`selection()`) |
 | `focused` | `boolean` | it is the focused item (model data: the roving tab stop as stored) |
 | `tabStop` | `boolean` | it is the roving tab stop: the one item with `tabindex` 0 |
-| `checkState` | `CheckState`: `"checked" \| "unchecked" \| "mixed"` | its check (`mixed` only when the root has `checkboxes`); your check control reads it |
+| `checkState` | `CheckState`: `"checked" \| "unchecked" \| "mixed"` | its check (`checkboxes()`; `unchecked` without it); your check control reads it |
 | `checked` | `boolean` | it is checked (not mixed) |
 | `indeterminate` | `boolean` | it is mixed: only some of its descendants are checked |
 | `renaming` | `boolean` | its label is being edited |
@@ -254,8 +254,9 @@ function useTreeItemRename<T extends TreeTypes = AnyTypes>(
 ): UseTreeItemRenameResult;
 ```
 
-An item's rename, wired onto an input of yours: the part hook of the label editor, with no
-element of its own. Render your input only while `state.renaming`, spread `props` on it and name
+From `@fragiola/tree-react/rename` (Vue: `@fragiola/tree-vue/rename`), with `rename()` in the
+model's features. An item's rename, wired onto an input of yours: the part hook of the label
+editor, with no element of its own. Render your input only while `state.renaming`, spread `props` on it and name
 it. It opens with the label, focused and selected. Enter commits (`engine.run("commit-rename")`)
 and Escape cancels (`engine.run("cancel-rename")`), and focus goes back to the item. Leaving it
 commits, or cancels when refused, and leaves focus where it went. A refused commit keeps it open
@@ -279,7 +280,8 @@ To add a handler of your own on the input, call the hook's handler first (`props
 
 ```vue
 <script setup lang="ts">
-import { type ItemOf, useTreeItemRename } from "@fragiola/tree-vue";
+import type { ItemOf } from "@fragiola/tree-vue";
+import { useTreeItemRename } from "@fragiola/tree-vue/rename";
 
 const props = defineProps<{ item: ItemOf<Types> }>();
 // the item as a value, a ref or a getter; state and props are computed refs

@@ -42,19 +42,19 @@ Its type is `TreeJson<T>`, typed by your registry `T`; its `settings` are a `Tre
 | `items` | object | yes | every item, keyed by its id |
 | `expandedItemIds` | `string[]` | no | the expanded items |
 | `selectedItemIds` | `string[]` | no | `selection()`: the selection, in the order it was made |
-| `checkedItemIds` | `string[]` | no | the checked items |
+| `checkedItemIds` | `string[]` | no | `checkboxes()`: the checked items |
 | `selectionAnchorItemId` | `string \| null` | no | `selection()`: where a range selection starts |
 | `focusedItemId` | `string \| null` | no | the roving tab stop |
-| `renamingItemId` | `string \| null` | no | the item whose label is being edited |
+| `renamingItemId` | `string \| null` | no | `rename()`: the item whose label is being edited |
 
 ## Settings
 
 | field | values | default |
 | --- | --- | --- |
 | `selectionMode` | `"none"`, `"single"`, `"multiple"` (`selection()`) | the feature's `mode` option, `"single"` by default |
-| `checkMode` | `"cascade"`, `"independent"` | `"cascade"` |
+| `checkMode` | `"cascade"`, `"independent"` (`checkboxes()`) | the feature's `mode` option, `"cascade"` by default |
 | `movable` | boolean: the default of an item's `movable` | `true` |
-| `renamable` | boolean: the default of an item's `renamable` | `true` |
+| `renamable` | boolean: the default of an item's `renamable` (`rename()`) | the feature's `renamable` option, `true` by default |
 | `droppable` | boolean: the default of an item's `droppable` | `true` |
 
 ## Items
@@ -71,10 +71,10 @@ shape.
 | `label` | `string` | yes | the item's name, raw: the app renders it, the packages never do |
 | `data` | JSON | no | the app's data (required by the type when the kind's data does not allow `undefined`) |
 | `childItemIds` | `string[]` | no | its children, in order |
-| `childrenStatus` | `"unloaded"`, `"loading"`, `"loaded"`, `"error"` | no | where its children come from the app's loader |
+| `childrenStatus` | `"unloaded"`, `"loading"`, `"loaded"`, `"error"` | no | `asyncChildren()`: where its children come from the app's loader |
 | `disabled` | boolean | no | focusable, but not actionable |
 | `movable` | boolean | no | whether it can be moved (default: `settings.movable`) |
-| `renamable` | boolean | no | whether its label can be edited (default: `settings.renamable`) |
+| `renamable` | boolean | no | `rename()`: whether its label can be edited (default: `settings.renamable`) |
 | `droppable` | boolean | no | whether it accepts items moved into it (default: `settings.droppable`) |
 
 An item with neither `childItemIds` nor `childrenStatus` is a **leaf**. An item with
@@ -90,7 +90,7 @@ waits for `loadChildren`, `loaded` with its `childItemIds`, `error` when the loa
 - `expandedItemIds`, `selectedItemIds`, `checkedItemIds` and the single ids name items; no list
   repeats an id.
 - `selectionMode: "none"` holds no selection, `"single"` at most one item.
-- A field of a feature (the ones marked `selection()`) loads only into a model with that feature:
+- A field of a feature (the ones marked `selection()`, `checkboxes()`, `rename()` or `asyncChildren()`) loads only into a model with that feature:
   elsewhere it is an issue, `requires the selection feature` ([Features](/docs/concepts/features)).
   `model.get("tree-json")` writes only the installed features' fields.
 - With `dataSchemas` (a JSON Schema per kind, an option of `createTreeModel`), each item's `data`
