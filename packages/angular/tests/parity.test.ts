@@ -11,6 +11,7 @@ import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { describe, expect, it } from "vitest";
 import {
+    createTreeForeignDrop,
     createTreeModel,
     TREE,
     type TreeJson,
@@ -26,6 +27,7 @@ import {
     press,
     render,
     renderFiles,
+    settle,
 } from "./tree";
 
 type Item = { id: string; label: string; childItemIds?: string[] };
@@ -338,6 +340,76 @@ describe("parity with @fragiola/tree-react across a drag group", () => {
             "inside",
         );
         expect(attributes(files, "drop-indicator")).toBeUndefined();
+        expect(angular).toEqual(react);
+    });
+});
+
+describe("parity with @fragiola/tree-react in a foreign drag", () => {
+    it("renders the same target for files dragged on the tree", async () => {
+        const foreignDrop = createTreeForeignDrop<FileTypes>({
+            onDrop: () => {},
+        });
+        // the top of app.ts (the second row, 20px each): before it
+        const dragOver = (target: Element | null | undefined) => {
+            const event = new MouseEvent("dragover", {
+                bubbles: true,
+                cancelable: true,
+                clientX: 40,
+                clientY: 22,
+            });
+            Object.defineProperty(event, "dataTransfer", {
+                value: { types: ["Files"], dropEffect: "none" },
+            });
+            target?.dispatchEvent(event);
+        };
+        const rendered = await renderFiles({
+            model: filesModel(),
+            foreignDrop,
+        });
+        dragOver(document.querySelector('[role="tree"]'));
+        rendered.fixture.detectChanges();
+        await settle();
+        const treeElement = document.querySelector(
+            '[role="tree"]',
+        ) as HTMLElement;
+        const angular = [part(treeElement), ...snapshot(treeElement, true)];
+        document.body.innerHTML = "";
+
+        const host = document.createElement("div");
+        document.body.append(host);
+        const root = createRoot(host);
+        (
+            globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
+        ).IS_REACT_ACT_ENVIRONMENT = true;
+        await act(async () => {
+            root.render(
+                r(
+                    ReactTree.Root,
+                    {
+                        model: filesModel() as never,
+                        "aria-label": "Files",
+                        foreignDrop: foreignDrop as never,
+                    },
+                    r(ReactTree.Items, {
+                        children: (item: Item) => reactItem(item),
+                    } as never),
+                    r(ReactTree.DropIndicator),
+                    r(ReactTree.LiveRegion),
+                ),
+            );
+        });
+        await act(async () => dragOver(host.firstElementChild));
+        const reactElement = host.firstElementChild as HTMLElement;
+        const react = [part(reactElement), ...snapshot(reactElement, false)];
+        act(() => root.unmount());
+
+        expect(angular[0]?.attributes["data-dragging"]).toBe("");
+        expect(
+            angular.find(
+                (element) =>
+                    element.attributes["data-tree-part"] === "drop-indicator",
+            )?.attributes["data-drop-position"],
+        ).toBe("before");
         expect(angular).toEqual(react);
     });
 });

@@ -6,7 +6,9 @@ import {
     type KeyMap,
     type LoadChildren,
     type TransferHandler,
+    type TreeDropOutside,
     type TreeEngine,
+    type TreeForeignDrop,
     type TreeJson,
     type TreeModel,
     type TreeTypes,
@@ -99,6 +101,19 @@ export interface RootProps<T extends TreeTypes = AnyTypes>
      * model adds the dragged subtrees and the source model removes them
      */
     transfer?: TransferHandler | undefined;
+    /**
+     * takes files, links and text dragged on the tree from the desktop or another window
+     * (`createTreeForeignDrop(options)`): the target shows as for a tree drag, and its `onDrop`
+     * runs your commands. Create it once (at module level, or memoized): another one creates
+     * another engine
+     */
+    foreignDrop?: TreeForeignDrop<T> | undefined;
+    /**
+     * hands your `onDrop` the items of a pointer drag released outside every tree of the group
+     * (`createTreeDropOutside(options)`), for your own targets. Create it once: another one
+     * creates another engine
+     */
+    dropOutside?: TreeDropOutside<T> | undefined;
     /** access to the model and the engine from outside the root (`useTreeRef`, `createTreeRef`) */
     treeRef?: TreeRef<T> | undefined;
     children?: React.ReactNode;
@@ -135,6 +150,8 @@ export function Root<T extends TreeTypes = AnyTypes>(props: RootProps<T>) {
         virtual,
         dragGroup,
         transfer,
+        foreignDrop,
+        dropOutside,
         treeRef,
         children,
         ...rest
@@ -183,6 +200,8 @@ export function Root<T extends TreeTypes = AnyTypes>(props: RootProps<T>) {
             transfer: hasTransfer
                 ? (event) => latest.current.transfer?.(event)
                 : undefined,
+            foreignDrop: foreignDrop as TreeForeignDrop | undefined,
+            dropOutside: dropOutside as TreeDropOutside | undefined,
             // a remount (StrictMode, a route change) loads what this engine was loading
             resetLoadsOnDestroy: true,
         });
@@ -207,6 +226,8 @@ export function Root<T extends TreeTypes = AnyTypes>(props: RootProps<T>) {
         virtual,
         dragGroup,
         hasTransfer,
+        foreignDrop,
+        dropOutside,
     ]);
     // a destroyed engine (StrictMode's first mount, a replaced model) is never used again
     const live = engine && engine.adapter.model === model ? engine : null;
@@ -257,6 +278,10 @@ export function Root<T extends TreeTypes = AnyTypes>(props: RootProps<T>) {
     const onKeyDown = (event: React.KeyboardEvent<HTMLElement>) => {
         live?.adapter.handleKeyDown(event);
     };
+    // native drags bring foreign content (`foreignDrop`); the engine ignores them without it
+    const onDrag = (event: React.DragEvent<HTMLElement>) => {
+        live?.adapter.handleDragEvent(event.nativeEvent);
+    };
 
     // biome-ignore lint/correctness/useExhaustiveDependencies: the tab stop is the state's
     const tabStopItemId = React.useMemo(
@@ -298,6 +323,10 @@ export function Root<T extends TreeTypes = AnyTypes>(props: RootProps<T>) {
                 empty: rootState.empty,
             }),
             onKeyDown,
+            onDragEnter: onDrag,
+            onDragOver: onDrag,
+            onDragLeave: onDrag,
+            onDrop: onDrag,
             children,
         },
         // the containing block the drop indicator is positioned in

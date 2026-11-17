@@ -81,6 +81,11 @@ export interface EngineGetMap {
      * the spacer before it; null when the tree is not virtualized
      */
     "virtual-window": { payload: NoPayload; result: VirtualWindow | null };
+    /**
+     * the element under the pointer while this tree's pointer drag is outside every tree (the
+     * `dropOutside` option), for the app's own targets to show it; null otherwise
+     */
+    "drop-outside-element": { payload: NoPayload; result: Element | null };
 }
 
 export type EngineGetKey = keyof EngineGetMap;

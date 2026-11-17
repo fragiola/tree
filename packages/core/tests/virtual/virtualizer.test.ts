@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { createTreeForeignDrop } from "../../src/dnd/foreign-drop";
 import { createTreeEngine } from "../../src/engine/tree-engine";
 import { createTreeVirtualizer } from "../../src/virtual/virtualizer";
-import { mount, pointer, wait } from "../engine/dom";
+import { dataTransfer, mount, nativeDrag, pointer, wait } from "../engine/dom";
 import { filesModel } from "../fixture";
 import { flatModel, mountVirtual, type VirtualMounted } from "./dom";
 
@@ -301,6 +302,29 @@ describe("the virtualizer", () => {
         expect(mounted.model.state.rootItemIds.indexOf("n0")).toBeGreaterThan(
             20,
         );
+    });
+
+    it("takes a foreign drop on a row of its window, scrolled", () => {
+        const dropped: unknown[] = [];
+        mounted = mountVirtual(flatModel(1000), fixed, {
+            foreignDrop: createTreeForeignDrop({
+                onDrop: ({ to }) => dropped.push(to),
+            }),
+        });
+        mounted.scroll(1000);
+        const transfer = dataTransfer(["Files"]);
+        expect(nativeDrag(mounted.root, "dragover", 50, 5, transfer)).toBe(
+            true,
+        );
+        // between n49 and n50, in the window of the scrolled rows
+        expect(mounted.engine.get("drop-target")).toMatchObject({
+            parentItemId: null,
+            index: 50,
+        });
+        nativeDrag(mounted.root, "drop", 50, 5, transfer);
+        expect(dropped).toEqual([
+            expect.objectContaining({ parentItemId: null, index: 50 }),
+        ]);
     });
 
     it("drags between a virtualized tree and another tree of its group, by pointer and keyboard", () => {

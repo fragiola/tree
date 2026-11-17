@@ -38,6 +38,8 @@ interface Session {
     scrollSpeed: number;
     /** the scroll container the drag scrolls (the hovered tree's) */
     container: HTMLElement | undefined;
+    /** the pointer is outside every tree of the drag */
+    outside: boolean;
 }
 
 const sameTarget = (a: DropTarget | null, b: DropTarget | null) =>
@@ -187,6 +189,7 @@ export class PointerDrag {
             cancelScroll: undefined,
             scrollSpeed: 0,
             container: undefined,
+            outside: false,
         };
         drag.begin(null);
         this.host.announce({
@@ -211,7 +214,15 @@ export class PointerDrag {
     private hover(): void {
         const session = this.session;
         if (!session) return;
-        const over = this.treeAt(session);
+        let over = this.treeAt(session);
+        // with a drop outside, the part of the source's root its scroll container hides (a
+        // virtualized tree's rows out of view) is outside too
+        if (
+            over === this.host &&
+            this.host.dropOutside() &&
+            !overRoot(this.host, session.x, session.y, true)
+        )
+            over = undefined;
         const host = over ?? this.host;
         const target = over
             ? targetAt(
@@ -231,6 +242,9 @@ export class PointerDrag {
         }
         session.over = host;
         session.target = target;
+        session.outside = !over;
+        // the app's targets outside every tree see the element under the pointer
+        this.host.dropOutside()?.over(over ? undefined : session.x, session.y);
         if (moved || !sameTarget(previous, target)) {
             session.drag.show(host, target);
             this.host.announce({
@@ -291,7 +305,11 @@ export class PointerDrag {
     private updateScroll(): void {
         const session = this.session;
         if (!session || !this.host.root()) return;
-        const container = session.over.scrollContainer();
+        // a drag outside every tree, toward the app's targets, scrolls nothing
+        const container =
+            session.outside && this.host.dropOutside()
+                ? undefined
+                : session.over.scrollContainer();
         if (session.container !== container) {
             session.cancelScroll?.();
             session.cancelScroll = undefined;
@@ -352,6 +370,26 @@ export class PointerDrag {
             this.suppressClick = false;
         }, 0);
         this.end();
+        // released outside every tree: the app's `dropOutside` may take the items
+        const outside =
+            target === null && session.outside
+                ? this.host
+                      .dropOutside()
+                      ?.drop(
+                          session.itemIds,
+                          session.x,
+                          session.y,
+                          session.modifiers,
+                      )
+                : undefined;
+        if (outside !== undefined) {
+            this.host.announce({
+                type: "drop-outside",
+                itemIds: session.itemIds,
+                element: outside,
+            });
+            return;
+        }
         if (target === null || over.isDestroyed()) {
             this.host.announce({
                 type: "drag-cancel",
@@ -407,6 +445,7 @@ export class PointerDrag {
         const press = this.press;
         for (const release of this.release.splice(0)) release();
         if (session) {
+            this.host.dropOutside()?.over();
             session.drag.end();
             session.cancelExpand?.();
             session.cancelScroll?.();

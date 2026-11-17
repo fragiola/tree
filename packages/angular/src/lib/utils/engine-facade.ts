@@ -33,6 +33,7 @@ const EMPTY: { [K in EngineGetKey]: EngineGetResult<K> } = {
     announcement: "",
     direction: "ltr",
     "virtual-window": null,
+    "drop-outside-element": null,
 };
 
 type Verb = (key: string, payload?: unknown) => unknown;

@@ -15,6 +15,8 @@ import {
     type KeyMap,
     type LoadChildren,
     TREE,
+    type TreeDropOutside,
+    type TreeForeignDrop,
     type TreeJson,
     type TreeModel,
     type TreeRootDirective,
@@ -75,6 +77,8 @@ export interface FileTreeInputs {
     indentation?: number | undefined;
     indicatorInset?: number | undefined;
     typeAheadTimeout?: number | undefined;
+    foreignDrop?: TreeForeignDrop<FileTypes> | undefined;
+    dropOutside?: TreeDropOutside<FileTypes> | undefined;
 }
 
 /** What the root's change outputs reported, in order. */
@@ -102,6 +106,8 @@ export type Emitted = [list: string, itemIds: string[]];
             [indentation]="indentation()"
             [indicatorInset]="indicatorInset()"
             [typeAheadTimeout]="typeAheadTimeout()"
+            [foreignDrop]="foreignDrop()"
+            [dropOutside]="dropOutside()"
             (expandedItemIdsChange)="emitted.push(['expandedItemIds', $event])"
             (selectedItemIdsChange)="emitted.push(['selectedItemIds', $event])"
             (checkedItemIdsChange)="emitted.push(['checkedItemIds', $event])"
@@ -143,6 +149,12 @@ export class FileTree {
     readonly indentation = input<number | undefined>(undefined);
     readonly indicatorInset = input<number | undefined>(undefined);
     readonly typeAheadTimeout = input<number | undefined>(undefined);
+    readonly foreignDrop = input<TreeForeignDrop<FileTypes> | undefined>(
+        undefined,
+    );
+    readonly dropOutside = input<TreeDropOutside<FileTypes> | undefined>(
+        undefined,
+    );
     /** what the change outputs reported */
     readonly emitted: Emitted[] = [];
     /** the codes `(renameError)` reported */

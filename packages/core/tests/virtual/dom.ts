@@ -147,6 +147,10 @@ export function mountVirtual(
     };
     render();
     const unsubscribe = mounted.adapter.subscribe(render);
+    for (const type of ["dragenter", "dragover", "dragleave", "drop"])
+        root.addEventListener(type, (event) =>
+            mounted.adapter.handleDragEvent(event as DragEvent),
+        );
     root.addEventListener("keydown", (event) => {
         mounted.adapter.handleKeyDown(event);
     });

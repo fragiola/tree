@@ -47,6 +47,11 @@ export interface TreeEngineAdapter<T extends TreeTypes = AnyTypes> {
     /** DOM focus entered an item's element: it becomes the focused item */
     handleFocus(itemId: string): void;
     /**
+     * a native drag event on the root (`dragenter`, `dragover`, `dragleave`, `drop`): foreign
+     * content with the `foreignDrop` option, ignored without it
+     */
+    handleDragEvent(event: DragEvent): void;
+    /**
      * the rename input committed a label (Enter, blur): `item.rename`, then focus goes back to the
      * item unless `focus` is false (a blur: focus went elsewhere and stays there)
      */
