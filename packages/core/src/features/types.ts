@@ -5,6 +5,7 @@
 import type { CommandDefinition } from "../commands/define";
 import type { CommandName, CommandResult, RunOptions } from "../commands/types";
 import type { Scheduler } from "../dom/owner";
+import type { LoadChildren } from "../engine/load-children";
 import type { KeyEventInput, PressInput } from "../engine/adapter";
 import type { AnnounceEvent } from "../engine/host";
 import type {
@@ -299,8 +300,7 @@ export type FeatureStateOf<F extends TreeFeatures> = UnionToIntersection<
         : never
 >;
 
-/** The root props of a list of features, merged (`selectedItemIds` with `selection()`). */
-export type FeatureRootPropsOf<F extends TreeFeatures> = UnionToIntersection<
+type MergedRootProps<F extends TreeFeatures> = UnionToIntersection<
     F[number] extends infer X
         ? X extends TreeFeature<FeatureName, object, infer P>
             ? keyof P extends never
@@ -309,6 +309,20 @@ export type FeatureRootPropsOf<F extends TreeFeatures> = UnionToIntersection<
             : never
         : never
 >;
+
+/**
+ * The root props of a list of features, merged (`selectedItemIds` with `selection()`), typed by the
+ * registry `T` where a prop takes the app's items (`loadChildren` with `asyncChildren()`).
+ */
+export type FeatureRootPropsOf<
+    F extends TreeFeatures,
+    T extends TreeTypes = AnyTypes,
+> = "async-children" extends FeatureNamesOf<F>
+    ? Omit<MergedRootProps<F>, "loadChildren"> & {
+          /** the app's loader of the children of an item with a `childrenStatus` */
+          loadChildren?: LoadChildren<T> | undefined;
+      }
+    : MergedRootProps<F>;
 
 type UnionToIntersection<U> = (
     U extends unknown

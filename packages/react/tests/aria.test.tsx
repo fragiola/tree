@@ -1,7 +1,14 @@
 import { act, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { Tree } from "../src";
-import { byPath, FileTree, filesModel, itemElement } from "./tree";
+import { selection } from "../src/selection";
+import {
+    byPath,
+    FileTree,
+    filesModel,
+    filesModelWith,
+    itemElement,
+} from "./tree";
 
 describe("the WAI-ARIA Tree View roles and states", () => {
     it("renders a tree, its items and their groups", () => {
@@ -68,7 +75,7 @@ describe("the WAI-ARIA Tree View roles and states", () => {
             expandedItemIds: ["src", "utils"],
             checkedItemIds: ["a"],
         });
-        render(<FileTree model={model} checkboxes />);
+        render(<FileTree model={model} />);
         expect(itemElement("a.ts")).toHaveAttribute("aria-checked", "true");
         expect(itemElement("b.ts")).toHaveAttribute("aria-checked", "false");
         expect(itemElement("utils")).toHaveAttribute("aria-checked", "mixed");
@@ -76,7 +83,7 @@ describe("the WAI-ARIA Tree View roles and states", () => {
     });
 
     it("sets no aria-checked without checkboxes", () => {
-        render(<FileTree model={filesModel({ checkedItemIds: ["app"] })} />);
+        render(<FileTree model={filesModelWith([selection()])} />);
         expect(itemElement("app.ts")).not.toHaveAttribute("aria-checked");
     });
 

@@ -5,12 +5,16 @@ import {
     type ItemOf,
     type RootProps,
     Tree,
+    type TreeFeatures,
     type TreeJson,
     useTree,
     useTreeItem,
-    useTreeItemRename,
 } from "../src";
+import { asyncChildren } from "../src/async-children";
+import { checkboxes } from "../src/checkboxes";
+import { rename, useTreeItemRename } from "../src/rename";
 import { selection } from "../src/selection";
+import { typeAhead } from "../src/type-ahead";
 
 export type FileTypes = {
     items: { folder: undefined; file: { size: number } };
@@ -47,8 +51,14 @@ export function files(
     };
 }
 
-/** The features the tests' trees install: the selection. */
-export const FEATURES = [selection()] as const;
+/** The features the tests' trees install: every feature with a model of its own. */
+export const FEATURES = [
+    selection(),
+    checkboxes(),
+    rename(),
+    asyncChildren(),
+    typeAhead(),
+] as const;
 
 export const filesModel = (patch: Partial<TreeJson<FileTypes>> = {}) =>
     createTreeModel<FileTypes, typeof FEATURES>(files(patch), {
@@ -56,11 +66,30 @@ export const filesModel = (patch: Partial<TreeJson<FileTypes>> = {}) =>
     });
 
 /**
+ * A model of `files()` with other features: without `asyncChildren()`, `lib` is a parent with no
+ * children (a document without the feature has no `childrenStatus`).
+ */
+export function filesModelWith<const F extends TreeFeatures>(
+    features: F,
+    patch: Partial<TreeJson<FileTypes>> = {},
+) {
+    const json = files(patch);
+    if (!features.some((feature) => feature.name === "async-children")) {
+        const { childrenStatus: _, ...lib } = json.items.lib ?? {
+            kind: "folder",
+            label: "lib",
+        };
+        json.items.lib = { ...lib, childItemIds: [] };
+    }
+    return createTreeModel<FileTypes, F>(json, { features });
+}
+
+/**
  * The app's own check control: a native button out of the tab order and hidden from assistive
  * technology (the item carries `aria-checked`, and Space toggles it), running `item.toggle-check`.
  */
 export function Check({ item }: { item: ItemOf<FileTypes> }) {
-    const { model } = useTree<FileTypes>();
+    const { model } = useTree<FileTypes, typeof FEATURES>();
     const { state } = useTreeItem(item);
     return (
         <button
@@ -97,11 +126,13 @@ export function FileItem({ item }: { item: ItemOf<FileTypes> }) {
     );
 }
 
-export function FileTree(props: RootProps<FileTypes, typeof FEATURES>) {
+export function FileTree<F extends TreeFeatures = typeof FEATURES>(
+    props: RootProps<FileTypes, F>,
+) {
     return (
-        <Tree.Root<FileTypes, typeof FEATURES>
+        <Tree.Root<FileTypes, F>
             aria-label="Files"
-            features={FEATURES}
+            features={FEATURES as unknown as F}
             {...props}
         >
             <Tree.Items<FileTypes>>

@@ -42,6 +42,30 @@
             "import": "./dist/selection.js",
             "default": "./dist/selection.js"
         },
+        "./checkboxes": {
+            "@fragiola/source": "./src/checkboxes/index.ts",
+            "types": "./dist/checkboxes.d.ts",
+            "import": "./dist/checkboxes.js",
+            "default": "./dist/checkboxes.js"
+        },
+        "./rename": {
+            "@fragiola/source": "./src/rename/index.ts",
+            "types": "./dist/rename.d.ts",
+            "import": "./dist/rename.js",
+            "default": "./dist/rename.js"
+        },
+        "./async-children": {
+            "@fragiola/source": "./src/async-children/index.ts",
+            "types": "./dist/async-children.d.ts",
+            "import": "./dist/async-children.js",
+            "default": "./dist/async-children.js"
+        },
+        "./type-ahead": {
+            "@fragiola/source": "./src/type-ahead/index.ts",
+            "types": "./dist/type-ahead.d.ts",
+            "import": "./dist/type-ahead.js",
+            "default": "./dist/type-ahead.js"
+        },
         "./virtualization": {
             "@fragiola/source": "./src/virtualization/index.ts",
             "types": "./dist/virtualization.d.ts",
@@ -67,6 +91,26 @@
                 "types": "./dist/selection.d.ts",
                 "import": "./dist/selection.js",
                 "default": "./dist/selection.js"
+            },
+            "./checkboxes": {
+                "types": "./dist/checkboxes.d.ts",
+                "import": "./dist/checkboxes.js",
+                "default": "./dist/checkboxes.js"
+            },
+            "./rename": {
+                "types": "./dist/rename.d.ts",
+                "import": "./dist/rename.js",
+                "default": "./dist/rename.js"
+            },
+            "./async-children": {
+                "types": "./dist/async-children.d.ts",
+                "import": "./dist/async-children.js",
+                "default": "./dist/async-children.js"
+            },
+            "./type-ahead": {
+                "types": "./dist/type-ahead.d.ts",
+                "import": "./dist/type-ahead.js",
+                "default": "./dist/type-ahead.js"
             },
             "./virtualization": {
                 "types": "./dist/virtualization.d.ts",

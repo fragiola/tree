@@ -1,7 +1,11 @@
 // Type fixtures (compiled by `pnpm typecheck`, never run): the root's props, the hooks and the refs
 // are typed by the model's features. `@ts-expect-error` marks what must not compile.
 import { createTreeModel, Tree, useTreeRef, useTreeState } from "../../src";
+import { asyncChildren } from "../../src/async-children";
+import { checkboxes } from "../../src/checkboxes";
+import { rename } from "../../src/rename";
 import { selection } from "../../src/selection";
+import { typeAhead } from "../../src/type-ahead";
 import { virtualization } from "../../src/virtualization";
 import type { FileTypes } from "../tree";
 
@@ -46,6 +50,65 @@ export function WithoutFeatures() {
             />
             {/* @ts-expect-error a root's features type its model */}
             <Tree.Root<FileTypes> features={features} />
+        </>
+    );
+}
+
+const stateFeatures = [
+    checkboxes(),
+    rename(),
+    asyncChildren(),
+    typeAhead(),
+] as const;
+const stateModel = createTreeModel<FileTypes, typeof stateFeatures>(undefined, {
+    features: stateFeatures,
+});
+
+export function WithStateFeatures() {
+    const checked = useTreeState((state) => state.checkedItemIds.length, {
+        model: stateModel,
+    });
+    const tree = useTreeRef<FileTypes, typeof stateFeatures>();
+    tree.current?.engine.run("load-children", { itemId: "a" });
+    tree.current?.engine.run("cancel-rename", { itemId: "a" });
+    return (
+        <Tree.Root
+            model={stateModel}
+            treeRef={tree}
+            checkedItemIds={[]}
+            onCheckedItemIdsChange={(itemIds: string[]) => void itemIds}
+            // the loader is typed by the registry: a file's data is { size }
+            loadChildren={async (item) =>
+                item.kind === "file"
+                    ? []
+                    : [{ kind: "file", label: "x", data: { size: 1 } }]
+            }
+            aria-label={String(checked)}
+        />
+    );
+}
+
+export function WithoutStateFeatures() {
+    // @ts-expect-error a bare tree's state has no checks
+    useTreeState((state) => state.checkedItemIds, { model: bare });
+    const tree = useTreeRef<FileTypes>();
+    // @ts-expect-error the async children feature is not installed
+    tree.current?.engine.run("load-children", { itemId: "a" });
+    // @ts-expect-error the rename feature is not installed
+    tree.current?.engine.run("commit-rename", { itemId: "a", label: "b" });
+    return (
+        <>
+            {/* @ts-expect-error checkedItemIds needs the checkboxes feature */}
+            <Tree.Root model={bare} checkedItemIds={[]} />
+            {/* @ts-expect-error loadChildren needs the async children feature */}
+            <Tree.Root model={bare} loadChildren={async () => []} />
+            <Tree.Root
+                model={stateModel}
+                // @ts-expect-error a file's data is { size: number }
+                loadChildren={async () => [
+                    { kind: "file", label: "x", data: { size: "big" } },
+                ]}
+            />
         </>
     );
 }

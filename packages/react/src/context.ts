@@ -27,8 +27,6 @@ export interface TreeContextValue {
     revision: number;
     /** the roving tab stop of this state (`tab-stop-item`), computed once per render */
     tabStopItemId: string | undefined;
-    /** the items carry `aria-checked` and Space toggles the check (`checkboxes` on the root) */
-    checkboxes: boolean;
 }
 
 export const TreeContext = React.createContext<TreeContextValue | null>(null);

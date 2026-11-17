@@ -34,17 +34,17 @@ export interface TreeItemState {
     focused: boolean;
     /** it is the roving tab stop: the one item with `tabindex` 0 */
     tabStop: boolean;
-    /** its checkbox: checked, unchecked or mixed */
+    /** its check: checked, unchecked or mixed (`checkboxes()`; unchecked without it) */
     checkState: CheckState;
-    /** its checkbox is checked (not mixed) */
+    /** its check is checked, not mixed (`checkboxes()`) */
     checked: boolean;
-    /** its checkbox is mixed: only some of its descendants are checked */
+    /** its check is mixed: only some of its descendants are checked (`checkboxes()`) */
     indeterminate: boolean;
-    /** its label is being edited */
+    /** its label is being edited (`rename()`) */
     renaming: boolean;
-    /** its children are being loaded */
+    /** its children are being loaded (`asyncChildren()`) */
     loading: boolean;
-    /** the last load of its children failed */
+    /** the last load of its children failed (`asyncChildren()`) */
     loadError: boolean;
     /** focusable, not actionable */
     disabled: boolean;
@@ -74,7 +74,8 @@ export interface UseTreeItemResult {
 /**
  * An item of the enclosing `Tree.Root`: its state, and the props of its element (`role="treeitem"`
  * with `aria-level`, `aria-posinset`, `aria-setsize`, `aria-expanded`, the features' ARIA
- * (`aria-selected` with `selection()`), `aria-checked`, `aria-disabled`, `aria-busy`, the roving `tabindex`, the `data-*` state, the
+ * (`aria-selected` with `selection()`, `aria-checked` with `checkboxes()`, `aria-busy` with
+ * `asyncChildren()`), `aria-disabled`, the roving `tabindex`, the `data-*` state, the
  * part and path attributes, its focus handler and the ref that registers it with the engine).
  * `Tree.Item` is this hook on a `div`.
  *
@@ -87,7 +88,7 @@ export function useTreeItem<T extends TreeTypes = AnyTypes>(
     item: ItemOf<T>,
 ): UseTreeItemResult {
     const context = useTreeContext("Item");
-    const { engine, checkboxes } = context;
+    const { engine } = context;
     const state = useTreeItemState<T>(item);
     const itemId = item.id;
     const ref = React.useCallback(
@@ -112,13 +113,7 @@ export function useTreeItem<T extends TreeTypes = AnyTypes>(
         "aria-setsize": state.setsize,
         "aria-expanded": state.leaf ? undefined : state.expanded,
         ...featureAriaAttributes(state.attributes),
-        "aria-checked": checkboxes
-            ? state.indeterminate
-                ? "mixed"
-                : state.checked
-            : undefined,
         "aria-disabled": state.disabled || undefined,
-        "aria-busy": state.loading || undefined,
         tabIndex: state.tabStop ? 0 : -1,
         "data-tree-part": "item",
         "data-tree-path": state.path,

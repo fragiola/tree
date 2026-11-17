@@ -1,7 +1,16 @@
-import type { AnyTypes, CommandError, ItemOf, TreeTypes } from "@fragiola/tree";
+// The rename's part hook (`@fragiola/tree-react/rename`): it wires the app's own editor onto an
+// item's rename (`rename()`). A tree that never imports it does not ship it.
+import type {
+    AnyFeatures,
+    AnyTypes,
+    CommandError,
+    ItemOf,
+    TreeEngine,
+    TreeTypes,
+} from "@fragiola/tree";
 import * as React from "react";
 import { useTreeContext } from "../context";
-import { useIsomorphicLayoutEffect } from "./internal";
+import { useIsomorphicLayoutEffect } from "../hooks/internal";
 
 /** What `useTreeItemRename` says about an item's rename. */
 export interface TreeItemRenameState {
@@ -51,9 +60,13 @@ export function useTreeItemRename<T extends TreeTypes = AnyTypes>(
     item: ItemOf<T>,
     options: UseTreeItemRenameOptions = {},
 ): UseTreeItemRenameResult {
-    const { engine, state: treeState } = useTreeContext("useTreeItemRename");
+    const context = useTreeContext("useTreeItemRename");
+    const engine = context.engine as TreeEngine<AnyTypes, AnyFeatures> | null;
     const itemId = item.id;
-    const renaming = treeState.renamingItemId === itemId;
+    // the rename's state (`rename()`): a model without it never renames
+    const renaming =
+        (context.state as { readonly renamingItemId?: string | null })
+            .renamingItemId === itemId;
     const input = React.useRef<HTMLInputElement | null>(null);
     // set once this rename is committed or cancelled: the item taking focus back blurs the input,
     // and that blur must not commit a second time

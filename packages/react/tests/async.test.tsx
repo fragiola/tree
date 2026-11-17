@@ -2,7 +2,13 @@ import { act, render, screen } from "@testing-library/react";
 import { StrictMode } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { createTreeRef, type TreeItemJson } from "../src";
-import { FileTree, type FileTypes, filesModel, itemElement } from "./tree";
+import {
+    type FEATURES,
+    FileTree,
+    type FileTypes,
+    filesModel,
+    itemElement,
+} from "./tree";
 
 type Load = {
     resolve: (items: TreeItemJson<FileTypes>[]) => void;
@@ -60,7 +66,7 @@ describe("async children", () => {
     it("marks a failed load, announces it, and retries through the engine", async () => {
         const model = filesModel();
         const { loads, loadChildren } = loader();
-        const tree = createTreeRef<FileTypes>();
+        const tree = createTreeRef<FileTypes, typeof FEATURES>();
         render(
             <FileTree
                 model={model}
