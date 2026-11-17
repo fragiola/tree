@@ -146,8 +146,10 @@ const change = (itemIds: string[]) => {
 
 Controlled props are commands too. When a prop differs from the model, the root runs the commands
 that bring the model to it (`item.expand`, `item.collapse`, `tree.select`, `item.check`), as one
-batch, before paint, with `meta.source` set to `"controlled"`; those commits do not call your
-callbacks. Every other commit that changes a list calls its callback with the new list. So:
+batch, before the tree shows it (before paint in React, before mount and after each change of the
+prop in Vue), with `meta.source` set to `"controlled"`; those commits report no change. Every other
+commit that changes a list reports the new list (`onExpandedItemIdsChange` and the other callbacks
+in React, the `update:*` events in Vue). So:
 
 - your middleware sees the controlled changes too, and can tell them apart by their `meta`;
 - an id the tree does not have is skipped rather than failing the rest (an expansion or a check
