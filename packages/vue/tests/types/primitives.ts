@@ -9,6 +9,7 @@ import {
     type Tree as Untyped,
     useTree,
     useTreeItem,
+    useTreeItemRename,
     useTreeState,
 } from "../../src";
 
@@ -53,9 +54,6 @@ h(Tree.Root, {
     checkboxes: true,
     treeRef: createTreeRef<Types>(),
 });
-h(Tree.RenameInput, {
-    onRenameError: (error) => error.code,
-});
 // a tree ref is not a Vue ref: `value` is the handle, read-only, and a ref of the app's own is not
 // a tree ref (a template would unwrap it)
 const tree = createTreeRef<Types>();
@@ -79,5 +77,11 @@ export function composables() {
         () => model.state.items.a as ItemOf<Types>,
     );
     const level: number = state.value.level;
-    return n + level;
+    const rename = useTreeItemRename<Types>(
+        () => model.state.items.a as ItemOf<Types>,
+        { onRenameError: (error) => error.code },
+    );
+    const renaming: boolean = rename.state.value.renaming;
+    h("input", rename.props.value);
+    return n + level + (renaming ? 1 : 0);
 }

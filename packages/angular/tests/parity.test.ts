@@ -1,11 +1,17 @@
-// Parity with @fragiola/tree-react: the same document, rendered by both adapters with every part,
-// gives the same elements (part, tag, order) with the same ARIA, `data-*` and structural style.
-// The one difference is Angular's: a directive is on the app's element, which is there even when
-// React renders nothing (a collapsed item's group, the rename input of an item not renaming, the
+// Parity with @fragiola/tree-react: the same document, rendered by both adapters with every part
+// and the app's own controls (a check button reading the item's state, a rename editor wired by
+// `useTreeItemRename` / `[treeItemRename]`), gives the same elements (part, tag, order) with the
+// same ARIA, `data-*` and structural style. The one difference is Angular's: a directive is on the
+// app's element, which is there even when React renders nothing (a collapsed item's group, the
 // drop indicator with no drop target); the directive hides it (`display: none`), and the
 // comparison leaves those hidden elements out.
 import { Component, input } from "@angular/core";
-import { Tree as ReactTree } from "@fragiola/tree-react";
+import {
+    Tree as ReactTree,
+    useTree,
+    useTreeItem,
+    useTreeItemRename,
+} from "@fragiola/tree-react";
 import * as React from "react";
 import { act } from "react";
 import { createRoot } from "react-dom/client";
@@ -34,6 +40,29 @@ type Item = { id: string; label: string; childItemIds?: string[] };
 
 const r = React.createElement;
 
+/** The app's check control, as tests/tree.ts renders it. */
+function Check({ item }: { item: Item }) {
+    const { model } = useTree();
+    const { state } = useTreeItem(item as never);
+    return r("button", {
+        type: "button",
+        tabIndex: -1,
+        "aria-hidden": true,
+        "data-testid": "check",
+        "data-checked": state.checked ? "" : undefined,
+        "data-indeterminate": state.indeterminate ? "" : undefined,
+        onClick: () => model.run("item.toggle-check", { itemId: item.id }),
+    });
+}
+
+/** The app's rename editor, as tests/tree.ts renders it. */
+function RenameField({ item }: { item: Item }) {
+    const { state, props } = useTreeItemRename(item as never);
+    return state.renaming
+        ? r("input", { ...props, "aria-label": "Name" })
+        : null;
+}
+
 function reactItem(item: Item): React.ReactElement {
     return r(
         ReactTree.Item,
@@ -42,9 +71,9 @@ function reactItem(item: Item): React.ReactElement {
             ReactTree.ItemContent,
             null,
             r(ReactTree.Toggle),
-            r(ReactTree.Checkbox),
+            r(Check, { item }),
             r("span", null, item.label),
-            r(ReactTree.RenameInput, { "aria-label": "Name" }),
+            r(RenameField, { item }),
         ),
         r(ReactTree.Group, {
             children: (child: Item) => reactItem(child),
@@ -52,15 +81,19 @@ function reactItem(item: Item): React.ReactElement {
     );
 }
 
+/** The parts, and the app's controls (its check button and its rename editor). */
+const ELEMENTS =
+    '[data-tree-part], [data-testid="check"], input[aria-label="Name"]';
+
 /** Every element of a tree, as its part, tag, ARIA, `data-*` and style. */
 function snapshot(root: Element, skipHidden: boolean) {
-    return [...root.querySelectorAll<HTMLElement>("[data-tree-part]")]
+    return [...root.querySelectorAll<HTMLElement>(ELEMENTS)]
         .filter(
             (element) =>
                 !(
                     skipHidden &&
                     element.style.display === "none" &&
-                    ["group", "rename-input", "drop-indicator"].includes(
+                    ["group", "drop-indicator"].includes(
                         element.dataset.treePart ?? "",
                     )
                 ),
@@ -148,14 +181,26 @@ describe("parity with @fragiola/tree-react", () => {
         expect(angular).toEqual(react);
     });
 
-    it("renders the same rename input", async () => {
+    it("renders the same check controls, mixed included", async () => {
+        const json = files({
+            expandedItemIds: ["src", "utils"],
+            checkedItemIds: ["a"],
+        });
+        const { angular, react } = await both(json, { checkboxes: true });
+        const checks = angular.filter(
+            (part) => part.attributes["data-testid"] === "check",
+        );
+        expect(checks).toHaveLength(7);
+        expect(
+            checks.filter((part) => "data-indeterminate" in part.attributes),
+        ).toHaveLength(2);
+        expect(angular).toEqual(react);
+    });
+
+    it("renders the same rename editor", async () => {
         const json = files({ renamingItemId: "readme" });
         const { angular, react } = await both(json);
-        expect(
-            angular.find(
-                (part) => part.attributes["data-tree-part"] === "rename-input",
-            ),
-        ).toBeDefined();
+        expect(angular.filter((part) => part.tag === "INPUT")).toHaveLength(1);
         expect(angular).toEqual(react);
     });
 });
@@ -222,12 +267,22 @@ describe("parity with @fragiola/tree-react in a virtualized tree", () => {
         @for (tree of trees(); track tree.name) {
             <div [treeRoot]="tree.model" dragGroup="files" [attr.aria-label]="tree.name">
                 <ng-template [treeItems]="tree.model" let-item>
-                    <div [treeItem]="item">
+                    <div [treeItem]="item" #treeItem="treeItem">
                         <div treeItemContent>
                             <span treeToggle></span>
-                            <span treeCheckbox></span>
+                            <button
+                                type="button"
+                                tabindex="-1"
+                                aria-hidden="true"
+                                data-testid="check"
+                                [attr.data-checked]="treeItem.state().checked ? '' : null"
+                                [attr.data-indeterminate]="treeItem.state().indeterminate ? '' : null"
+                                (click)="tree.model.run('item.toggle-check', { itemId: item.id })"
+                            ></button>
                             <span>{{ item.label }}</span>
-                            <input treeRenameInput aria-label="Name" />
+                            @if (treeItem.state().renaming) {
+                                <input treeItemRename aria-label="Name" />
+                            }
                         </div>
                         <div treeGroup></div>
                     </div>

@@ -149,10 +149,6 @@ describe("clicks", () => {
         expect(m.model.state.selectedItemIds).toEqual(["app", "utils"]);
         m.engine.adapter.handleToggleClick("utils");
         expect(m.model.is("item-expanded", { itemId: "utils" })).toBe(false);
-        m.engine.adapter.handleCheckboxClick("utils");
-        expect(m.model.get("check-state-by", { itemId: "utils" })).toBe(
-            "checked",
-        );
     });
 });
 

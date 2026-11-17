@@ -14,14 +14,14 @@ import { elementRef, type RenderSlot, renderElement } from "../utils/render";
 export interface ItemContentProps extends PrimitiveProps {}
 
 export interface ItemContentSlots extends RenderSlot<TreeItemState> {
-    /** the row's content: the label, an icon, the toggle, the checkbox; no text of its own */
+    /** the row's content: the label, an icon, the toggle, your check control or rename editor; no text of its own */
     default?: SlotFunction<{ state: TreeItemState }>;
 }
 
 /**
  * An item's row: the element a press selects (Shift extends, Ctrl/Cmd toggles; `expand-on-click`
  * also expands) and a drag starts from (Pointer Events), and the rect the drag hit-tests. A press
- * on a control inside it (a button, an input, the toggle, the checkbox) is the control's.
+ * on a control inside it (a button, an input, the toggle) is the control's.
  */
 export const ItemContent: TreeComponent<ItemContentProps, ItemContentSlots> =
     definePrimitive<ItemContentProps, ItemContentSlots>(

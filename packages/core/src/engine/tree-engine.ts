@@ -803,10 +803,6 @@ class Engine<T extends TreeTypes> implements TreeEngine<T>, EngineHost {
                 if (this.destroyed) return;
                 this.model.run("item.toggle", { itemId });
             },
-            handleCheckboxClick: (itemId) => {
-                if (this.destroyed) return;
-                this.model.run("item.toggle-check", { itemId });
-            },
             handleFocus: (itemId) => {
                 if (this.destroyed || this.model.state.focusedItemId === itemId)
                     return;
@@ -814,18 +810,6 @@ class Engine<T extends TreeTypes> implements TreeEngine<T>, EngineHost {
             },
             handleDragEvent: (event) => {
                 if (!this.destroyed) this.foreign?.handle(event);
-            },
-            commitRename: (itemId, label, options) => {
-                if (this.destroyed)
-                    return fail("refused", "the engine was destroyed");
-                return this.commitRename(
-                    { itemId, label, focus: options?.focus },
-                    false,
-                );
-            },
-            cancelRename: (itemId, options) => {
-                if (this.destroyed) return;
-                this.cancelRename({ itemId, focus: options?.focus }, false);
             },
             subscribe: (listener) => {
                 const wrapper = () => listener();

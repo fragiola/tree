@@ -16,6 +16,18 @@ const REACT_FILES = readdirSync(
     .map((file) => file.slice(0, -".tsx".length))
     .sort();
 
+/**
+ * The React part hooks that are a directive here (`use-tree-item-rename` → `item-rename`): they
+ * wire an element of the app's own, as an attribute directive does.
+ */
+const REACT_PART_HOOKS = ["use-tree-item-rename"];
+const PART_HOOK_FILES = REACT_PART_HOOKS.map((hook) =>
+    hook.slice("use-tree-".length),
+);
+
+/** Every directive's file name (`src/lib/directives/<name>.directive.ts`). */
+const DIRECTIVE_FILES = [...REACT_FILES, ...PART_HOOK_FILES].sort();
+
 /** `item-content` → `TreeItemContentDirective`. */
 const directiveOf = (file: string) =>
     `Tree${file
@@ -25,7 +37,7 @@ const directiveOf = (file: string) =>
 
 /** The package's own runtime exports: the documented API. */
 const OWN = [
-    ...REACT_FILES.map(directiveOf),
+    ...DIRECTIVE_FILES.map(directiveOf),
     "TREE",
     "injectTree",
     "injectTreeItem",
@@ -64,30 +76,35 @@ describe("@fragiola/tree-angular", () => {
     });
 
     it("exports exactly the documented runtime API besides the core", () => {
-        expect(REACT_FILES).toHaveLength(11);
+        expect(REACT_FILES).toHaveLength(9);
+        for (const hook of REACT_PART_HOOKS) {
+            expect(
+                readdirSync(join(import.meta.dirname, "../../react/src/hooks")),
+            ).toContain(`${hook}.ts`);
+        }
         const own = Object.keys(angular).filter((name) => !(name in core));
         expect(own.sort()).toEqual([...OWN].sort());
     });
 
     it("lists every directive in TREE, once", () => {
-        const directives = REACT_FILES.map(
+        const directives = DIRECTIVE_FILES.map(
             (file) => (angular as Record<string, unknown>)[directiveOf(file)],
         );
         expect(new Set(angular.TREE)).toEqual(new Set(directives));
         expect(angular.TREE).toHaveLength(directives.length);
     });
 
-    it("has a directive file per primitive, named as in the React adapter, and the templates' types", () => {
+    it("has a directive file per primitive and part hook, named as in the React adapter, and the templates' types", () => {
         const files = readdirSync(
             join(import.meta.dirname, "../src/lib/directives"),
         ).sort();
         expect(files).toEqual(
             [
-                ...REACT_FILES.map((name) => `${name}.directive.ts`),
+                ...DIRECTIVE_FILES.map((name) => `${name}.directive.ts`),
                 "templates.directive.ts",
             ].sort(),
         );
-        for (const name of REACT_FILES) {
+        for (const name of DIRECTIVE_FILES) {
             expect(
                 read(`src/lib/directives/${name}.directive.ts`),
                 name,

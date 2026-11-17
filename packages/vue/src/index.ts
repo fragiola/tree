@@ -1,7 +1,6 @@
 // The whole core, so that a Vue app installs and imports one package. A local export would
 // silently shadow a core name of the same spelling: tests/index.test.ts fails on one.
 export * from "@fragiola/tree";
-export type { CheckboxProps, CheckboxSlots } from "./components/checkbox";
 export type {
     DropIndicatorProps,
     DropIndicatorSlots,
@@ -19,12 +18,6 @@ export type {
     LiveRegionSlots,
     LiveRegionState,
 } from "./components/live-region";
-export type {
-    RenameInputEmits,
-    RenameInputProps,
-    RenameInputSlots,
-    RenameInputState,
-} from "./components/rename-input";
 export type {
     RootEmits,
     RootProps,
@@ -48,6 +41,13 @@ export {
     type UseTreeItemResult,
     useTreeItem,
 } from "./composables/use-tree-item";
+export {
+    type TreeItemRenameProps,
+    type TreeItemRenameState,
+    type UseTreeItemRenameOptions,
+    type UseTreeItemRenameResult,
+    useTreeItemRename,
+} from "./composables/use-tree-item-rename";
 export { useTreeRef } from "./composables/use-tree-ref";
 export {
     type UseTreeStateOptions,

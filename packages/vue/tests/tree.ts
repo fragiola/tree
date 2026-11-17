@@ -14,6 +14,9 @@ import {
     type RootProps,
     type TreeJson,
     typedTree,
+    useTree,
+    useTreeItem,
+    useTreeItemRename,
 } from "../src";
 
 export type FileTypes = {
@@ -56,6 +59,51 @@ export function files(
 export const filesModel = (patch: Partial<TreeJson<FileTypes>> = {}) =>
     createTreeModel<FileTypes>(files(patch));
 
+/**
+ * The app's own check control: a native button out of the tab order and hidden from assistive
+ * technology (the item carries `aria-checked`, and Space toggles it), running `item.toggle-check`.
+ */
+export const Check = defineComponent({
+    name: "CheckControl",
+    props: {
+        item: { type: Object as PropType<ItemOf<FileTypes>>, required: true },
+    },
+    setup(props) {
+        const { model } = useTree<FileTypes>();
+        const { state } = useTreeItem(() => props.item);
+        return (): VNodeChild =>
+            h("button", {
+                type: "button",
+                tabindex: -1,
+                "aria-hidden": "true",
+                "data-testid": "check",
+                "data-checked": state.value.checked ? "" : undefined,
+                "data-indeterminate": state.value.indeterminate
+                    ? ""
+                    : undefined,
+                onClick: () =>
+                    model.run("item.toggle-check", { itemId: props.item.id }),
+            });
+    },
+});
+
+/** The app's own rename editor, wired by `useTreeItemRename`. */
+export const RenameField = defineComponent({
+    name: "RenameField",
+    props: {
+        item: { type: Object as PropType<ItemOf<FileTypes>>, required: true },
+    },
+    setup(props) {
+        const { state, props: inputProps } = useTreeItemRename(
+            () => props.item,
+        );
+        return (): VNodeChild =>
+            state.value.renaming
+                ? h("input", { ...inputProps.value, "aria-label": "Name" })
+                : null;
+    },
+});
+
 export const FileItem = defineComponent({
     name: "FileItem",
     props: {
@@ -71,9 +119,9 @@ export const FileItem = defineComponent({
                         h(Tree.ItemContent, null, {
                             default: () => [
                                 h(Tree.Toggle),
-                                h(Tree.Checkbox),
+                                h(Check, { item: props.item }),
                                 h("span", props.item.label),
-                                h(Tree.RenameInput, { "aria-label": "Name" }),
+                                h(RenameField, { item: props.item }),
                             ],
                         }),
                         h(Tree.Group, null, {

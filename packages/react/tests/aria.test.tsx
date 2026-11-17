@@ -72,12 +72,7 @@ describe("the WAI-ARIA Tree View roles and states", () => {
         expect(itemElement("a.ts")).toHaveAttribute("aria-checked", "true");
         expect(itemElement("b.ts")).toHaveAttribute("aria-checked", "false");
         expect(itemElement("utils")).toHaveAttribute("aria-checked", "mixed");
-        const box = itemElement("utils").querySelector(
-            '[data-tree-part="checkbox"]',
-        );
-        expect(box).toHaveAttribute("role", "checkbox");
-        expect(box).toHaveAttribute("aria-checked", "mixed");
-        expect(box).toHaveAttribute("data-indeterminate");
+        expect(itemElement("utils")).toHaveAttribute("data-indeterminate");
     });
 
     it("sets no aria-checked without checkboxes", () => {
@@ -143,7 +138,6 @@ describe("the WAI-ARIA Tree View roles and states", () => {
                 "item",
                 "content",
                 "toggle",
-                "checkbox",
                 "group",
                 "live-region",
             ].sort(),

@@ -114,12 +114,24 @@ export type Emitted = [list: string, itemIds: string[]];
             aria-label="Files"
         >
             <ng-template [treeItems]="model()" let-item>
-                <div [treeItem]="item">
+                <div [treeItem]="item" #treeItem="treeItem">
                     <div treeItemContent>
                         <span treeToggle></span>
-                        <span treeCheckbox></span>
+                        <!-- the app's own check control: a native button out of the tab order and
+                             hidden from assistive technology (the item carries aria-checked) -->
+                        <button
+                            type="button"
+                            tabindex="-1"
+                            aria-hidden="true"
+                            data-testid="check"
+                            [attr.data-checked]="treeItem.state().checked ? '' : null"
+                            [attr.data-indeterminate]="treeItem.state().indeterminate ? '' : null"
+                            (click)="tree.model().run('item.toggle-check', { itemId: item.id })"
+                        ></button>
                         <span>{{ item.label }}</span>
-                        <input treeRenameInput aria-label="Name" (renameError)="renameErrors.push($event.code)" />
+                        @if (treeItem.state().renaming) {
+                            <input treeItemRename aria-label="Name" (renameError)="renameErrors.push($event.code)" />
+                        }
                     </div>
                     <div treeGroup></div>
                 </div>
@@ -247,13 +259,10 @@ export const shownGroups = () =>
         (group) => group.style.display !== "none",
     );
 
-/**
- * The rename input shown: the one of the item renaming (every item's input is there, hidden with
- * `display: none` while its item is not renaming), or null.
- */
+/** The rename input of the item renaming (the app renders it only then), or null. */
 export const renameInput = () =>
     document.querySelector<HTMLInputElement>(
-        'input[data-tree-part="rename-input"][data-renaming]',
+        '[data-tree-part="content"] > input[aria-label="Name"]',
     );
 
 /** Dispatches a DOM event on `target` (the fields of `init` an event lacks are set on it), then settles. */

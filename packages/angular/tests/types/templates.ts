@@ -68,7 +68,9 @@ void root.model.state;
                 <div [treeItem]="item" #node="treeItem">
                     <div treeItemContent [class.open]="node.state().expanded">
                         {{ item.kind === "file" ? item.data.size : item.label }}
-                        <input treeRenameInput aria-label="Name" (renameError)="code = $event.code" />
+                        @if (node.state().renaming) {
+                            <input treeItemRename #rename="treeItemRename" aria-label="Name" [class.bad]="rename.state().invalid" (renameError)="code = $event.code" />
+                        }
                     </div>
                     <div treeGroup keepMounted></div>
                 </div>

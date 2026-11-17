@@ -32,8 +32,6 @@ type Child = ItemOf<FileTypes>;
                 <div [treeItem]="item">
                     <div treeItemContent>
                         <span treeToggle></span>
-                        <span treeCheckbox></span>
-                        <input treeRenameInput />
                     </div>
                     <div treeGroup></div>
                 </div>

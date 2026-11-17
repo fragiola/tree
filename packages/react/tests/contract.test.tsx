@@ -42,7 +42,6 @@ describe("the primitive contract", () => {
                         <Tree.Item item={item}>
                             <Tree.ItemContent>
                                 <Tree.Toggle />
-                                <Tree.Checkbox />
                             </Tree.ItemContent>
                             <Tree.Group>
                                 {(child) => <Tree.Item item={child} />}

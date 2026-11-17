@@ -7,8 +7,8 @@ children, inline rename and tri-state checkboxes.
 
 Fragiola Tree is **headless**. It ships the behaviour, the accessibility and the primitives, here
 standalone attribute directives you put on your own elements (`[treeRoot]`, `treeItems`, `treeVirtualItems`,
-`[treeItem]`, `treeItemContent`, `treeGroup`, `treeToggle`, `treeCheckbox`, `treeRenameInput`,
-`treeDropIndicator`, `treeLiveRegion`), and **no CSS, no icons and no text**: you style every
+`[treeItem]`, `treeItemContent`, `treeGroup`, `treeToggle`, `treeDropIndicator`, `treeLiveRegion`,
+and `treeItemRename` on your rename input), and **no CSS, no icons and no text**: you style every
 element with `class`, `style` and the `data-*` attributes the directives set, and every visible
 word and accessible name comes from you. The ARIA and the `data-*` are the same as
 `@fragiola/tree-react`'s and `@fragiola/tree-vue`'s.
@@ -88,6 +88,39 @@ focus, keys, drags, the async loader) is the root's.
 - `injectTreeState(selector, { model? })`: a signal of a value of the state.
 - `#tree="treeRoot"`: the root's `model()` and `engine` from anywhere in the template (or
   `viewChild(TreeRootDirective)`); `#node="treeItem"`: an item's `state()`.
+
+## Checks and rename: your own controls
+
+With `checkboxes` on the root, every item carries `aria-checked` (`mixed` included),
+`data-checked` / `data-indeterminate`, and Space toggles its check. The check control is yours:
+read the item's state and run the command. A press on a native `button` or `input` in the row is
+the control's; any other element needs `data-tree-no-drag`.
+
+```html
+<div [treeItem]="item" #node="treeItem">
+    <div treeItemContent>
+        <button
+            type="button"
+            tabindex="-1"
+            aria-hidden="true"
+            [attr.data-checked]="node.state().checked ? '' : null"
+            [attr.data-indeterminate]="node.state().indeterminate ? '' : null"
+            (click)="tree.model().run('item.toggle-check', { itemId: item.id })"
+        ></button>
+        {{ item.label }}
+        @if (node.state().renaming) {
+            <input treeItemRename #rename="treeItemRename" aria-label="Name" (renameError)="onError($event)" />
+        }
+    </div>
+</div>
+```
+
+`treeItemRename` goes on your input, rendered only while the item renames (F2,
+`item.start-rename`): it starts with the label, focused and selected; Enter commits, Escape cancels,
+leaving it commits (or cancels when refused). A refused label keeps it open with `aria-invalid` and
+`data-invalid`, emits `(renameError)`, and shows in `rename.state()` (`{ renaming, invalid, error }`).
+Without it, call `engine.run("commit-rename", { itemId, label })` and
+`engine.run("cancel-rename", { itemId })` yourself; focus goes back to the item.
 
 ## The primitive contract
 

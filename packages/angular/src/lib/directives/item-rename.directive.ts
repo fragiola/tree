@@ -12,14 +12,12 @@ import {
 } from "@angular/core";
 import type { CommandError } from "@fragiola/tree";
 import { injectItemContext, injectTreeContext } from "../context";
-import { bindStructuralStyle, injectHost } from "../utils/helpers";
-import {
-    ITEM_DATA_HOST,
-    itemData,
-    type TreeItemState,
-} from "../utils/item-state";
+import { injectHost } from "../utils/helpers";
 
-export interface RenameInputState extends TreeItemState {
+/** What `[treeItemRename]` says about its item's rename. */
+export interface TreeItemRenameState {
+    /** the item's label is being edited (`item.start-rename`, F2): render your editor */
+    renaming: boolean;
     /** the last commit was refused (an empty label, a middleware's veto) */
     invalid: boolean;
     /** why the last commit was refused */
@@ -27,57 +25,62 @@ export interface RenameInputState extends TreeItemState {
 }
 
 /**
- * The enclosing item's label editor: `<input treeRenameInput aria-label="Name" />`, shown only
- * while the item is renaming (`item.start-rename`, F2; hidden otherwise, `display: none`). A new
- * rename starts it with the label, focused and selected. Enter commits (`item.rename`; a refused
- * label keeps it open, `aria-invalid`, and emits `(renameError)`), Escape cancels, and leaving it
- * commits (or cancels when refused). Focus goes back to the item. Give it an accessible name.
+ * An item's rename, wired onto an input of yours: no element of its own, and it hides nothing.
+ * Render your input only while the item is renaming and give it an accessible name:
+ *
+ * ```html
+ * @if (item.state().renaming) {
+ *     <input treeItemRename aria-label="Name" (renameError)="onError($event)" />
+ * }
+ * ```
+ *
+ * A rename starts it with the label, focused and selected. Enter commits (a refused label keeps it
+ * open, `aria-invalid` and `data-invalid`, and emits `(renameError)`), Escape cancels, and leaving
+ * it commits (or cancels when refused). Committing and cancelling go through
+ * `engine.run("commit-rename" | "cancel-rename")`, which you can call yourself instead; focus goes
+ * back to the item.
  */
 @Directive({
-    selector: "input[treeRenameInput]",
-    exportAs: "treeRenameInput",
+    selector: "input[treeItemRename]",
+    exportAs: "treeItemRename",
     host: {
-        type: "text",
         "[attr.aria-invalid]": "state().invalid ? 'true' : null",
-        "data-tree-part": "rename-input",
-        ...ITEM_DATA_HOST,
         "[attr.data-invalid]": "state().invalid ? '' : null",
         "(keydown)": "onKeyDown($event)",
         "(blur)": "onBlur()",
         "(input)": "onInput()",
     },
 })
-export class TreeRenameInputDirective {
+export class TreeItemRenameDirective {
     /** a commit was refused (Enter on an empty label, a middleware's veto) */
     readonly renameError = output<CommandError>();
 
-    private readonly context = injectTreeContext("[treeRenameInput]");
-    private readonly item = injectItemContext("[treeRenameInput]");
+    private readonly context = injectTreeContext("[treeItemRename]");
+    private readonly item = injectItemContext("[treeItemRename]");
     private readonly input = injectHost() as HTMLInputElement;
     private readonly injector = inject(Injector);
     private readonly error = signal<CommandError | undefined>(undefined);
-    /** this rename is over (committed or cancelled): a later blur does nothing */
+    /**
+     * this rename is over (committed or cancelled): the item taking focus back blurs the input,
+     * and that blur must not commit a second time
+     */
     private done = true;
 
-    /** the enclosing item's state, and the last refused commit */
-    readonly state: Signal<RenameInputState> = computed(() => {
+    private readonly renaming = computed(() => this.item.state().renaming);
+
+    /** the item's rename, and the last refused commit */
+    readonly state: Signal<TreeItemRenameState> = computed(() => {
         const error = this.error();
         return {
-            ...this.item.state(),
+            renaming: this.renaming(),
             invalid: error !== undefined,
             error,
         };
     });
 
-    protected readonly itemData = computed(() => itemData(this.item.state()));
-
-    private readonly renaming = computed(() => this.item.state().renaming);
-
     constructor() {
-        bindStructuralStyle(this.input, () =>
-            this.renaming() ? {} : { display: "none" },
-        );
-        // a new rename: it starts with the label, focused and selected once it is shown
+        // a rename (the one under way when the input is created, or a later one when the app
+        // keeps it): it starts with the label, focused and selected once it is rendered
         effect(() => {
             if (!this.renaming()) {
                 this.done = true;
@@ -103,14 +106,12 @@ export class TreeRenameInputDirective {
     private commit(focus: boolean): boolean {
         const engine = this.context.engine();
         if (this.done || !engine) return true;
-        // done before the command: the item taking focus back blurs the input, and that blur must
-        // not commit a second time
         this.done = true;
-        const result = engine.adapter.commitRename(
-            this.item.item().id,
-            this.input.value,
-            { focus },
-        );
+        const result = engine.run("commit-rename", {
+            itemId: this.item.item().id,
+            label: this.input.value,
+            focus,
+        });
         if (result.ok) return true;
         this.done = false;
         this.error.set(result.error);
@@ -119,11 +120,10 @@ export class TreeRenameInputDirective {
     }
 
     private cancel(focus: boolean): void {
-        if (this.done) return;
+        const engine = this.context.engine();
+        if (this.done || !engine) return;
         this.done = true;
-        this.context
-            .engine()
-            ?.adapter.cancelRename(this.item.item().id, { focus });
+        engine.run("cancel-rename", { itemId: this.item.item().id, focus });
     }
 
     protected onKeyDown(event: KeyboardEvent): void {

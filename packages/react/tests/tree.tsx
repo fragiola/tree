@@ -6,6 +6,9 @@ import {
     type RootProps,
     Tree,
     type TreeJson,
+    useTree,
+    useTreeItem,
+    useTreeItemRename,
 } from "../src";
 
 export type FileTypes = {
@@ -46,14 +49,40 @@ export function files(
 export const filesModel = (patch: Partial<TreeJson<FileTypes>> = {}) =>
     createTreeModel<FileTypes>(files(patch));
 
+/**
+ * The app's own check control: a native button out of the tab order and hidden from assistive
+ * technology (the item carries `aria-checked`, and Space toggles it), running `item.toggle-check`.
+ */
+export function Check({ item }: { item: ItemOf<FileTypes> }) {
+    const { model } = useTree<FileTypes>();
+    const { state } = useTreeItem(item);
+    return (
+        <button
+            type="button"
+            tabIndex={-1}
+            aria-hidden
+            data-testid="check"
+            data-checked={state.checked ? "" : undefined}
+            data-indeterminate={state.indeterminate ? "" : undefined}
+            onClick={() => model.run("item.toggle-check", { itemId: item.id })}
+        />
+    );
+}
+
+/** The app's own rename editor, wired by `useTreeItemRename`. */
+export function RenameField({ item }: { item: ItemOf<FileTypes> }) {
+    const { state, props } = useTreeItemRename(item);
+    return state.renaming ? <input {...props} aria-label="Name" /> : null;
+}
+
 export function FileItem({ item }: { item: ItemOf<FileTypes> }) {
     return (
         <Tree.Item item={item}>
             <Tree.ItemContent>
                 <Tree.Toggle />
-                <Tree.Checkbox />
+                <Check item={item} />
                 <span>{item.label}</span>
-                <Tree.RenameInput aria-label="Name" />
+                <RenameField item={item} />
             </Tree.ItemContent>
             <Tree.Group<FileTypes>>
                 {(child) => <FileItem item={child} />}

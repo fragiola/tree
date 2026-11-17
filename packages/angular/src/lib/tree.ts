@@ -1,11 +1,10 @@
-import { TreeCheckboxDirective } from "./directives/checkbox.directive";
 import { TreeDropIndicatorDirective } from "./directives/drop-indicator.directive";
 import { TreeGroupDirective } from "./directives/group.directive";
 import { TreeItemDirective } from "./directives/item.directive";
 import { TreeItemContentDirective } from "./directives/item-content.directive";
+import { TreeItemRenameDirective } from "./directives/item-rename.directive";
 import { TreeItemsDirective } from "./directives/items.directive";
 import { TreeLiveRegionDirective } from "./directives/live-region.directive";
-import { TreeRenameInputDirective } from "./directives/rename-input.directive";
 import { TreeRootDirective } from "./directives/root.directive";
 import { TreeToggleDirective } from "./directives/toggle.directive";
 import { TreeVirtualItemsDirective } from "./directives/virtual-items.directive";
@@ -21,8 +20,7 @@ export const TREE = [
     TreeItemContentDirective,
     TreeGroupDirective,
     TreeToggleDirective,
-    TreeCheckboxDirective,
-    TreeRenameInputDirective,
+    TreeItemRenameDirective,
     TreeDropIndicatorDirective,
     TreeLiveRegionDirective,
     TreeVirtualItemsDirective,
