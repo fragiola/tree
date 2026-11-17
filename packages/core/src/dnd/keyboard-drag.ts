@@ -2,7 +2,11 @@
 // the positions a drop can stop at (`viablePositions`, filtered by `model.can`). Down and Up move
 // the target, Enter drops (one `item.move`), Escape cancels with nothing committed.
 import type { EngineHost } from "../engine/host";
-import { type DropTarget, viablePositions } from "./drop-evaluation";
+import {
+    type DropContext,
+    type DropTarget,
+    viablePositions,
+} from "./drop-evaluation";
 import { accepts, dropContext } from "./drop-target";
 
 export class KeyboardDrag {
@@ -34,25 +38,18 @@ export class KeyboardDrag {
         if (targets.length === 0) return false;
         this.itemIds = [...itemIds];
         this.targets = targets;
-        // start where the first dragged item is
-        const first = itemIds[0];
-        const here = targets.findIndex(
-            (target) => target.itemId === first && target.position === "before",
-        );
-        this.at = here >= 0 ? here : 0;
+        this.at = nearestStart(targets, dropContext(this.host, itemIds));
         this.host.setDrag({
             mode: "keyboard",
             itemIds: this.itemIds,
             target: this.current(),
         });
+        // one message for the start and its first target: a second one in the same tick would
+        // replace it in the live region before it is read
         this.host.announce({
             type: "drag-start",
             itemIds: this.itemIds,
             keyboard: true,
-        });
-        this.host.announce({
-            type: "drag-over",
-            itemIds: this.itemIds,
             target: this.current(),
         });
         return true;
@@ -118,4 +115,58 @@ export class KeyboardDrag {
         this.itemIds = [];
         if (this.active) this.host.setDrag(null);
     }
+}
+
+/**
+ * Where a keyboard drag starts, next to the first dragged item: the place it already is (its
+ * "before", or the "after" of the sibling above it, the same place), then its "after", then the
+ * valid position nearest to it by visible rows (the first in render order on a tie). Never the
+ * top of the tree when a closer position exists.
+ */
+function nearestStart(
+    targets: readonly DropTarget[],
+    context: DropContext,
+): number {
+    const first = context.draggingItemIds[0];
+    const row = (itemId: string | null) =>
+        itemId === null
+            ? -1
+            : context.visible.findIndex((item) => item.itemId === itemId);
+    const from = first === undefined ? -1 : row(first);
+    if (first === undefined || from < 0) return 0;
+    const parentItemId = context.visible[from]?.parentItemId ?? null;
+    const index = context.childIdsOf(parentItemId).indexOf(first);
+    const at = (offset: number) =>
+        targets.findIndex(
+            (target) =>
+                target.parentItemId === parentItemId &&
+                target.index === index + offset &&
+                target.position !== "inside",
+        );
+    for (const offset of [0, 1]) {
+        const found = at(offset);
+        if (found >= 0) return found;
+    }
+    // where a position is between the rows: before an item is at its top edge, after it is below
+    // its last visible descendant, inside it is in its middle; the dragged item is at from + 0.5
+    const { visible } = context;
+    const gap = (target: DropTarget) => {
+        const start = row(target.itemId);
+        if (target.position === "before") return start;
+        if (target.position === "inside") return start + 0.5;
+        const level = visible[start]?.level ?? 0;
+        let end = start + 1;
+        while ((visible[end]?.level ?? 0) > level) end++;
+        return end;
+    };
+    let best = 0;
+    let distance = Number.POSITIVE_INFINITY;
+    for (const [i, target] of targets.entries()) {
+        const d = Math.abs(gap(target) - (from + 0.5));
+        if (d < distance) {
+            best = i;
+            distance = d;
+        }
+    }
+    return best;
 }

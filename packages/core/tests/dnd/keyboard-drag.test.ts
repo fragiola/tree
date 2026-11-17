@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it } from "vitest";
 import type { CommandEvent } from "../../src/commands/types";
+import type { AnnounceEvent } from "../../src/engine/host";
 import { type Mounted, mount } from "../engine/dom";
 import { type FileTypes, filesModel } from "../fixture";
 
@@ -132,5 +133,76 @@ describe("a keyboard drag", () => {
         expect(
             m.engine.can("start-keyboard-drag", { itemIds: ["readme"] }),
         ).toBe(true);
+    });
+
+    it("announces its start and its first target in one message", () => {
+        const announced: AnnounceEvent[] = [];
+        mounted = mount(filesModel({ expandedItemIds: ["src", "utils"] }), {
+            announce: (event) => {
+                announced.push(event);
+                return event.type === "drag-start" && event.target
+                    ? `Picked up ${event.itemIds.join(", ")}, ${event.target.position} ${event.target.itemId}`
+                    : event.type;
+            },
+        });
+        mounted.engine.run("start-keyboard-drag", { itemIds: ["lib"] });
+        expect(announced).toEqual([
+            {
+                type: "drag-start",
+                itemIds: ["lib"],
+                keyboard: true,
+                target: expect.objectContaining({
+                    position: "after",
+                    itemId: "app",
+                }),
+            },
+        ]);
+        expect(mounted.engine.get("announcement")).toBe(
+            "Picked up lib, after app",
+        );
+        // the next step is a drag-over, as before
+        mounted.key("ArrowDown");
+        expect(announced.map((event) => event.type)).toEqual([
+            "drag-start",
+            "drag-over",
+        ]);
+    });
+
+    it("starts next to the dragged item, not at the top of the tree", () => {
+        const { m } = setup();
+        // b is deep (src/utils/b) and its "before" is the "after" of a, its sibling above
+        m.engine.run("start-keyboard-drag", { itemIds: ["b"] });
+        expect(describeTarget(m)).toBe("after a");
+        m.engine.run("cancel-drag");
+        // lib, the second child of src: the "after" of app
+        m.engine.run("start-keyboard-drag", { itemIds: ["lib"] });
+        expect(describeTarget(m)).toBe("after app");
+        m.engine.run("cancel-drag");
+        // a root item keeps its own "before"
+        m.engine.run("start-keyboard-drag", { itemIds: ["readme"] });
+        expect(describeTarget(m)).toBe("before readme");
+    });
+
+    it("starts on the nearest valid position when its own place is refused", () => {
+        const { m } = setup();
+        // nothing can be dropped into utils: neither b's place nor its neighbours' are valid
+        m.model.run("item.set-flags", { itemId: "utils", droppable: false });
+        m.engine.run("start-keyboard-drag", { itemIds: ["b"] });
+        expect(describeTarget(m)).not.toBe("before src");
+        expect(describeTarget(m)).toBe("after utils");
+    });
+
+    it("starts after the item when only that place is valid", () => {
+        const { m } = setup();
+        // a middleware that refuses the item's own place keeps the start next to it
+        m.model.use((context, next) =>
+            context.command === "item.move" &&
+            context.payload.to.parentItemId === "src" &&
+            context.payload.to.index === 1
+                ? { ok: false, error: { code: "refused", message: "no" } }
+                : next(),
+        );
+        m.engine.run("start-keyboard-drag", { itemIds: ["lib"] });
+        expect(describeTarget(m)).toBe("after lib");
     });
 });
