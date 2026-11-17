@@ -1,0 +1,223 @@
+{
+    "sections": [
+        {
+            "label": "Getting started",
+            "pages": [
+                {
+                    "label": "Introduction",
+                    "path": "getting-started/introduction"
+                },
+                {
+                    "label": "Installation",
+                    "path": "getting-started/installation"
+                },
+                {
+                    "label": "Your first tree",
+                    "path": "getting-started/first-tree"
+                },
+                {
+                    "label": "Accessible names",
+                    "path": "getting-started/accessible-names"
+                },
+                {
+                    "label": "Styling the depth",
+                    "path": "getting-started/depth"
+                }
+            ]
+        },
+        {
+            "label": "Concepts",
+            "collapsible": true,
+            "pages": [
+                {
+                    "label": "The model and commands",
+                    "path": "concepts/model-and-commands"
+                },
+                {
+                    "label": "Model and engine",
+                    "path": "concepts/model-and-engine"
+                },
+                {
+                    "label": "Composition",
+                    "path": "concepts/composition"
+                },
+                {
+                    "label": "The primitive contract",
+                    "path": "concepts/primitive-contract"
+                },
+                {
+                    "label": "State attributes",
+                    "path": "concepts/state-attributes"
+                },
+                {
+                    "label": "Parts and paths",
+                    "path": "concepts/parts-and-paths"
+                },
+                {
+                    "label": "Typed data",
+                    "path": "concepts/typed-data"
+                },
+                {
+                    "label": "Glossary",
+                    "path": "concepts/glossary"
+                }
+            ]
+        },
+        {
+            "label": "Guides",
+            "collapsible": true,
+            "pages": [
+                {
+                    "label": "Selection",
+                    "path": "guides/selection"
+                },
+                {
+                    "label": "Keyboard and type-ahead",
+                    "path": "guides/keyboard"
+                },
+                {
+                    "label": "Drag and drop",
+                    "path": "guides/drag-and-drop"
+                },
+                {
+                    "label": "Async loading",
+                    "path": "guides/async-loading"
+                },
+                {
+                    "label": "Inline rename",
+                    "path": "guides/rename"
+                },
+                {
+                    "label": "Checkboxes",
+                    "path": "guides/checkboxes"
+                },
+                {
+                    "label": "Controlled state",
+                    "path": "guides/controlled-state"
+                },
+                {
+                    "label": "Saving and restoring",
+                    "path": "guides/persistence"
+                },
+                {
+                    "label": "Undo and redo",
+                    "path": "guides/undo-redo"
+                },
+                {
+                    "label": "Middleware and permissions",
+                    "path": "guides/middleware"
+                },
+                {
+                    "label": "Testing your tree",
+                    "path": "guides/testing"
+                },
+                {
+                    "label": "AI and automation",
+                    "path": "guides/ai-and-automation"
+                },
+                {
+                    "label": "Right-to-left trees",
+                    "path": "guides/rtl"
+                },
+                {
+                    "label": "Styling with plain CSS",
+                    "path": "guides/styling-css"
+                },
+                {
+                    "label": "Styling with Tailwind",
+                    "path": "guides/styling-tailwind"
+                }
+            ]
+        },
+        {
+            "label": "API: primitives (@fragiola/tree-react)",
+            "collapsible": true,
+            "pages": [
+                {
+                    "label": "Tree.Root",
+                    "path": "api/root"
+                },
+                {
+                    "label": "Tree.Items",
+                    "path": "api/items"
+                },
+                {
+                    "label": "Tree.Item",
+                    "path": "api/item"
+                },
+                {
+                    "label": "Tree.ItemContent",
+                    "path": "api/item-content"
+                },
+                {
+                    "label": "Tree.Group",
+                    "path": "api/group"
+                },
+                {
+                    "label": "Tree.Toggle",
+                    "path": "api/toggle"
+                },
+                {
+                    "label": "Tree.Checkbox",
+                    "path": "api/checkbox"
+                },
+                {
+                    "label": "Tree.RenameInput",
+                    "path": "api/rename-input"
+                },
+                {
+                    "label": "Tree.DropIndicator",
+                    "path": "api/drop-indicator"
+                },
+                {
+                    "label": "Tree.LiveRegion",
+                    "path": "api/live-region"
+                },
+                {
+                    "label": "Hooks",
+                    "path": "api/hooks"
+                }
+            ]
+        },
+        {
+            "label": "API: core (@fragiola/tree)",
+            "collapsible": true,
+            "pages": [
+                {
+                    "label": "Model",
+                    "path": "api/model"
+                },
+                {
+                    "label": "The command bus",
+                    "path": "api/command-bus"
+                },
+                {
+                    "label": "Commands",
+                    "path": "api/commands"
+                },
+                {
+                    "label": "The JSON model",
+                    "path": "api/json-model"
+                },
+                {
+                    "label": "Engine",
+                    "path": "api/engine"
+                }
+            ]
+        },
+        {
+            "label": "More",
+            "pages": [
+                {
+                    "label": "Known limitations",
+                    "path": "limitations"
+                },
+                {
+                    "label": "Found a problem?",
+                    "href": "https://github.com/fragiola/tree/issues",
+                    "external": true
+                }
+            ]
+        }
+    ]
+}

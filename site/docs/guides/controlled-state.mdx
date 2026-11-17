@@ -1,0 +1,82 @@
+---
+title: Controlled state
+description: Own the expanded, selected and checked items in React state, decide what each change becomes, and keep the tree in step with your app.
+---
+
+By default the model owns its state, and you read it with `useTreeState`. When your app wants to
+own a list (to sync it with the URL, a store or another view), the root takes it as a controlled
+prop, with a callback for every change the tree would make:
+
+| prop | callback |
+| --- | --- |
+| `expandedItemIds` | `onExpandedItemIdsChange` |
+| `selectedItemIds` | `onSelectedItemIdsChange` |
+| `checkedItemIds` | `onCheckedItemIdsChange` |
+
+Each pair is independent: control the selection and leave the expansion to the model.
+
+## Controlling the expansion
+
+```tsx
+import { Tree } from "@fragiola/tree-react";
+import { useState } from "react";
+
+export function Outline() {
+    const [expandedItemIds, setExpandedItemIds] = useState<string[]>(["src"]);
+    return (
+        <>
+            <button type="button" onClick={() => setExpandedItemIds([])}>
+                Collapse all
+            </button>
+            <Tree.Root<Types>
+                defaultTree={json}
+                expandedItemIds={expandedItemIds}
+                onExpandedItemIdsChange={setExpandedItemIds}
+                aria-label="Outline"
+            >
+                <Tree.Items<Types>>{(item) => <OutlineItem item={item} />}</Tree.Items>
+            </Tree.Root>
+        </>
+    );
+}
+```
+
+## Deciding what a change becomes
+
+The callback receives the list the tree would have; the prop decides what it has. A change the
+app does not accept is reverted: here a pinned folder stays open.
+
+```tsx
+const change = (itemIds: string[]) =>
+    setExpandedItemIds(itemIds.includes("src") ? itemIds : ["src", ...itemIds]);
+
+<Tree.Root<Types>
+    defaultTree={json}
+    expandedItemIds={expandedItemIds}
+    onExpandedItemIdsChange={change}
+    aria-label="Outline"
+>
+    <Tree.Items<Types>>{(item) => <OutlineItem item={item} />}</Tree.Items>
+</Tree.Root>;
+```
+
+<Example id="controlled" />
+
+## How it works
+
+Controlled props are commands too. When a prop differs from the model, the root runs the commands
+that bring the model to it (`item.expand`, `item.collapse`, `tree.select`, `item.check`), as one
+batch, before paint, with `meta.source` set to `"controlled"`; those commits do not call your
+callbacks. Every other commit that changes a list calls its callback with the new list. So:
+
+- your middleware sees the controlled changes too, and can tell them apart by their `meta`;
+- an id the tree does not have is skipped rather than failing the rest (an expansion or a check
+  the model refuses, a disabled item's, is skipped too);
+- in cascade mode, `checkedItemIds` is normalized by the model (checking a parent checks its
+  children), so the list you get back may hold more ids than you set.
+
+## When not to control
+
+Controlled props are for state the app shares. To read the state, `useTreeState` is enough; to
+change it from a button, run a command (`model.run("tree.collapse-all", {})`); to save it, the
+document holds all of it ([Saving and restoring](/docs/guides/persistence)).

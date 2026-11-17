@@ -1,0 +1,52 @@
+---
+title: Tree.RenameInput
+description: The label editor of the enclosing item, rendered only while it is renaming - Enter commits, Escape cancels, and a refused name keeps it open.
+---
+
+`Tree.RenameInput` is a text `input`, rendered only while its item is the renaming item
+(`item.start-rename`, or F2 on the focused item). It opens with the label, focused and selected.
+Enter commits (`item.rename`), Escape cancels (`item.cancel-rename`), and leaving it commits, or
+cancels when the name is refused. Focus then goes back to the item. The tree ignores the keys
+pressed in it. Give it an accessible name.
+
+```tsx
+<Tree.ItemContent className="row">
+    <span className="label">{item.label}</span>
+    <Tree.RenameInput
+        aria-label={`Rename ${item.label}`}
+        className={(state) => (state.invalid ? "rename rename-invalid" : "rename")}
+        onRenameError={(error) => setMessage(error.message)}
+    />
+</Tree.ItemContent>
+```
+
+A refused commit (a middleware's veto, an empty label) keeps it open with `aria-invalid`; the
+next change clears it. See [Inline rename](/docs/guides/rename).
+
+## Props
+
+`RenameInputProps` extends the [common primitive props](/docs/api/root#common-props) (on an
+`input`, without `value` and `defaultValue`: it starts with the label).
+
+| prop | type | description |
+| --- | --- | --- |
+| `onRenameError` | `(error: CommandError) => void` | called when a commit is refused (Enter on an empty label, a middleware's veto) |
+
+## State
+
+`RenameInputState` is the item's state (`TreeItemState`) and:
+
+| field | type | description |
+| --- | --- | --- |
+| `invalid` | `boolean` | the last commit was refused |
+| `error` | `CommandError \| undefined` | why the last commit was refused |
+
+## Attributes
+
+| attribute | when |
+| --- | --- |
+| `type="text"` | always |
+| `aria-invalid` | the last commit was refused |
+| `data-invalid` | the last commit was refused |
+| `data-tree-part="rename-input"` | always |
+| the item's `data-*` state | [State attributes](/docs/concepts/state-attributes) |

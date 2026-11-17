@@ -1,0 +1,43 @@
+---
+title: Tree.Group
+description: The children of an item (role group), rendered only while the item is expanded, each one handed to your function, keyed by its id.
+---
+
+`Tree.Group` is the `role="group"` element that holds an item's children, as in the WAI-ARIA APG
+tree view. It renders only while its item is expanded, and calls its children function with each
+child, in order, keyed by its id. Its state is its item's.
+
+```tsx
+function FileItem({ item }: { item: ItemOf<Types> }) {
+    return (
+        <Tree.Item item={item}>
+            <Tree.ItemContent>{item.label}</Tree.ItemContent>
+            <Tree.Group<Types> className="group">{(child) => <FileItem item={child} />}</Tree.Group>
+        </Tree.Item>
+    );
+}
+```
+
+Pass the registry as the type argument (`<Tree.Group<Types>>`): a function cannot infer it
+through context.
+
+## Props
+
+`GroupProps<T>` extends the [common primitive props](/docs/api/root#common-props) (on a `div`),
+with the item's state (`TreeItemState`).
+
+| prop | type | default | description |
+| --- | --- | --- | --- |
+| `children` | `(item: ItemOf<T>) => ReactNode` | required | renders a child item: called with each child of the enclosing item, in order |
+| `keepMounted` | `boolean` | `false` | render the group while the item is collapsed too, hidden with `display: none` |
+
+## Attributes
+
+| attribute | when |
+| --- | --- |
+| `role="group"` | always |
+| `data-tree-part="group"` | always |
+| the item's `data-*` state | [State attributes](/docs/concepts/state-attributes) |
+
+Structural style: `--tree-depth` (the item's), and `display: none` while collapsed with
+`keepMounted`.

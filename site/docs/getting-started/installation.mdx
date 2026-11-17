@@ -1,0 +1,116 @@
+---
+title: Installation
+description: Add the tree view to a React 19 app with one package, @fragiola/tree-react, which brings the primitives, the hooks and the whole core.
+---
+
+A React app installs one package, `@fragiola/tree-react`: the `Tree.*` primitives, the hooks and
+the whole framework-free core (`@fragiola/tree`), re-exported.
+
+<Callout type="info" title="Not on npm yet">
+    The packages are not published on npm yet: these pages describe the upcoming first release,
+    and the commands below will work once it is out. Until then, the repository
+    (github.com/fragiola/tree) builds them from source.
+</Callout>
+
+<Tabs items={["pnpm", "npm", "yarn"]}>
+    <Tab value="pnpm">
+        ```sh
+        pnpm add @fragiola/tree-react
+        ```
+    </Tab>
+    <Tab value="npm">
+        ```sh
+        npm install @fragiola/tree-react
+        ```
+    </Tab>
+    <Tab value="yarn">
+        ```sh
+        yarn add @fragiola/tree-react
+        ```
+    </Tab>
+</Tabs>
+
+## Requirements
+
+| requirement | why |
+| --- | --- |
+| `react` and `react-dom` **^19** | peer dependencies of `@fragiola/tree-react`. The primitives use React 19 features: `ref` as a plain prop and ref cleanup functions. |
+| A browser DOM | the engine focuses elements, listens to Pointer Events and measures rows during a drag. The **model** runs in plain Node (tests, server-side JSON handling), but a tree is interactive only on the client. |
+| ES modules | both packages are ESM only (`"type": "module"`). |
+
+`@fragiola/tree` has **zero runtime dependencies**, and `@fragiola/tree-react` depends only on
+the core, at the exact same version, and on its React peers.
+
+Both packages ship their types and are best used with TypeScript in `strict` mode: the document,
+the command payloads and each item's data are typed by your registry
+([Typed data](/docs/concepts/typed-data)). Plain JavaScript works too: the model validates every
+command's payload at run time either way.
+
+## What to import from where
+
+Everything comes from `@fragiola/tree-react`:
+
+```tsx
+import {
+    // the primitives (one namespace) and the hooks
+    Tree,
+    useTree,
+    useTreeState,
+    // the core: the model, its types and helpers
+    createTreeModel,
+    type ItemOf,
+    type TreeJson,
+} from "@fragiola/tree-react";
+```
+
+The React package re-exports the whole core (`createTreeModel`, `TreeModel`, `TreeJson`, `ItemOf`,
+`Middleware`, `veto`, `createTreeEngine`, `DEFAULT_KEY_MAP`, …), so the pages on
+[the core API](/docs/api/model) apply as they are: in a React app, import those names from
+`@fragiola/tree-react` too.
+
+## Without a framework
+
+The core is published on its own as `@fragiola/tree`, for code that renders nothing: handling tree
+JSON on a server, a script or a test that runs no framework, or an adapter for another framework.
+
+```sh
+pnpm add @fragiola/tree
+```
+
+```ts
+import { createTreeModel, type TreeJson } from "@fragiola/tree";
+```
+
+A React app never needs it: it comes with `@fragiola/tree-react`.
+
+## Server rendering
+
+The primitives render on the server: `Tree.Root` outputs the tree's markup with its roles and
+state, and creates its engine (focus, keys, drags, the loader) only once it is mounted in the
+browser. In Next.js, the file that renders the tree is a client component:
+
+```tsx title="app/files/file-tree.tsx"
+"use client";
+
+import { Tree, type TreeJson } from "@fragiola/tree-react";
+
+type Types = { items: { folder: undefined; file: undefined } };
+
+export function FileTree({ json }: { json: TreeJson<Types> }) {
+    return (
+        <Tree.Root<Types> defaultTree={json} aria-label="Files">
+            <Tree.Items<Types>>
+                {(item) => (
+                    <Tree.Item item={item}>
+                        <Tree.ItemContent>{item.label}</Tree.ItemContent>
+                    </Tree.Item>
+                )}
+            </Tree.Items>
+        </Tree.Root>
+    );
+}
+```
+
+## Next
+
+[Your first tree](/docs/getting-started/first-tree) builds a working, typed tree step by step.

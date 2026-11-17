@@ -1,0 +1,79 @@
+---
+title: Styling the depth
+description: Indent rows with the --tree-depth custom property every part carries, and keep the drop indicator's level in line with your indentation.
+---
+
+The tree is not nested visually by the package: each item's group is inside the item's element,
+but nothing is indented. Every part of an item (`Tree.Item`, `Tree.ItemContent`, `Tree.Group`)
+carries the item's depth twice: as the custom property `--tree-depth` (an inline style: `0` for a
+root item, `1` for its children, …) and as the attribute `data-depth`. The indentation is a line
+of CSS you own.
+
+## Indenting the row
+
+Pad the row, not the item: the row is what the user sees and what a drag hit-tests, and the
+padding keeps the whole width clickable and highlightable.
+
+```css
+.row {
+    padding-inline-start: calc(var(--tree-depth) * 1.25rem + 0.5rem);
+}
+```
+
+`padding-inline-start` follows the writing direction, so the same rule indents from the right in
+a [right-to-left tree](/docs/guides/rtl). With Tailwind:
+
+```tsx
+<Tree.ItemContent className="ps-[calc(var(--tree-depth)*1.25rem+0.5rem)]">{item.label}</Tree.ItemContent>
+```
+
+## Guide lines
+
+A vertical line per level is a background on the row, sized by the same property:
+
+```css
+.row {
+    --indent: 1.25rem;
+    padding-inline-start: calc(var(--tree-depth) * var(--indent) + 0.5rem);
+    background-image: repeating-linear-gradient(
+        to right,
+        transparent 0 calc(var(--indent) - 1px),
+        #e5e7eb calc(var(--indent) - 1px) var(--indent)
+    );
+    background-size: calc(var(--tree-depth) * var(--indent)) 100%;
+    background-repeat: no-repeat;
+}
+```
+
+Or select a depth with `data-depth`, for a style a level gets (a bold root level):
+
+```css
+.row[data-depth="0"] {
+    font-weight: 600;
+}
+```
+
+## Keeping drops in line
+
+During a drag, the pointer's inline position at the end of a sublist picks the level the drop
+lands on, and the drop indicator starts at `(level - 1) * indentation` pixels from the root's
+inline start. Tell the root your indentation in pixels with `indentation` (default `16`):
+
+```tsx
+<Tree.Root<Types> defaultTree={json} indentation={20} aria-label="Files">
+    <Tree.Items<Types>>{(item) => <FileItem item={item} />}</Tree.Items>
+    <Tree.DropIndicator className="drop-indicator" />
+</Tree.Root>
+```
+
+The indicator does not know about padding before the first level (the `+ 0.5rem` above, a grip,
+a toggle). Shift it with a margin in its own styles, as the examples do
+([Known limitations](/docs/limitations)).
+
+```css
+.drop-indicator {
+    margin-inline-start: 0.5rem;
+}
+```
+
+<Example id="drag-and-drop" />

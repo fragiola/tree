@@ -1,0 +1,98 @@
+---
+title: Typed data
+description: Declare each kind of item and the type of its data once; the document, the commands and every item you render are then checked against it.
+---
+
+An app declares its tree's registry: each item **kind**, and the type of that kind's **data**.
+Everything typed by the model follows from it: the document, the payloads of `item.add` and
+`item.set-data`, and the items the primitives hand you.
+
+```ts
+type Types = {
+    items: {
+        folder: undefined; // a folder holds no data
+        file: { size: number; modified: string };
+        link: { url: string };
+    };
+};
+```
+
+## Items narrow on their kind
+
+`ItemOf<Types>` is a union discriminated by `kind`, so `data` narrows:
+
+```tsx
+function Meta({ item }: { item: ItemOf<Types> }) {
+    switch (item.kind) {
+        case "file":
+            return <small>{item.data.size} B</small>; // { size: number; modified: string }
+        case "link":
+            return <small>{new URL(item.data.url).host}</small>;
+        case "folder":
+            return null; // item.data is undefined
+    }
+}
+```
+
+`KindOf<Types>` is the union of kinds and `DataOf<Types, "file">` one kind's data type. With no
+registry, `AnyTypes` accepts any kind with `unknown` data.
+
+## The document and the commands
+
+`TreeJson<Types>` checks each item's `data` against its `kind`, and requires it when the kind's
+data cannot be `undefined`:
+
+```ts
+const json: TreeJson<Types> = {
+    version: 1,
+    rootItemIds: ["readme"],
+    items: {
+        readme: { kind: "file", label: "README.md", data: { size: 80, modified: "2026-11-01" } },
+    },
+};
+
+model.run("item.add", {
+    item: { kind: "link", label: "Docs", data: { url: "https://fragiola.com/tree" } },
+    to: { parentItemId: null },
+});
+model.run("item.set-data", { itemId: "readme", data: { size: 120, modified: "2026-11-16" } });
+```
+
+A `file` without `size`, or a `link` with a `size`, does not compile. `TreeItemJson<Types>` is one
+item in JSON (as `loadChildren` returns them).
+
+## Passing the registry along
+
+`createTreeModel<Types>(json)` types the model, and `<Tree.Root<Types>>` the root. A part that
+hands you items through a function (`Tree.Items`, `Tree.Group`) cannot infer the registry through
+React context: pass it as their type argument. The hooks take it the same way:
+
+```tsx
+<Tree.Items<Types>>{(item) => <Node item={item} />}</Tree.Items>
+<Tree.Group<Types>>{(child) => <Node item={child} />}</Tree.Group>
+
+const { model } = useTree<Types>();
+const tree = useTreeRef<Types>();
+```
+
+## Checking data at run time
+
+Types check your code; a document from a server or an assistant is checked at run time. Give the
+model a JSON Schema per kind, and the document, `item.add`, `item.set-data` and
+`item.set-children` validate `data` against it:
+
+```ts
+const model = createTreeModel<Types>(json, {
+    dataSchemas: {
+        file: {
+            type: "object",
+            properties: { size: { type: "number" }, modified: { type: "string" } },
+            required: ["size", "modified"],
+        },
+    },
+});
+```
+
+An invalid document throws a `TreeValidationError` listing every problem with its JSON path; an
+invalid payload is refused with `invalid_payload`. The `FromSchema` type derives a TypeScript type
+from a schema written `as const`, if you would rather write the schema first.

@@ -1,0 +1,69 @@
+---
+title: The primitive contract
+description: What every Tree primitive accepts and guarantees - render instead of asChild, state-aware className and style, composed handlers, and state as attributes.
+---
+
+Every `Tree.*` primitive follows the Fragiola primitive contract, the same in every Fragiola
+library. Learn it once and every part reads the same way.
+
+## render, never asChild
+
+`render` replaces the element a primitive renders. Give it an element, whose props are merged
+with the primitive's, or a function receiving the props and the primitive's state:
+
+```tsx
+<Tree.Item item={item} render={<li />}>…</Tree.Item>
+
+<Tree.ItemContent
+    render={(props, state) => (
+        <a {...props} href={`/files/${state.itemId}`} aria-current={state.selected ? "page" : undefined} />
+    )}
+>
+    {item.label}
+</Tree.ItemContent>
+```
+
+The props a `render` function receives (`RenderedProps`) include a callback `ref`, so they fit
+any element with no cast. Spread them all: they carry the roles, the state and the handlers.
+
+## className and style as functions
+
+`className` and `style` take a value, or a function of the primitive's state:
+
+```tsx
+<Tree.ItemContent
+    className={(state) => (state.selected ? "row row-selected" : "row")}
+    style={(state) => ({ opacity: state.dragging ? 0.5 : 1 })}
+>
+    {item.label}
+</Tree.ItemContent>
+```
+
+A structural style the primitive sets always wins: `--tree-depth` on an item's parts,
+`position: relative` on the root, the drop indicator's geometry, a hidden group's `display`.
+
+## Props and handlers
+
+Every other prop goes to the element: `id`, `aria-describedby`, `data-testid`, `onKeyDown`, …
+Handlers are composed: the primitive's runs first, then yours. `ref` is a plain prop
+(React 19), merged with the primitive's own.
+
+## State goes out as attributes
+
+A primitive exposes its state through ARIA and `data-*` attributes, **present or absent**, never
+`"false"`, so `[data-selected]` and Tailwind's `data-selected:` work as they read. Every part of
+an item carries the item's state, so a nested row never inherits its ancestor's
+([State attributes](/docs/concepts/state-attributes)).
+
+## No text, no names
+
+No primitive renders text or sets an `aria-label` of its own: the children are yours, and so is
+every name ([Accessible names](/docs/getting-started/accessible-names)).
+
+## Part and path attributes
+
+Every element carries `data-tree-part`, and every item `data-tree-path`, its position from the
+root. Tests and tooling select by them, never by class names
+([Parts and paths](/docs/concepts/parts-and-paths)).
+
+The props every primitive shares are on [Tree.Root](/docs/api/root#common-props).

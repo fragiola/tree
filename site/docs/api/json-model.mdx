@@ -1,6 +1,6 @@
 ---
 title: The JSON model
-description: The tree document, version 1, that createTreeModel loads and get("tree-json") writes back: its fields, its rules and how it is normalized.
+description: The tree document (version 1) that createTreeModel loads and get("tree-json") writes back, with its fields, its rules and how it is normalized.
 ---
 
 A tree is one JSON document. `createTreeModel<Types>(json)` validates it against its JSON Schema
@@ -32,6 +32,8 @@ A field holding an id is named `<entity>Id`, a list of ids `<entity>Ids`.
 
 ## The document
 
+Its type is `TreeJson<T>`, typed by your registry `T`; its `settings` are a `TreeSettingsJson`.
+
 | field | type | required | what it is |
 | --- | --- | --- | --- |
 | `version` | `1` | yes | the document version |
@@ -56,6 +58,11 @@ A field holding an id is named `<entity>Id`, a list of ids `<entity>Ids`.
 | `droppable` | boolean: the default of an item's `droppable` | `true` |
 
 ## Items
+
+An item is written as a `TreeItemInit<K, D>` (kind `K`, data `D`); `TreeItemJson<T>` is the union
+of your registry's kinds, so `data` is checked per kind (`DataField<D>` makes it optional when the
+kind's data allows `undefined`). `loadChildren`, `item.add` and `item.set-children` take the same
+shape.
 
 | field | type | required | what it is |
 | --- | --- | --- | --- |

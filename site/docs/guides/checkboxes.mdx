@@ -1,0 +1,103 @@
+---
+title: Checkboxes
+description: Tri-state checkboxes for permission pickers and filters - checks that cascade to children and back up as mixed parents, or independent ones.
+---
+
+Checks are model state: `state.checkedItemIds`. `Tree.Checkbox` is the box you draw; the root's
+`checkboxes` prop puts `aria-checked` on every item and makes Space toggle the focused item's
+check instead of its selection. What a check means (a scope to grant, a filter to apply) is yours.
+
+## Turning them on
+
+```tsx
+import { type ItemOf, Tree } from "@fragiola/tree-react";
+
+function PermissionItem({ item }: { item: ItemOf<Types> }) {
+    return (
+        <Tree.Item item={item}>
+            <Tree.ItemContent className="row">
+                <Tree.Toggle>▸</Tree.Toggle>
+                <Tree.Checkbox className="box">
+                    <CheckIcon className="check" aria-hidden />
+                    <MinusIcon className="dash" aria-hidden />
+                </Tree.Checkbox>
+                <span>{item.label}</span>
+            </Tree.ItemContent>
+            <Tree.Group<Types>>{(child) => <PermissionItem item={child} />}</Tree.Group>
+        </Tree.Item>
+    );
+}
+
+export function Permissions() {
+    return (
+        <Tree.Root<Types> defaultTree={json} checkboxes aria-label="Permissions">
+            <Tree.Items<Types>>{(item) => <PermissionItem item={item} />}</Tree.Items>
+        </Tree.Root>
+    );
+}
+```
+
+```css
+.box .check,
+.box .dash {
+    display: none;
+}
+.box[data-checked] .check,
+.box[data-indeterminate] .dash {
+    display: block;
+}
+```
+
+A press on the box toggles the check (`item.toggle-check`); a press on the rest of the row still
+selects. The box is `role="checkbox"` but hidden from assistive technology and never focused: the
+item carries `aria-checked` (`true`, `false` or `"mixed"`), and Space acts on it.
+
+<Example id="checkboxes" />
+
+## Cascade or independent
+
+`settings.checkMode` is `"cascade"` (the default) or `"independent"`:
+
+- **cascade**: checking a parent checks its descendants; a parent is checked when all its
+  children are, and **mixed** when only some of its descendants are. Children loaded later
+  inherit a checked parent. A mixed parent is never stored: `model.get("check-state-by", {
+  itemId })` computes it, and `checkedItemIds` holds the fully checked items only.
+- **independent**: each item is checked on its own (a filter where a category and its entries
+  mean different things).
+
+```ts
+model.run("tree.configure", { settings: { checkMode: "independent" } });
+```
+
+## From code
+
+```ts
+model.run("item.check", { itemId: "billing", checked: true });
+model.run("item.toggle-check", { itemId: "billing.read" });
+model.get("check-state-by", { itemId: "billing" }); // "checked" | "unchecked" | "mixed"
+model.is("item-checked", { itemId: "billing" });
+```
+
+A disabled item cannot be checked or unchecked.
+
+## Reading what is checked
+
+In cascade mode, `checkedItemIds` lists parents and their children alike. Keep what your app
+saves, here the leaves' data:
+
+```tsx
+const scopes = useTreeState<Types, string>(
+    (state) =>
+        state.checkedItemIds
+            .flatMap((itemId) => {
+                const item = state.items[itemId];
+                return item?.kind === "permission" ? [item.data.scope] : [];
+            })
+            .join(" "),
+    { model },
+);
+```
+
+The selector returns a string so that `Object.is` sees an unchanged selection as equal; pass
+`isEqual` to compare arrays instead. To keep the checks in React state, use `checkedItemIds` and
+`onCheckedItemIdsChange` on the root ([Controlled state](/docs/guides/controlled-state)).

@@ -1,0 +1,56 @@
+---
+title: Model and engine
+description: The model holds what is true with no screen; the engine is one tree on screen. Here is which state lives where, and why it matters.
+---
+
+The core has two halves. The **model** is the tree's data and its rules, and works in plain Node.
+The **engine** (`createTreeEngine(model, { root })`) is one tree on screen: it owns everything
+that needs a DOM. `Tree.Root` creates the engine for you; your code reaches both through
+`useTree()`.
+
+## What lives where
+
+| the model (the same answer with no screen) | the engine (only on screen) |
+| --- | --- |
+| the structure: items, children, order | DOM focus |
+| expansion | key handling, type-ahead |
+| selection and the selection anchor | pointer drags and the keyboard drag |
+| checks (and mixed parents) | drop targets and the drop indicator |
+| the focused item (the roving tab stop) | scrolling an item into view, auto-scroll |
+| which item is being renamed | calling your `loadChildren` |
+| each parent's children status | the live region's latest announcement |
+
+The **focused item** is model state: it is which item holds the roving tab stop
+(`tabindex="0"`), saved with the document, and it can be set with no screen
+(`item.focus`). DOM focus is the engine's: `engine.run("focus", { itemId })` moves both.
+
+## The same verbs
+
+The engine has the model's verbs, with its own keys. Its keys never have a dot, so an engine
+action never reads as a command:
+
+```ts
+const { model, engine } = useTree<Types>();
+
+model.run("item.expand", { itemId: "src" }); // the model: a command
+engine.run("focus", { itemId: "app" }); // the engine: a screen action
+engine.run("scroll-to", { itemId: "app" });
+engine.run("load-children", { itemId: "photos" }); // retry a failed load
+engine.get("drop-target"); // the drop target of the drag under way, or null
+engine.is("dragging");
+```
+
+An engine action that changes the tree does it by running commands (a drop runs one
+`item.move`, a key runs `item.select` or `item.expand`), so your middleware sees what a key or a
+drag does exactly as it sees your own calls. Every key is on [Engine](/docs/api/engine).
+
+## Why it matters
+
+- **Tests and servers.** The model needs no DOM: load a document, run commands, assert the
+  state, in plain Node ([Testing your tree](/docs/guides/testing)).
+- **Persistence.** The document (`model.get("tree-json")`) holds the model's state, focus and
+  expansion included; nothing on screen needs saving.
+- **Automation.** An assistant drives the model with JSON commands; the engine shows the result
+  ([AI and automation](/docs/guides/ai-and-automation)).
+- **One tree per engine.** Two trees on screen showing one model each have their own engine,
+  focus and drag, over the same state.

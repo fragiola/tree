@@ -1,0 +1,110 @@
+---
+title: Undo and redo
+description: Build undo and redo over the command bus - what counts as a step is your app's decision, and a drag with its auto-expand stays one step.
+---
+
+The package ships no undo: what counts as a step (a move, yes; a selection change, probably not)
+is your app's policy. The model makes it short to write: every commit is an event with the state
+before and after, a command can be marked `transient` (a step of a gesture), and `tree.load` puts
+a saved document back on the same model.
+
+## A history of documents
+
+Before each step, keep the document; undo loads it back. A listener records the steps, and the
+loads it runs itself carry a `meta` it skips:
+
+```ts
+import type { CommandEvent, CommandName, TreeJson, TreeModel, TreeTypes } from "@fragiola/tree-react";
+
+const IGNORED: readonly CommandName[] = [
+    "item.select",
+    "tree.select",
+    "tree.select-all",
+    "tree.clear-selection",
+    "item.focus",
+    "item.start-rename",
+    "item.cancel-rename",
+    "item.set-children-status",
+];
+
+export class History<T extends TreeTypes> {
+    private past: TreeJson<T>[] = [];
+    private future: TreeJson<T>[] = [];
+    private last: TreeJson<T>;
+    private gesture = false;
+
+    constructor(private readonly model: TreeModel<T>) {
+        this.last = model.get("tree-json");
+        model.subscribe(this.record);
+    }
+
+    undo() {
+        this.swap(this.past, this.future);
+    }
+
+    redo() {
+        this.swap(this.future, this.past);
+    }
+
+    private readonly record = (event: CommandEvent<T>) => {
+        if (event.meta?.undo === true || event.before === event.after) return;
+        if (IGNORED.includes(event.command)) {
+            // part of what the next step goes back to
+            if (!this.gesture) this.last = this.model.get("tree-json");
+            return;
+        }
+        // a drag's auto-expand is transient: the drop that ends the gesture records it
+        if (event.transient) {
+            this.gesture = true;
+            return;
+        }
+        this.past.push(this.last);
+        this.future = [];
+        this.gesture = false;
+        this.last = this.model.get("tree-json");
+    };
+
+    private swap(from: TreeJson<T>[], to: TreeJson<T>[]) {
+        const json = from.pop();
+        if (!json) return;
+        to.push(this.model.get("tree-json"));
+        this.model.run("tree.load", { json: { ...json, renamingItemId: null } }, { meta: { undo: true } });
+        this.last = this.model.get("tree-json");
+    }
+}
+```
+
+An item that keeps its id and did not change keeps its identity across `tree.load`, so React
+re-renders only what the undo changed. The undo-redo example's `_kit/undo.ts` is the same class
+with a snapshot for `useSyncExternalStore`, to enable the buttons.
+
+<Example id="undo-redo" />
+
+## One step for several commands
+
+A `batch` is one commit, so one step: everything in it applies, or nothing does.
+
+```ts
+model.run("batch", {
+    commands: [
+        { command: "item.add", payload: { item: { id: "new", kind: "folder", label: "New", childItemIds: [] }, to: { parentItemId: null } } },
+        { command: "item.move", payload: { itemIds: ["app", "main"], to: { parentItemId: "new", index: 0 } } },
+    ],
+});
+```
+
+## Gestures of your own
+
+Mark the intermediate commands of a gesture you build (a slider that renames as it moves)
+`transient`, and the last one not: the history above records one step.
+
+```ts
+model.run("item.rename", { itemId, label: preview }, { transient: true });
+// …
+model.run("item.rename", { itemId, label: final });
+```
+
+## Keys
+
+Bind Ctrl/Cmd + Z on your app, not on the tree: the tree has no undo key, and the same history
+also undoes changes made from a toolbar or an assistant.

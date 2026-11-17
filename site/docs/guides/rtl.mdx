@@ -1,0 +1,57 @@
+---
+title: Right-to-left trees
+description: A tree in Arabic, Hebrew or Persian needs no option - the engine reads the root's direction, and logical CSS properties mirror the rest.
+---
+
+Nothing is configured for a right-to-left tree. The engine reads the direction of the root
+element (its computed `direction`, set by a `dir` attribute on it or an ancestor), and the
+styles you write with logical properties mirror on their own.
+
+## What changes
+
+- **The keys.** ArrowRight and ArrowLeft swap: in `rtl`, ArrowLeft expands a parent or goes to
+  its first child, ArrowRight collapses or goes to the parent. A custom `keyMap` is read the same
+  way: bind `"ArrowRight"` and it follows the tree's direction.
+- **Drag and drop.** The pointer's inline offset (which picks a drop's level at the end of a
+  sublist) is measured from the right edge, and the drop indicator is positioned with
+  `inset-inline-start`.
+- **Nothing else**: the model has no direction, and a document works in both.
+
+`engine.get("direction")` returns `"ltr"` or `"rtl"`, read when a key or a drag needs it.
+
+## Setting the direction
+
+Put `dir` on the page (`<html dir="rtl" lang="ar">`) or on any ancestor of the tree:
+
+```tsx
+<div dir="rtl" lang="ar">
+    <Tree.Root<Types> defaultTree={json} aria-label="المستندات">
+        <Tree.Items<Types>>{(item) => <Item item={item} />}</Tree.Items>
+    </Tree.Root>
+</div>
+```
+
+## Styles that mirror
+
+Write the indentation and the alignment with logical properties: `padding-inline-start`,
+`margin-inline-end`, `inset-inline-start`, `text-align: start` (Tailwind: `ps-*`, `me-*`,
+`start-*`). A chevron that points to the inline end needs a flip:
+
+```css
+.row {
+    padding-inline-start: calc(var(--tree-depth) * 1rem + 0.25rem);
+}
+.toggle[data-expanded] {
+    rotate: 90deg;
+}
+[dir="rtl"] .toggle {
+    scale: -1 1;
+}
+[dir="rtl"] .toggle[data-expanded] {
+    rotate: -90deg;
+}
+```
+
+With Tailwind: `rtl:-scale-x-100 rtl:data-expanded:-rotate-90`.
+
+<Example id="rtl" />

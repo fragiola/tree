@@ -1,0 +1,40 @@
+---
+title: Known limitations
+description: What the first release does not do yet - virtualization, drags between trees, foreign drops - and the known gaps the examples work around.
+---
+
+The first release covers a tree view's behaviour end to end, but not everything a tree can do.
+Here is what it leaves out on purpose, and the rough edges the examples work around today. Each
+workaround is commented in the examples' code.
+
+## Not in this release
+
+- **No virtualization.** Every visible item is rendered. Trees of a few thousand visible rows are
+  fine; beyond that, collapse by default or load children on demand
+  ([Async loading](/docs/guides/async-loading)). `model.get("visible-items")` is already the flat
+  render order a virtualizer needs, so adding one later will not break the API.
+- **No drag between two trees.** A drag moves items inside its own tree; two trees, even over
+  one model, do not exchange items by dragging. Move them with `item.remove` and `item.add`.
+- **No foreign drops.** Files from the desktop, links, text or another library's elements cannot
+  be dropped on a tree, and a tree's items cannot be dropped elsewhere: the drag uses Pointer
+  Events, not native HTML5 drag and drop.
+- **No built-in app policy.** Undo and redo, persistence, translations and announcement text are
+  yours: the examples show each one as code to copy.
+- **React only, for now.** The Vue and Angular adapters come in later releases, with the same
+  primitives and the same core.
+
+## Known gaps
+
+- **The keyboard drag's first announcement.** Starting a keyboard drag announces `drag-start`
+  and then the first `drag-over` in the same tick, so the second message replaces the first in
+  the live region before a screen reader reads it. The [keyboard](/examples/keyboard) and
+  [drag and drop](/examples/drag-and-drop) examples keep the start ("Picked up …") as the first
+  target's prefix.
+- **Where the keyboard drag starts.** The keyboard drag starts on the position just before the
+  dragged item when the model accepts one there, and otherwise on the first valid position, which
+  may be the top of the tree rather than next to the item.
+- **The drop indicator's inline offset.** The indicator starts `(level - 1) * indentation`
+  pixels from the root's inline start: it knows nothing of padding before the first level, a
+  grip or a toggle. Rows with leading padding shift the line with a margin in the indicator's own
+  styles ([Styling the depth](/docs/getting-started/depth#keeping-drops-in-line)).
+Found something else? [Open an issue](https://github.com/fragiola/tree/issues).

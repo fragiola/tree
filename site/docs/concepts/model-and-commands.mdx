@@ -1,0 +1,109 @@
+---
+title: The model and commands
+description: The tree is a typed, immutable state that only commands change. Run them, ask whether they would succeed, read the state and listen to every commit.
+---
+
+A tree model (`createTreeModel<Types>(json)`) holds the whole tree: its items, what is expanded,
+selected, checked and focused, and its settings. The state is plain, frozen, JSON-shaped data, and
+**only commands change it**. Every member of the model is one verb:
+
+| verb | does |
+| --- | --- |
+| `model.run(command, payload)` | changes the tree: runs a command, typed, through the middleware chain |
+| `model.dispatch(input)` | `run` for untrusted JSON `{ command, payload }`, validated first |
+| `model.can(command, payload)` | whether `run` would succeed now; nothing changes |
+| `model.check(command, payload)` | what `run` would return (its value, or why it is refused); nothing changes |
+| `model.get(key, payload)` | reads: an item, its parent, the visible items, the document |
+| `model.is(key, payload)` | asks a yes/no question: is this item expanded, selected, movable? |
+| `model.use(middleware)` | adds a middleware around every command |
+| `model.subscribe(listener)` | listens to every committed command |
+
+## Running a command
+
+A command has a dotted name and a JSON payload. A field that holds an id says so (`itemId`,
+`itemIds`, `parentItemId`), and a key and its payload read as one sentence:
+
+```ts
+import { createTreeModel } from "@fragiola/tree-react";
+
+const model = createTreeModel<Types>(json);
+
+model.run("item.expand", { itemId: "src" });
+model.run("item.select", { itemId: "app", mode: "toggle" });
+model.run("item.move", { itemIds: ["readme"], to: { parentItemId: "src", index: 0 } });
+
+const result = model.run("item.rename", { itemId: "app", label: "" });
+if (!result.ok) console.log(result.error.code); // "invalid_payload": a label is never empty
+```
+
+`run` never throws on bad input: it returns `{ ok: true, value }` or `{ ok: false, error }`,
+with an error `code` (`not_found`, `refused`, `invalid_payload`, `vetoed`, …) and a `message`.
+The 27 commands are on [Commands](/docs/api/commands).
+
+## Asking before acting
+
+The rules (a disabled item, an item that is not `movable`, a folder that is not `droppable`, the
+selection mode) are enforced by the commands themselves, so `can` and `check` answer exactly what
+`run` would do, middleware included. Ask them to decide what to render:
+
+```tsx
+function DeleteButton({ itemId }: { itemId: string }) {
+    const { model } = useTree<Types>();
+    if (!model.can("item.remove", { itemIds: [itemId] })) return null;
+    return (
+        <button type="button" onClick={() => model.run("item.remove", { itemIds: [itemId] })}>
+            Delete
+        </button>
+    );
+}
+```
+
+A drag asks the same question: the engine runs `model.can("item.move", …)` for every drop target,
+and a refused one never shows.
+
+## Reading the state
+
+`model.state` is the current state (a new object after every change). `model.get` and `model.is`
+read it through named keys; a key that takes an id ends in `-by`:
+
+```ts
+model.get("item-by", { id: "app" }); // the item, or undefined
+model.get("item-parent-by", { itemId: "app" }); // its parent
+model.get("visible-items"); // the render order, with level, posinset and setsize
+model.get("tree-json"); // the document, ready to save
+model.is("item-expanded", { itemId: "src" });
+model.is("item-movable", { itemId: "license" });
+```
+
+In a component, `useTreeState` selects a value and re-renders only when it changes
+([Hooks](/docs/api/hooks)). Every key is on [Model](/docs/api/model).
+
+## Middleware and listeners
+
+A middleware runs around every command, whoever issued it (a key, a click, a drop, your code, an
+assistant): it can veto it, rewrite its payload, or observe its result. A listener sees each
+commit once, with the state before and after:
+
+```ts
+import { veto } from "@fragiola/tree-react";
+
+model.use((ctx, next) =>
+    ctx.command === "item.remove" && ctx.payload.itemIds.includes("readme")
+        ? veto("The README stays.")
+        : next(),
+);
+
+model.subscribe((event) => {
+    console.log(event.command, event.before === event.after ? "no change" : "changed");
+});
+```
+
+`ctx.command` narrows `ctx.payload`. See [Middleware and permissions](/docs/guides/middleware) and
+[The command bus](/docs/api/command-bus).
+
+## Structural sharing
+
+A command produces a new state that shares every item it did not touch: after
+`item.rename` on `app`, `after.items.readme === before.items.readme`. A state that did not change
+is the same object (`before === after`), which makes change detection, memoization and undo
+cheap.

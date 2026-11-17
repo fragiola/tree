@@ -1,0 +1,66 @@
+---
+title: Introduction
+description: What the tree view packages give you (the behaviour, the keyboard model and the accessibility of a tree) and what stays yours.
+---
+
+`@fragiola/tree-react` is a **headless** tree view for React 19: file explorers, outlines,
+navigation menus, nested settings and permission pickers. It ships the behaviour of a tree and its
+accessibility, as composable primitives over a framework-free core.
+
+<Callout type="info" title="Not on npm yet">
+    The packages are not published on npm yet: these pages describe the upcoming first release.
+</Callout>
+
+## What it gives you
+
+- **The WAI-ARIA tree view pattern.** `role="tree"`, `role="treeitem"` and `role="group"`, with
+  `aria-level`, `aria-posinset`, `aria-setsize`, `aria-expanded`, `aria-selected`, `aria-checked`,
+  `aria-disabled` and `aria-busy`, and a roving tab stop: the tree is one stop in the page's tab
+  order.
+- **The keyboard.** Arrows, Home and End, type-ahead, Enter and Space, Shift to extend a
+  selection, `*` to expand siblings, F2 to rename and a keyboard drag, all overridable
+  ([Keyboard and type-ahead](/docs/guides/keyboard)).
+- **Selection and checkboxes.** `none`, `single` or `multiple` selection, and checkboxes that
+  cascade (a parent is checked, unchecked or mixed) or stay independent.
+- **Editing.** Inline rename with validation, and drag and drop with Pointer Events (mouse, touch
+  and pen alike), auto-expanding folders, auto-scroll and a drop indicator.
+- **Async children.** A parent's children can come from your loader, called the first time it is
+  expanded, with a loading state, an error state and a retry.
+- **A model.** The tree is a JSON document, typed by your registry. Every change is a command
+  through a middleware chain, so you can veto, rewrite or record anything a click, a key, a drop or
+  an assistant does ([The model and commands](/docs/concepts/model-and-commands)).
+
+## What stays yours
+
+The packages ship **no CSS, no icons, no text and no rendered menus**:
+
+- every visible word, including each item's label, which is raw data you render
+  (`{item.label}`), and every accessible name ([Accessible names](/docs/getting-started/accessible-names));
+- every pixel: the parts expose their state as `data-*` attributes and ARIA, and the depth as
+  `--tree-depth`, and you style them with any tool ([Styling the depth](/docs/getting-started/depth));
+- the markup: you own the recursion, so an item can render whatever it needs around its row
+  ([Composition](/docs/concepts/composition));
+- app policy: undo and redo, persistence, translations and the live region's announcements are
+  your code. The examples show each of them as code to copy.
+
+## How it is built
+
+Two packages, one per layer:
+
+| package | what it holds |
+| --- | --- |
+| `@fragiola/tree` | the core: the model (the document, its commands, `get`/`is` queries, middleware and events) and the engine (DOM focus, the keyboard, drag and drop, the async loader). No framework, zero runtime dependencies. |
+| `@fragiola/tree-react` | the `Tree.*` primitives and the hooks, and the whole core re-exported: a React app installs this one package. |
+
+The model holds what is true with no screen (what is expanded, selected, checked, focused, being
+renamed); the engine is the one tree on screen (see [Model and engine](/docs/concepts/model-and-engine)).
+
+## A taste
+
+<Example id="hello-tree" />
+
+## Next
+
+- [Installation](/docs/getting-started/installation)
+- [Your first tree](/docs/getting-started/first-tree)
+- [Known limitations](/docs/limitations): no virtualization yet, no drag between two trees.

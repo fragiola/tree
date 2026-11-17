@@ -1,0 +1,84 @@
+---
+title: Styling with Tailwind
+description: Style the tree with Tailwind's data and ARIA variants, arbitrary values for the depth, and one class string per part kept next to the component.
+---
+
+The state attributes map one to one onto Tailwind's variants: `data-selected:`,
+`data-expanded:`, `data-leaf:`, `data-[drop-position=inside]:`, `aria-disabled:`. The depth is an
+arbitrary value over `--tree-depth`. Nothing in the packages assumes Tailwind; the examples use
+it, with one class string per part in a `styles.ts` next to each component.
+
+## The parts
+
+```tsx
+import { type ItemOf, Tree } from "@fragiola/tree-react";
+import { ChevronRight } from "lucide-react";
+
+const styles = {
+    root: "overflow-auto rounded-lg border p-1 text-sm",
+    item: "outline-none",
+    row: [
+        "flex h-8 cursor-default select-none items-center gap-1.5 rounded-md pe-2",
+        "ps-[calc(var(--tree-depth)*1rem+0.25rem)] hover:bg-gray-100",
+        "[:focus-visible>&]:ring-2 [:focus-visible>&]:ring-blue-600 [:focus-visible>&]:ring-inset",
+        "data-selected:bg-blue-100 data-selected:text-blue-900 data-disabled:opacity-50",
+    ].join(" "),
+    toggle: [
+        "flex size-4 shrink-0 items-center justify-center transition-[rotate] data-leaf:invisible",
+        "data-expanded:rotate-90 rtl:-scale-x-100 rtl:data-expanded:-rotate-90",
+    ].join(" "),
+    label: "min-w-0 flex-1 truncate",
+};
+
+function FileItem({ item }: { item: ItemOf<Types> }) {
+    return (
+        <Tree.Item item={item} className={styles.item}>
+            <Tree.ItemContent className={styles.row}>
+                <Tree.Toggle className={styles.toggle}>
+                    <ChevronRight aria-hidden className="size-3.5" />
+                </Tree.Toggle>
+                <span className={styles.label}>{item.label}</span>
+            </Tree.ItemContent>
+            <Tree.Group<Types>>{(child) => <FileItem item={child} />}</Tree.Group>
+        </Tree.Item>
+    );
+}
+```
+
+- `[:focus-visible>&]:` draws the ring on the row when its item (the element with DOM focus)
+  shows focus.
+- `ps-[calc(var(--tree-depth)*1rem+0.25rem)]` indents by depth, mirrored in right-to-left.
+- `data-leaf:invisible` keeps a leaf's toggle room, so labels line up.
+
+<Example id="file-explorer" />
+
+## The drop indicator and the live region
+
+```tsx
+<Tree.DropIndicator
+    className={[
+        "pointer-events-none z-10",
+        "data-[drop-position=before]:-mt-px data-[drop-position=before]:border-t-2 data-[drop-position=before]:border-blue-600",
+        "data-[drop-position=after]:-mt-px data-[drop-position=after]:border-t-2 data-[drop-position=after]:border-blue-600",
+        "data-[drop-position=inside]:rounded-md data-[drop-position=inside]:border-2 data-[drop-position=inside]:border-blue-600",
+    ].join(" ")}
+/>
+<Tree.LiveRegion className="sr-only" />
+```
+
+## State as a function
+
+`className` also takes a function of the part's state, for the cases a variant cannot express:
+
+```tsx
+<Tree.ItemContent className={(state) => cn(styles.row, state.level === 1 && "font-semibold")}>
+    {item.label}
+</Tree.ItemContent>
+```
+
+## Themes
+
+The examples read their sizes and colours from CSS variables (`--tr-indent`, `--tr-row-height`,
+`--tr-selected-bg`, …) set by a theme file, so one set of class strings works in the light and
+the dark theme: `ps-[calc(var(--tree-depth)*var(--tr-indent)+0.25rem)]`,
+`data-selected:bg-(--tr-selected-bg)`. Copy that pattern to theme your own tree.
