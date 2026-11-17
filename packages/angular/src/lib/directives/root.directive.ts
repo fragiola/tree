@@ -15,16 +15,17 @@ import {
     type AnyTypes,
     createTreeEngine,
     createTreeModel,
+    FEATURE_ROOT_PROPS,
     type KeyMap,
     type LoadChildren,
     type TransferHandler,
     type TreeDropOutside,
     type TreeEngine,
+    type TreeFeatures,
     type TreeForeignDrop,
     type TreeJson,
     type TreeModel,
     type TreeTypes,
-    type TreeVirtualizer,
 } from "@fragiola/tree";
 import {
     eraseModel,
@@ -36,6 +37,7 @@ import {
 import { bindControlledState } from "../utils/controlled";
 import { createEngineFacade } from "../utils/engine-facade";
 import {
+    bindFeatureAttributes,
     bindStructuralStyle,
     dataAttr,
     fromStore,
@@ -45,7 +47,7 @@ import {
 } from "../utils/helpers";
 
 export interface RootState {
-    /** the selection mode is `multiple` (`aria-multiselectable`) */
+    /** the selection mode is `multiple` (`aria-multiselectable`, with `selection()`) */
     multiselectable: boolean;
     /** a drag is under way (pointer or keyboard) */
     dragging: boolean;
@@ -64,6 +66,11 @@ export interface RootState {
  * the tree to the parts inside. Another model, or another engine option, makes another engine.
  * `#tree="treeRoot"` gives its `model()` and its `engine` to the rest of the template.
  */
+/** A list of features by their names, in order: an equal new list (`features={[selection()]}`) is the same. */
+function featureNames(features: TreeFeatures | undefined): string {
+    return (features ?? []).map((feature) => feature.name).join(",");
+}
+
 @Directive({
     selector: "[treeRoot]",
     exportAs: "treeRoot",
@@ -77,7 +84,6 @@ export interface RootState {
     ],
     host: {
         role: "tree",
-        "[attr.aria-multiselectable]": "data().multiselectable",
         "data-tree-part": "root",
         "[attr.data-dragging]": "data().dragging",
         "[attr.data-keyboard-dragging]": "data().keyboardDragging",
@@ -90,18 +96,29 @@ export interface RootState {
         "(drop)": "onDrag($event)",
     },
 })
-export class TreeRootDirective<T extends TreeTypes = AnyTypes> {
+export class TreeRootDirective<
+    T extends TreeTypes = AnyTypes,
+    F extends TreeFeatures = readonly [],
+> {
     /**
      * the tree model. Its middleware (`model.use`) sees every command the tree runs, and its
      * listeners (`model.subscribe`) every change. Another model makes another engine. Give
      * either the model or `defaultTree`
      */
-    readonly treeRoot = input<TreeModel<T> | "" | undefined>(undefined);
+    readonly treeRoot = input<TreeModel<T, F> | "" | undefined>(undefined);
     /** the document of a model the root creates and keeps (read once, when first set) */
     readonly defaultTree = input<TreeJson<T> | undefined>(undefined);
+    /**
+     * the opt-in features of the model the root creates from `defaultTree` (read once, when it
+     * creates it): `[selection(), virtualization({ rowSize: 28 })]`. A model has its own
+     */
+    readonly features = input<TreeFeatures | undefined>(undefined);
     /** controlled expansion: the expanded items (`[(expandedItemIds)]`) */
     readonly expandedItemIds = input<readonly string[] | undefined>(undefined);
-    /** controlled selection: the selected items (`[(selectedItemIds)]`) */
+    /**
+     * controlled selection: the selected items (`[(selectedItemIds)]`), with `selection()` in the
+     * model's features (without it, ignored with a warning)
+     */
     readonly selectedItemIds = input<readonly string[] | undefined>(undefined);
     /** controlled checkboxes: the checked items (`[(checkedItemIds)]`) */
     readonly checkedItemIds = input<readonly string[] | undefined>(undefined);
@@ -127,12 +144,6 @@ export class TreeRootDirective<T extends TreeTypes = AnyTypes> {
     readonly indicatorInset = input<number | undefined>(undefined);
     /** how long (ms) between two typed characters keeps one type-ahead search (default 500) */
     readonly typeAheadTimeout = input<number | undefined>(undefined);
-    /**
-     * renders only the visible items in view (`createTreeVirtualizer(options)`, rendered by
-     * `ng-template[treeVirtualItems]`). Create it once (a field): another virtualizer makes
-     * another engine
-     */
-    readonly virtual = input<TreeVirtualizer | undefined>(undefined);
     /**
      * joins the trees of the document with the same group name: items drag between them, by pointer
      * and keyboard (over one model a drop is one `item.move`, over two a transfer)
@@ -165,24 +176,32 @@ export class TreeRootDirective<T extends TreeTypes = AnyTypes> {
     readonly checkedItemIdsChange = output<string[]>();
 
     private readonly host = injectHost();
+    /** the names of the features the root's own model was created with */
+    private createdWith: string | undefined;
     /** the model made from `defaultTree`, once it is set */
     private own: TreeModel | undefined;
     /** the model shown while there is neither a model nor a `defaultTree`: no item */
     private empty: TreeModel | undefined;
 
     /** the root's model: its `treeRoot` input, or the one it made from `defaultTree` */
-    readonly model: Signal<TreeModel<T>> = computed(() => {
+    readonly model: Signal<TreeModel<T, F>> = computed(() => {
         const given = this.treeRoot();
         if (given) return given;
         if (!this.own) {
             const json = this.defaultTree();
             if (json === undefined) {
                 this.empty ??= createTreeModel();
-                return this.empty as unknown as TreeModel<T>;
+                return this.empty as unknown as TreeModel<T, F>;
             }
-            this.own = eraseModel(createTreeModel<T>(json));
+            const features = untracked(this.features);
+            this.createdWith = featureNames(features);
+            this.own = eraseModel(
+                createTreeModel<T, TreeFeatures>(json, {
+                    features,
+                }) as unknown as TreeModel<T, F>,
+            );
         }
-        return this.own as unknown as TreeModel<T>;
+        return this.own as unknown as TreeModel<T, F>;
     });
     private readonly erased = computed(() => eraseModel(this.model()));
 
@@ -193,7 +212,7 @@ export class TreeRootDirective<T extends TreeTypes = AnyTypes> {
      * there from the start; before the root created its engine an action is refused and a read
      * is empty
      */
-    readonly engine: TreeEngine<T> = typedEngine<T>(this.facade.engine);
+    readonly engine: TreeEngine<T, F> = typedEngine<T, F>(this.facade.engine);
 
     private readonly current = signal<TreeEngine | null>(null);
     private readonly tick = signal(0);
@@ -222,7 +241,9 @@ export class TreeRootDirective<T extends TreeTypes = AnyTypes> {
         this.tick();
         const live = this.current();
         return {
-            multiselectable: tree.settings.selectionMode === "multiple",
+            multiselectable:
+                this.erased().get("root-attributes")["aria-multiselectable"] ===
+                "true",
             dragging: live?.is("dragging") ?? false,
             keyboardDragging: live?.is("keyboard-dragging") ?? false,
             draggingFromOtherTree:
@@ -234,7 +255,6 @@ export class TreeRootDirective<T extends TreeTypes = AnyTypes> {
     protected readonly data = computed(() => {
         const state = this.state();
         return {
-            multiselectable: state.multiselectable ? "true" : null,
             dragging: dataAttr(state.dragging),
             keyboardDragging: dataAttr(state.keyboardDragging),
             draggingFromOtherTree: dataAttr(state.draggingFromOtherTree),
@@ -271,9 +291,7 @@ export class TreeRootDirective<T extends TreeTypes = AnyTypes> {
             if (!rendered()) return;
             const model = this.erased();
             this.options();
-            // a virtualizer, a foreign drop, a drop outside by identity (they hold functions JSON
-            // leaves out)
-            this.virtual();
+            // a foreign drop, a drop outside by identity (they hold functions JSON leaves out)
             this.foreignDrop();
             this.dropOutside();
             untracked(() => {
@@ -301,6 +319,13 @@ export class TreeRootDirective<T extends TreeTypes = AnyTypes> {
             );
         });
 
+        // the controlled lists: the core's and the features' (an Angular input is declared on
+        // the class, so a feature's list is an input of every root, used with its feature)
+        const outputs: Record<string, { emit(itemIds: string[]): void }> = {
+            expandedItemIds: this.expandedItemIdsChange,
+            selectedItemIds: this.selectedItemIdsChange,
+            checkedItemIds: this.checkedItemIdsChange,
+        };
         bindControlledState(
             this.erased,
             () => ({
@@ -308,16 +333,52 @@ export class TreeRootDirective<T extends TreeTypes = AnyTypes> {
                 selectedItemIds: this.selectedItemIds(),
                 checkedItemIds: this.checkedItemIds(),
             }),
-            (list, itemIds) => {
-                if (list === "expandedItemIds") {
-                    this.expandedItemIdsChange.emit(itemIds);
-                } else if (list === "selectedItemIds") {
-                    this.selectedItemIdsChange.emit(itemIds);
-                } else {
-                    this.checkedItemIdsChange.emit(itemIds);
-                }
-            },
+            (list, itemIds) => outputs[list]?.emit(itemIds),
         );
+        // the installed features' ARIA and data-* (`aria-multiselectable` with `selection()`)
+        bindFeatureAttributes(this.host, () => {
+            this.treeState();
+            this.tick();
+            return this.erased().get("root-attributes");
+        });
+        // misuse the root ignores, once each: a feature's input without its feature, a later
+        // change of the features
+        const warned = new Set<string>();
+        const warn = (message: string) => {
+            if (warned.has(message)) return;
+            warned.add(message);
+            console.warn(`[@fragiola/tree-angular] ${message}`);
+        };
+        effect(() => {
+            // the names the root's own model was created with: a list equal by names is the same
+            const features = featureNames(this.features());
+            this.erased();
+            if (
+                !this.treeRoot() &&
+                this.createdWith !== undefined &&
+                features !== this.createdWith
+            ) {
+                warn(
+                    "the features input changed after the root created its model: the change is ignored (the features are fixed when the model is created)",
+                );
+            }
+            const installed = new Set(
+                this.erased()
+                    .get("features")
+                    .map(({ name }) => name),
+            );
+            const lists: Record<string, unknown> = {
+                selectedItemIds: this.selectedItemIds(),
+            };
+            for (const [name, value] of Object.entries(lists)) {
+                const feature = FEATURE_ROOT_PROPS[name];
+                if (value !== undefined && feature && !installed.has(feature)) {
+                    warn(
+                        `${name} needs the ${feature} feature (\`${feature}()\` in the model's features): it is ignored`,
+                    );
+                }
+            }
+        });
 
         onDestroy(() => this.facade.set(null));
     }
@@ -346,7 +407,6 @@ export class TreeRootDirective<T extends TreeTypes = AnyTypes> {
             indentation: untracked(this.indentation),
             indicatorInset: untracked(this.indicatorInset),
             typeAheadTimeout: untracked(this.typeAheadTimeout),
-            virtual: untracked(this.virtual),
             dragGroup: untracked(this.dragGroup),
             transfer:
                 untracked(this.transfer) === undefined

@@ -1,18 +1,50 @@
 // Type fixtures (compiled by `pnpm typecheck`, never run): the registry types the items' data, the
 // commands' payloads and the queries. `@ts-expect-error` marks what must not compile.
-import { createTreeModel } from "../../src/state/model";
+import { selection } from "../../src/selection/selection";
+import { createTreeModel, type TreeModel } from "../../src/state/model";
 import type { ItemOf } from "../../src/state/types";
+import { virtualization } from "../../src/virtual/virtualization";
 
 type Types = { items: { folder: undefined; file: { size: number } } };
 
-const model = createTreeModel<Types>({
-    version: 1,
-    rootItemIds: ["a"],
-    items: {
-        a: { kind: "folder", label: "a", childItemIds: ["b"] },
-        b: { kind: "file", label: "b", data: { size: 1 } },
+const features = [selection()] as const;
+
+const model = createTreeModel<Types, typeof features>(
+    {
+        version: 1,
+        rootItemIds: ["a"],
+        items: {
+            a: { kind: "folder", label: "a", childItemIds: ["b"] },
+            b: { kind: "file", label: "b", data: { size: 1 } },
+        },
     },
-});
+    { features },
+);
+
+// the features are inferred when the registry is
+const inferred = createTreeModel(
+    { version: 1, rootItemIds: [], items: {} },
+    { features: [selection(), virtualization()] },
+);
+inferred.run("tree.select-all", {});
+const selectedIds: readonly string[] = inferred.state.selectedItemIds;
+void selectedIds;
+
+// a bare tree: no selection command, key or state
+const bare = createTreeModel<Types>();
+// @ts-expect-error the selection feature is not installed
+bare.run("item.select", { itemId: "b" });
+// @ts-expect-error the selection feature is not installed
+bare.get("selected-items");
+// @ts-expect-error the selection feature is not installed
+bare.is("item-selected", { itemId: "b" });
+// @ts-expect-error the selection feature is not installed
+void bare.state.selectedItemIds;
+bare.run("item.expand", { itemId: "a" });
+
+// a model with more features is a model with fewer (an adapter's parts take any)
+const anyModel: TreeModel<Types> = model;
+void anyModel;
 
 createTreeModel<Types>({
     version: 1,

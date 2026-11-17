@@ -4,6 +4,10 @@ import {
     type TreeJson,
     useTree,
 } from "@fragiola/tree-react";
+import {
+    type SelectionFeature,
+    selection,
+} from "@fragiola/tree-react/selection";
 import { useState } from "react";
 import { StyledTree } from "../../fixture/styled";
 import { useInspector } from "../../inspector/context";
@@ -59,7 +63,11 @@ function Retry({ itemId }: { itemId: string }) {
 }
 
 export default function FlakyServer() {
-    const [model] = useState(() => createTreeModel<Types>(json));
+    const [model] = useState(() =>
+        createTreeModel<Types, readonly [SelectionFeature]>(json, {
+            features: [selection()],
+        }),
+    );
     useInspector(model);
     return (
         <StyledTree<Types>

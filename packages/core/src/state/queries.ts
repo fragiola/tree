@@ -1,8 +1,12 @@
 // The typed registry of `model.get` and `model.is` keys. Shape from Dockable (fragiola/dockable,
 // packages/core/src/state/queries.ts), same author and licence.
 import { COMMANDS } from "../commands/catalogue";
+import type { CommandDefinition } from "../commands/define";
 import { resolveFlags } from "../commands/rules";
 import type { CommandInfo, NoPayload } from "../commands/types";
+import { FEATURE_KEYS, type OwnedBy } from "../features/keys";
+import type { ComposedFeatures } from "../features/registry";
+import type { FeatureState, TreeFeatureInfo } from "../features/types";
 import { checkedSet, checkStateOf } from "./check-state";
 import { deepFreeze } from "./draft";
 import { stateToJson, type TreeJson } from "./json";
@@ -45,6 +49,21 @@ export interface ModelGetMap<T extends TreeTypes = AnyTypes> {
     "tree-json": { payload: NoPayload; result: TreeJson<T> };
     /** every command, with its description and JSON Schemas: ready to become tool definitions */
     commands: { payload: NoPayload; result: readonly CommandInfo[] };
+    /** the installed features, each with its controlled root props (for the adapters) */
+    features: { payload: NoPayload; result: readonly TreeFeatureInfo[] };
+    /**
+     * the ARIA and `data-*` the installed features give an item (`selection()`: `aria-selected`,
+     * `data-selected`), from the state alone: each a string, `undefined` when absent
+     */
+    "item-attributes-by": {
+        payload: { itemId: string };
+        result: Readonly<Record<string, string | undefined>>;
+    };
+    /** the ARIA and `data-*` the installed features give the root (`aria-multiselectable`) */
+    "root-attributes": {
+        payload: NoPayload;
+        result: Readonly<Record<string, string | undefined>>;
+    };
     /** the tree's settings: its modes and the item flags' defaults */
     settings: { payload: NoPayload; result: TreeSettings };
     /** an item by its id */
@@ -67,7 +86,7 @@ export interface ModelGetMap<T extends TreeTypes = AnyTypes> {
     "item-path-by": { payload: { itemId: string }; result: string | undefined };
     /** an item's checkbox: checked, unchecked or mixed */
     "check-state-by": { payload: { itemId: string }; result: CheckState };
-    /** the selected items, in the order they were selected */
+    /** the selected items, in the order they were selected (`selection()`) */
     "selected-items": { payload: NoPayload; result: ItemOf<T>[] };
     /** where an item's children come from: its status, undefined when it holds them itself */
     "children-status-by": {
@@ -83,8 +102,8 @@ export interface ModelGetMap<T extends TreeTypes = AnyTypes> {
         result: ItemOf<T> | undefined;
     };
     /**
-     * the roving tab stop: the focused item, else the first visible selected item, else the first
-     * visible item (the one item with `tabindex` 0)
+     * the roving tab stop: the focused item, else the first visible selected item (`selection()`),
+     * else the first visible item (the one item with `tabindex` 0)
      */
     "tab-stop-item": { payload: NoPayload; result: ItemOf<T> | undefined };
 }
@@ -111,7 +130,7 @@ export type ModelGetResult<
 export interface ModelIsMap {
     /** an item is expanded */
     "item-expanded": { itemId: string };
-    /** an item is selected */
+    /** an item is selected (`selection()`) */
     "item-selected": { itemId: string };
     /** an item is the focused item (the roving tab stop as stored; see `item-tab-stop`) */
     "item-focused": { itemId: string };
@@ -143,18 +162,23 @@ export type ModelIsKey = keyof ModelIsMap;
 /** The payload of `model.is(K)`. */
 export type ModelIsPayload<K extends ModelIsKey> = ModelIsMap[K];
 
-const COMMAND_INFO: readonly CommandInfo[] = Object.freeze(
-    COMMANDS.map((definition) =>
-        Object.freeze({
-            name: definition.name,
-            description: definition.description,
-            // the validator's own schemas: frozen, so no caller can change what validation means
-            payloadSchema: deepFreeze(definition.payloadSchema),
-            resultSchema: deepFreeze(definition.resultSchema),
-            transient: definition.transient,
-        }),
-    ),
-);
+/** Commands as `get("commands")` describes them. */
+function commandInfo(
+    definitions: readonly CommandDefinition[],
+): readonly CommandInfo[] {
+    return Object.freeze(
+        definitions.map((definition) =>
+            Object.freeze({
+                name: definition.name,
+                description: definition.description,
+                // the validator's own schemas: frozen, so no caller can change what validation means
+                payloadSchema: deepFreeze(definition.payloadSchema),
+                resultSchema: deepFreeze(definition.resultSchema),
+                transient: definition.transient,
+            }),
+        ),
+    );
+}
 
 type State = TreeState;
 
@@ -165,14 +189,15 @@ function items(state: State, ids: readonly string[]) {
     });
 }
 
-function tabStop(state: State): string | undefined {
+function tabStop(state: State, features: ComposedFeatures): string | undefined {
     const focused = state.focusedItemId;
     if (focused !== null && isVisible(state, focused)) return focused;
     const index = visibleIndex(state);
-    const selected = state.selectedItemIds
+    const preferred = features
+        .tabStop(state as FeatureState)
         .filter((id) => index.has(id))
         .sort((a, b) => (index.get(a) ?? 0) - (index.get(b) ?? 0))[0];
-    return selected ?? visibleItems(state)[0]?.itemId;
+    return preferred ?? visibleItems(state)[0]?.itemId;
 }
 
 function typeAheadMatch(
@@ -195,16 +220,28 @@ function typeAheadMatch(
     return undefined;
 }
 
+/** The keys of the core's own `model.get`, without the features'. */
+type CoreGetKey = Exclude<ModelGetKey, OwnedBy<"get">>;
+/** The keys of the core's own `model.is`, without the features'. */
+type CoreIsKey = Exclude<ModelIsKey, OwnedBy<"is">>;
+
 type Getters = {
-    [K in ModelGetKey]: (
+    [K in CoreGetKey]: (
         state: State,
         payload: ModelGetPayload<AnyTypes, K>,
+        features: ComposedFeatures,
     ) => ModelGetResult<AnyTypes, K>;
 };
 
 const GETTERS: Getters = {
-    "tree-json": (state) => stateToJson(state),
-    commands: () => COMMAND_INFO,
+    "tree-json": (state, _payload, features) => stateToJson(state, features),
+    // computed once per model, in `createQueries`
+    commands: () => [],
+    features: (_state, _payload, features) => features.info,
+    "item-attributes-by": (state, { itemId }, features) =>
+        features.itemAttributes(state as FeatureState, itemId),
+    "root-attributes": (state, _payload, features) =>
+        features.rootAttributes(state as FeatureState),
     settings: (state) => state.settings,
     "item-by": (state, { id }) => itemOf(state, id),
     "item-parent-by": (state, { itemId }) => {
@@ -217,27 +254,28 @@ const GETTERS: Getters = {
     "visible-items": (state) => visibleItems(state),
     "item-path-by": (state, { itemId }) => pathOf(state, itemId),
     "check-state-by": (state, { itemId }) => checkStateOf(state, itemId),
-    "selected-items": (state) => items(state, state.selectedItemIds),
     "children-status-by": (state, { itemId }) =>
         itemOf(state, itemId)?.childrenStatus,
     "type-ahead-match": (state, { text, fromItemId }) => {
         const id = typeAheadMatch(state, text, fromItemId);
         return id === undefined ? undefined : itemOf(state, id);
     },
-    "tab-stop-item": (state) => {
-        const id = tabStop(state);
+    "tab-stop-item": (state, _payload, features) => {
+        const id = tabStop(state, features);
         return id === undefined ? undefined : itemOf(state, id);
     },
 };
 
 type Questions = {
-    [K in ModelIsKey]: (state: State, payload: ModelIsPayload<K>) => boolean;
+    [K in CoreIsKey]: (
+        state: State,
+        payload: ModelIsPayload<K>,
+        features: ComposedFeatures,
+    ) => boolean;
 };
 
 const QUESTIONS: Questions = {
     "item-expanded": (state, { itemId }) => expandedSet(state).has(itemId),
-    "item-selected": (state, { itemId }) =>
-        state.selectedItemIds.includes(itemId),
     "item-focused": (state, { itemId }) => state.focusedItemId === itemId,
     "item-checked": (state, { itemId }) => checkedSet(state).has(itemId),
     "item-renaming": (state, { itemId }) => state.renamingItemId === itemId,
@@ -260,39 +298,72 @@ const QUESTIONS: Questions = {
         return item !== undefined && isLeaf(item);
     },
     "item-visible": (state, { itemId }) => isVisible(state, itemId),
-    "item-tab-stop": (state, { itemId }) => tabStop(state) === itemId,
+    "item-tab-stop": (state, { itemId }, features) =>
+        tabStop(state, features) === itemId,
     "item-descendant-of": (state, { itemId, ancestorItemId }) =>
         isDescendantOf(state, itemId, ancestorItemId),
 };
 
-/** Every key of `model.get`, for documentation coverage. */
-export const MODEL_GET_KEYS: readonly ModelGetKey[] = Object.freeze(
-    Object.keys(GETTERS) as ModelGetKey[],
-);
+const owned = (kind: "get" | "is") =>
+    Object.values(FEATURE_KEYS).flatMap(
+        (keys) => keys[kind] as readonly string[],
+    );
 
-/** Every key of `model.is`, for documentation coverage. */
-export const MODEL_IS_KEYS: readonly ModelIsKey[] = Object.freeze(
-    Object.keys(QUESTIONS) as ModelIsKey[],
-);
+/** Every key of `model.get`, the features' included, for documentation coverage. */
+export const MODEL_GET_KEYS: readonly ModelGetKey[] = Object.freeze([
+    ...Object.keys(GETTERS),
+    ...owned("get"),
+] as ModelGetKey[]);
 
-/** Reads `key` from `state`; an unknown key reads `undefined`. */
-export function queryGet(state: State, key: string, payload: unknown): unknown {
-    const getter = Object.hasOwn(GETTERS, key)
-        ? (GETTERS[key as ModelGetKey] as (
-              state: State,
-              payload: unknown,
-          ) => unknown)
-        : undefined;
-    return getter?.(state, payload ?? {});
+/** Every key of `model.is`, the features' included, for documentation coverage. */
+export const MODEL_IS_KEYS: readonly ModelIsKey[] = Object.freeze([
+    ...Object.keys(QUESTIONS),
+    ...owned("is"),
+] as ModelIsKey[]);
+
+/** A model's `get` and `is`: the core's keys and its features'. */
+export interface Queries {
+    get(state: State, key: string, payload: unknown): unknown;
+    is(state: State, key: string, payload: unknown): boolean;
+    /** the model's commands, described (`get("commands")`) */
+    readonly commands: readonly CommandInfo[];
 }
 
-/** Answers `key` on `state`; an unknown key answers `false`. */
-export function queryIs(state: State, key: string, payload: unknown): boolean {
-    const question = Object.hasOwn(QUESTIONS, key)
-        ? (QUESTIONS[key as ModelIsKey] as (
-              state: State,
-              payload: unknown,
-          ) => boolean)
-        : undefined;
-    return question?.(state, payload ?? {}) ?? false;
+/** Composes a model's queries once (an unknown key reads `undefined` / answers `false`). */
+export function createQueries(features: ComposedFeatures): Queries {
+    const commands = commandInfo([...COMMANDS, ...features.commands.values()]);
+    return {
+        commands,
+        get(state, key, payload) {
+            if (key === "commands") return commands;
+            if (Object.hasOwn(GETTERS, key)) {
+                const getter = GETTERS[key as CoreGetKey] as (
+                    state: State,
+                    payload: unknown,
+                    features: ComposedFeatures,
+                ) => unknown;
+                return getter(state, payload ?? {}, features);
+            }
+            return features.getters.get(key)?.(
+                state as FeatureState,
+                payload ?? {},
+            );
+        },
+        is(state, key, payload) {
+            if (Object.hasOwn(QUESTIONS, key)) {
+                const question = QUESTIONS[key as CoreIsKey] as (
+                    state: State,
+                    payload: unknown,
+                    features: ComposedFeatures,
+                ) => boolean;
+                return question(state, payload ?? {}, features);
+            }
+            return (
+                features.questions.get(key)?.(
+                    state as FeatureState,
+                    payload ?? {},
+                ) ?? false
+            );
+        },
+    };
 }

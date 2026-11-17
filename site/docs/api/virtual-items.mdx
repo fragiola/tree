@@ -1,24 +1,32 @@
 ---
-title: Tree.VirtualItems
-description: The rows of a virtualized tree - only the visible items in view, flat, between spacers - for trees of hundreds of thousands of rows.
+title: VirtualItems
+description: The rows of a virtualized tree - only the visible items in view, flat, between spacers - from the virtualization feature's entry.
 ---
 
-`Tree.VirtualItems` renders the rows of a virtualized tree: a `Tree.Root` with a `virtual` prop
-(`createTreeVirtualizer(options)`). It calls its children function with each visible item in view
-plus the overscan, in order, and puts a spacer where the other rows would be. It renders no
-element of its own and takes no common props. Without `virtual` on the root, it renders nothing.
+`VirtualItems` renders the rows of a virtualized tree: a `Tree.Root` whose model has the
+virtualization feature (`virtualization(options)`). It comes with the feature, from
+`@fragiola/tree-react/virtualization` (`@fragiola/tree-vue/virtualization`,
+`@fragiola/tree-angular/virtualization`), with `useTreeVirtualWindow`: a tree that never imports
+them does not ship them. It calls its children function with each visible item in view plus the
+overscan, in order, and puts a spacer where the other rows would be. It renders no element of its
+own and takes no common props. Without the feature, it renders nothing.
 
 <Framework name="react">
 
 ```tsx
-import { createTreeVirtualizer, Tree } from "@fragiola/tree-react";
+import { createTreeModel, Tree } from "@fragiola/tree-react";
+import { VirtualItems, virtualization } from "@fragiola/tree-react/virtualization";
 
-// one virtualizer serves every tree: create it once, not on every render
-const virtual = createTreeVirtualizer({ rowSize: 28 });
+const features = [virtualization({ rowSize: 28 })] as const;
 
-<Tree.Root<Types> model={model} virtual={virtual} aria-label="Files" style={{ height: 400, overflow: "auto" }}>
-    <Tree.VirtualItems<Types>>{(item) => <FileRow item={item} />}</Tree.VirtualItems>
-</Tree.Root>
+function Files() {
+    const [model] = useState(() => createTreeModel<Types, typeof features>(json, { features }));
+    return (
+        <Tree.Root model={model} aria-label="Files" style={{ height: 400, overflow: "auto" }}>
+            <VirtualItems<Types>>{(item) => <FileRow item={item} />}</VirtualItems>
+        </Tree.Root>
+    );
+}
 ```
 
 </Framework>
@@ -27,14 +35,18 @@ const virtual = createTreeVirtualizer({ rowSize: 28 });
 
 ```vue
 <script setup lang="ts">
-import { createTreeVirtualizer } from "@fragiola/tree-vue";
+import { createTreeModel } from "@fragiola/tree-vue";
+import { typedVirtualItems, virtualization } from "@fragiola/tree-vue/virtualization";
 
-const virtual = createTreeVirtualizer({ rowSize: 28 });
+const features = [virtualization({ rowSize: 28 })] as const;
+const model = createTreeModel<Types, typeof features>(json, { features });
+// typed by the registry: a template cannot pass a type argument
+const VirtualItems = typedVirtualItems<Types>();
 </script>
 
 <template>
-    <Tree.Root :model="model" :virtual="virtual" aria-label="Files" style="height: 400px; overflow: auto">
-        <Tree.VirtualItems v-slot="{ item }"><FileRow :item="item" /></Tree.VirtualItems>
+    <Tree.Root :model="model" aria-label="Files" style="height: 400px; overflow: auto">
+        <VirtualItems v-slot="{ item }"><FileRow :item="item" /></VirtualItems>
     </Tree.Root>
 </template>
 ```
@@ -43,19 +55,30 @@ const virtual = createTreeVirtualizer({ rowSize: 28 });
 
 <Framework name="angular">
 
-```html
-<div [treeRoot]="model" [virtual]="virtual" aria-label="Files" style="height: 400px; overflow: auto">
-    <ng-template [treeVirtualItems]="model" let-item>
-        <div [treeItem]="item">
-            <div treeItemContent>{{ item.label }}</div>
+```ts
+import { createTreeModel, TREE } from "@fragiola/tree-angular";
+import { TreeVirtualItemsDirective, virtualization } from "@fragiola/tree-angular/virtualization";
+
+const features = [virtualization({ rowSize: 28 })] as const;
+
+@Component({
+    imports: [TREE, TreeVirtualItemsDirective],
+    template: `
+        <div [treeRoot]="model" aria-label="Files" style="height: 400px; overflow: auto">
+            <ng-template [treeVirtualItems]="model" let-item>
+                <div [treeItem]="item"><div treeItemContent>{{ item.label }}</div></div>
+            </ng-template>
         </div>
-    </ng-template>
-</div>
+    `,
+})
+export class Files {
+    readonly model = createTreeModel<Types, typeof features>(json, { features });
+}
 ```
 
-In Angular, `<ng-template treeVirtualItems let-item let-row="row">` renders its template for each
-row, directly inside `[treeRoot]`, with the spacers around them; `[treeVirtualItems]="model"`
-types `item`.
+In Angular, `<ng-template treeVirtualItems let-item let-row="row">` (`TreeVirtualItemsDirective`,
+in your component's `imports`: it is not in `TREE`) renders its template for each row, directly
+inside `[treeRoot]`, with the spacers around them; `[treeVirtualItems]="model"` types `item`.
 
 </Framework>
 
@@ -63,7 +86,7 @@ A virtualized tree is **flat**: every rendered item is a sibling of the others i
 carries its `aria-level`, `aria-posinset` and `aria-setsize`, so assistive technology reads the
 whole structure. Render each row as a `Tree.Item` with its `Tree.ItemContent`, and **no
 `Tree.Group`**: the indentation comes from `--tree-depth` on the item. The rows start at the top
-of the root's content box, and the root (or the `scrollElement` you give the virtualizer) is the
+of the root's content box, and the root (or the `scrollElement` you give `virtualization()`) is the
 element that scrolls. The roving tab stop, the item being renamed and the item a pointer pressed
 stay rendered wherever the scroll is. The guide is [Virtualization](/docs/guides/virtualization).
 

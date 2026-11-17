@@ -6,7 +6,7 @@ import { Clickable } from "#/components/atoms/clickable";
 import { type FileTypes, fileSystem } from "../_kit/data";
 import FileItem from "./file-item.vue";
 import * as styles from "./styles";
-import { Tree } from "./tree";
+import { features, Tree } from "./tree";
 
 // An assistant, a script or a remote control drives the tree with the same JSON commands a key
 // or a click runs: `model.get("commands")` describes each one (its JSON Schemas are ready to be
@@ -55,7 +55,9 @@ function outcomeOf(result: CommandResult<unknown>): Outcome {
 }
 
 // the model is created once, outside Vue's reactivity
-const model = createTreeModel<FileTypes>(fileSystem());
+const model = createTreeModel<FileTypes, typeof features>(fileSystem(), {
+    features,
+});
 const commands = model.get("commands");
 const text = ref(format(PRESETS[0]?.input));
 const outcome = ref<Outcome>();

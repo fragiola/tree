@@ -1,13 +1,11 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
+import { createTreeModel, type ItemOf, Tree, type TreeJson } from "../src";
 import {
-    createTreeModel,
-    createTreeVirtualizer,
-    type ItemOf,
-    Tree,
-    type TreeJson,
     useTreeVirtualWindow,
-} from "../src";
+    VirtualItems,
+    virtualization,
+} from "../src/virtualization";
 import type { FileTypes } from "./tree";
 
 // 50 folders of 20 files, all expanded: 1050 visible items
@@ -30,7 +28,7 @@ function bigTree(): TreeJson<FileTypes> {
     return { version: 1, rootItemIds, items, expandedItemIds: rootItemIds };
 }
 
-const virtual = createTreeVirtualizer({
+const virtual = virtualization({
     rowSize: 20,
     overscan: 2,
     initialViewportSize: 100,
@@ -51,18 +49,24 @@ function BigTree({ withVirtual = true }: { withVirtual?: boolean }) {
     return (
         <Tree.Root<FileTypes>
             aria-label="Files"
-            model={createTreeModel<FileTypes>(bigTree())}
-            virtual={withVirtual ? virtual : undefined}
+            model={
+                withVirtual
+                    ? createTreeModel<FileTypes, readonly [typeof virtual]>(
+                          bigTree(),
+                          { features: [virtual] },
+                      )
+                    : createTreeModel<FileTypes>(bigTree())
+            }
             style={{ height: 100, overflow: "auto" }}
         >
-            <Tree.VirtualItems<FileTypes>>
+            <VirtualItems<FileTypes>>
                 {(item) => <Row item={item} />}
-            </Tree.VirtualItems>
+            </VirtualItems>
         </Tree.Root>
     );
 }
 
-describe("Tree.VirtualItems", () => {
+describe("VirtualItems", () => {
     it("renders only the rows in view plus the overscan, flat, between spacers", () => {
         render(<BigTree />);
         const items = screen.getAllByRole("treeitem");
@@ -121,8 +125,10 @@ describe("Tree.VirtualItems", () => {
         }
         render(
             <Tree.Root
-                model={createTreeModel<FileTypes>(bigTree())}
-                virtual={virtual}
+                model={createTreeModel<FileTypes, readonly [typeof virtual]>(
+                    bigTree(),
+                    { features: [virtual] },
+                )}
             >
                 <Count />
             </Tree.Root>,

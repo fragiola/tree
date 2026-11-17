@@ -1,4 +1,8 @@
 import { createTreeModel, veto } from "@fragiola/tree-react";
+import {
+    type SelectionFeature,
+    selection,
+} from "@fragiola/tree-react/selection";
 import { StrictMode, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { FixtureTree, files, type Types } from "../../src/fixture/tree";
@@ -9,7 +13,10 @@ import "../../src/fixture/fixture.css";
 
 function App() {
     const [model] = useState(() => {
-        const created = createTreeModel<Types>(files());
+        const created = createTreeModel<Types, readonly [SelectionFeature]>(
+            files(),
+            { features: [selection()] },
+        );
         created.use((ctx, next) =>
             ctx.command === "item.move" &&
             (ctx.payload as { to: { parentItemId: string | null } }).to

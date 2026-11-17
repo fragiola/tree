@@ -8,7 +8,12 @@ import type {
 import * as React from "react";
 import { useTreeContext } from "../context";
 import type { RenderedProps } from "../utils/use-render";
-import { depthStyle, itemDataAttributes, useTreeItemState } from "./internal";
+import {
+    depthStyle,
+    featureAriaAttributes,
+    itemDataAttributes,
+    useTreeItemState,
+} from "./internal";
 
 /** What an item shows: its place in the tree and its state. Every part of an item renders it. */
 export interface TreeItemState {
@@ -23,7 +28,7 @@ export interface TreeItemState {
     setsize: number;
     /** its children are shown */
     expanded: boolean;
-    /** it is part of the selection */
+    /** it is part of the selection (`selection()`) */
     selected: boolean;
     /** it is the focused item (model data: the roving tab stop as stored) */
     focused: boolean;
@@ -51,6 +56,12 @@ export interface TreeItemState {
     dropTarget: boolean;
     /** while it is the drop target: where the drop goes (`before`, `after`, `inside`) */
     dropPosition: DropPosition | undefined;
+    /**
+     * the ARIA and `data-*` the installed features give it (`selection()`: `aria-selected`,
+     * `data-selected`), each a string, `undefined` when absent: its element gets them all, every
+     * other part of it the `data-*`
+     */
+    attributes: Readonly<Record<string, string | undefined>>;
 }
 
 /** What `useTreeItem` returns: the item's state, and the props of its element (`role="treeitem"`). */
@@ -62,8 +73,8 @@ export interface UseTreeItemResult {
 
 /**
  * An item of the enclosing `Tree.Root`: its state, and the props of its element (`role="treeitem"`
- * with `aria-level`, `aria-posinset`, `aria-setsize`, `aria-expanded`, `aria-selected`,
- * `aria-checked`, `aria-disabled`, `aria-busy`, the roving `tabindex`, the `data-*` state, the
+ * with `aria-level`, `aria-posinset`, `aria-setsize`, `aria-expanded`, the features' ARIA
+ * (`aria-selected` with `selection()`), `aria-checked`, `aria-disabled`, `aria-busy`, the roving `tabindex`, the `data-*` state, the
  * part and path attributes, its focus handler and the ref that registers it with the engine).
  * `Tree.Item` is this hook on a `div`.
  *
@@ -76,7 +87,7 @@ export function useTreeItem<T extends TreeTypes = AnyTypes>(
     item: ItemOf<T>,
 ): UseTreeItemResult {
     const context = useTreeContext("Item");
-    const { engine, state: treeState, checkboxes } = context;
+    const { engine, checkboxes } = context;
     const state = useTreeItemState<T>(item);
     const itemId = item.id;
     const ref = React.useCallback(
@@ -93,7 +104,6 @@ export function useTreeItem<T extends TreeTypes = AnyTypes>(
             engine?.adapter.handleFocus(itemId);
         }
     };
-    const selectable = treeState.settings.selectionMode !== "none";
     const props = {
         ref,
         role: "treeitem",
@@ -101,7 +111,7 @@ export function useTreeItem<T extends TreeTypes = AnyTypes>(
         "aria-posinset": state.posinset,
         "aria-setsize": state.setsize,
         "aria-expanded": state.leaf ? undefined : state.expanded,
-        "aria-selected": selectable ? state.selected : undefined,
+        ...featureAriaAttributes(state.attributes),
         "aria-checked": checkboxes
             ? state.indeterminate
                 ? "mixed"

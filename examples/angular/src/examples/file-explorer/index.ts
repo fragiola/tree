@@ -1,9 +1,13 @@
 import { Component } from "@angular/core";
 import { TREE } from "@fragiola/tree-angular";
+import { selection } from "@fragiola/tree-angular/selection";
 import { LucideChevronRight } from "@lucide/angular";
 import { fileSystem, formatSize } from "../_kit/data";
 import { ItemIcon } from "./item-icon";
 import * as styles from "./styles";
+
+/** The opt-in features of the model: the selection. */
+const features = [selection()] as const;
 
 // The kit's file system: folders, and files whose `data` is `{ size }` (typed by `FileTypes`).
 const json = fileSystem();
@@ -19,7 +23,7 @@ let nextId = 0;
             <!-- expandOnClick: a click on a folder's row also opens or closes it -->
             <div
                 treeRoot
-                [defaultTree]="json"
+                [defaultTree]="json" [features]="features"
                 expandOnClick
                 aria-label="Project files"
                 [class]="styles.root"
@@ -52,6 +56,8 @@ let nextId = 0;
     `,
 })
 export default class FileExplorer {
+    /** the opt-in features of the root's model */
+    protected readonly features = features;
     protected readonly styles = styles;
     protected readonly json = json;
     protected readonly formatSize = formatSize;

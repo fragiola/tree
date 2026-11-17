@@ -16,28 +16,39 @@ import {
     typedTree,
     useTree,
     useTreeState,
-    useTreeVirtualWindow,
     type TreeJson,
 } from "@fragiola/tree-vue";
+// each feature from its own entry
+import { selection } from "@fragiola/tree-vue/selection";
+import {
+    typedVirtualItems,
+    useTreeVirtualWindow,
+    VirtualItems,
+    virtualization,
+} from "@fragiola/tree-vue/virtualization";
 ```
 
 ## Typing by your registry
 
-A React part takes the registry as a type argument (`<Tree.Items<Types>>`); a Vue template cannot
-pass one. `typedTree<Types>()` returns the same components, typed by `Types`: an item in a slot
-is then of your registry, `item.data` narrows on `item.kind`, and `Tree.Root` takes a
-`TreeModel<Types>`.
+A React part takes the registry and the features as type arguments
+(`<Tree.Root<Types, typeof features>>`); a Vue template cannot pass them.
+`typedTree<Types, typeof features>()` returns the same components, typed by both: an item in a
+slot is then of your registry, `item.data` narrows on `item.kind`, `Tree.Root` takes a
+`TreeModel<Types, typeof features>`, and a feature's list (`v-model:selected-item-ids` with
+`selection()`) compiles only when the feature is installed ([Features](/docs/concepts/features)).
 
 ```ts title="tree.ts"
 import { typedTree } from "@fragiola/tree-vue";
+import { selection } from "@fragiola/tree-vue/selection";
 
 export type Types = { items: { folder: undefined; file: { size: number } } };
-export const Tree = typedTree<Types>();
+export const features = [selection()] as const;
+export const Tree = typedTree<Types, typeof features>();
 ```
 
 | export | description |
 | --- | --- |
-| `typedTree<T>()` | the `Tree` components typed by the registry `T`, as a `TypedTree<T>` (the same objects as `Tree`) |
+| `typedTree<T, F>()` | the `Tree` components typed by the registry `T` and the features `F`, as a `TypedTree<T, F>` (the same objects as `Tree`); its `Tree.Root` takes `RootProps<T, F>` (`RootBaseProps<T, F>` and the features' lists) and emits `RootEmits<F>` |
 | `Tree` | the components, typed by `AnyTypes`: its `Tree.Root` takes a `TreeModel` of `AnyTypes`; give a typed model to `typedTree<Types>().Root` |
 
 ## How React's props map
@@ -52,12 +63,13 @@ export const Tree = typedTree<Types>();
 | `ref` | a template ref on a part is its component instance; the element is its `$el` |
 | children functions (`Tree.Items`, `Tree.Group`) | the default scoped slot: `v-slot="{ item }"` |
 | `expandedItemIds` + `onExpandedItemIdsChange` | `v-model:expanded-item-ids` (or `:expanded-item-ids` with `@update:expanded-item-ids`) |
-| `selectedItemIds` + `onSelectedItemIdsChange` | `v-model:selected-item-ids` |
+| `selectedItemIds` + `onSelectedItemIdsChange` | `v-model:selected-item-ids` (with `selection()`) |
 | `checkedItemIds` + `onCheckedItemIdsChange` | `v-model:checked-item-ids` |
 | `useTreeItemRename(item, { onRenameError })` | the same composable and option; `@input` of your own runs next to its listener |
 | `treeRef={tree}` | `:tree-ref="tree"`; the handle is `tree.value`, in the template too (React: `tree.current`) |
 | `defaultTree`, `expandOnClick`, `keyMap`, … | the same props in kebab-case (`default-tree`, `expand-on-click`, `key-map`); a boolean prop takes a bare attribute (`checkboxes`) |
-| `<Tree.Items<Types>>` and the other type arguments | `typedTree<Types>().Items` |
+| `<Tree.Items<Types>>` and the other type arguments | `typedTree<Types, typeof features>().Items` |
+| `<VirtualItems<Types>>` | `typedVirtualItems<Types>()`, from `@fragiola/tree-vue/virtualization` |
 
 ## Components
 
@@ -66,15 +78,18 @@ Every part is `Tree.<Part>`, with the props of its React page except `render`, `
 
 | part | Vue props | slots | events |
 | --- | --- | --- | --- |
-| `Tree.Root` | `model`, `defaultTree`, `expandedItemIds`, `selectedItemIds`, `checkedItemIds`, `loadChildren`, `announce`, `keyMap`, `expandOnClick`, `checkboxes`, `dragThreshold`, `autoExpandDelay`, `indentation`, `indicatorInset`, `typeAheadTimeout`, `virtual`, `dragGroup`, `transfer`, `foreignDrop`, `dropOutside`, `treeRef` | default | `update:expandedItemIds`, `update:selectedItemIds`, `update:checkedItemIds` |
+| `Tree.Root` | `model`, `defaultTree`, `features`, `expandedItemIds`, `selectedItemIds`, `checkedItemIds`, `loadChildren`, `announce`, `keyMap`, `expandOnClick`, `checkboxes`, `dragThreshold`, `autoExpandDelay`, `indentation`, `indicatorInset`, `typeAheadTimeout`, `dragGroup`, `transfer`, `foreignDrop`, `dropOutside`, `treeRef` | default | `update:expandedItemIds`, `update:selectedItemIds`, `update:checkedItemIds` |
 | `Tree.Items` | none | default `{ item }` | none |
-| `Tree.VirtualItems` | none | default `{ item, row }` (`row`: its `VirtualRow`) | none |
 | `Tree.Item` | `item` | default `{ state }` | none |
 | `Tree.ItemContent` | none | default `{ state }` | none |
 | `Tree.Group` | `keepMounted` | default `{ item }` | none |
 | `Tree.Toggle` | none | default `{ state }` | none |
 | `Tree.DropIndicator` | none | none | none |
 | `Tree.LiveRegion` | none | none | none |
+
+`VirtualItems` (from `@fragiola/tree-vue/virtualization`, with `VirtualItemsProps` and
+`VirtualItemsSlots`) takes no prop and has a default slot `{ item, row }` (`row`: its
+`VirtualRow`); `typedVirtualItems<Types>()` is the same component typed by the registry.
 
 Another `model` remounts the tree (a new engine), as a new model creates a new engine in React.
 Keep the model out of Vue's reactivity: create it once (`const model = createTreeModel(json)` in
@@ -86,13 +101,13 @@ The hooks of [the React reference](/docs/api/hooks), as composables. Call them i
 
 | composable | returns |
 | --- | --- |
-| `useTree<T>()` | `{ model, engine }`, a `UseTreeResult<T>` (plain values: another model remounts the root) |
+| `useTree<T, F>()` | `{ model, engine }`, a `UseTreeResult<T, F>` (plain values: another model remounts the root) |
 | `useTreeState(selector, options?)` | a read-only ref of the selection, changed only when `isEqual` says it changed (`UseTreeStateOptions`: `model`, `isEqual`); it selects again when a reactive value the selector reads changes |
 | `useTreeItem(item)` | `UseTreeItemResult`: `state` (`TreeItemState`) and `props` (`TreeItemElementProps`: the ARIA, `tabindex`, `data-*`, `onFocus`, the structural style and the template `ref`), as computed refs; bind `v-bind="props"` on your element. `item` is a value, a ref or a getter |
 | `useTreeItemRename(item, options?)` | `UseTreeItemRenameResult`: `state` (`TreeItemRenameState`: `renaming`, `invalid`, `error`) and `props` (`TreeItemRenameProps`: the template `ref`, which writes the label and focuses and selects it, `aria-invalid`, `data-invalid`, `onKeydown`, `onBlur`, `onInput`), as computed refs; render your input with `v-if="state.renaming"` and bind `v-bind="props"`. `item` is a value, a ref or a getter; `UseTreeItemRenameOptions`: `onRenameError` |
-| `useTreeRef<T>()` | a `TreeRef<T>`, whose read-only, reactive `value` is the root's `TreeHandle` (`model`, `engine`) while it is mounted, `null` otherwise. It is not a Vue ref, so a template does not unwrap it: `:tree-ref="tree"` passes it, and the template reads `tree.value` |
-| `createTreeRef<T>()` | the same tree ref, anywhere (a module, a test) |
-| `useTreeVirtualWindow()` | a computed ref of the root's `VirtualWindow` (the rows a virtualized tree renders), `null` before it mounts and without `virtual` |
+| `useTreeRef<T, F>()` | a `TreeRef<T, F>`, whose read-only, reactive `value` is the root's `TreeHandle` (`model`, `engine`) while it is mounted, `null` otherwise. It is not a Vue ref, so a template does not unwrap it: `:tree-ref="tree"` passes it, and the template reads `tree.value` |
+| `createTreeRef<T, F>()` | the same tree ref, anywhere (a module, a test) |
+| `useTreeVirtualWindow()` (from `@fragiola/tree-vue/virtualization`) | a computed ref of the root's `VirtualWindow` (the rows a virtualized tree renders), `null` before it mounts and without the `virtualization()` feature |
 
 A server render (Nuxt, `renderToString`) outputs the tree's markup, never subscribes to the model
 and never runs a command on it: the engine, the controlled lists and the composables' subscriptions

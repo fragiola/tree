@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { TREE } from "../src/public-api";
 import {
     content,
+    FEATURES,
     files,
     filesModel,
     fire,
@@ -30,6 +31,7 @@ const toggle = (label: string) => {
         <div
             treeRoot
             [defaultTree]="json"
+            [features]="features"
             [(selectedItemIds)]="selected"
             [(expandedItemIds)]="expanded"
             aria-label="Files"
@@ -47,6 +49,7 @@ const toggle = (label: string) => {
     `,
 })
 class Bound {
+    protected readonly features = FEATURES;
     readonly json = files();
     readonly selected = signal<string[]>(["app"]);
     readonly expanded = signal<string[]>(["src"]);

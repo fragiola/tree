@@ -1,9 +1,13 @@
 import { Component, computed } from "@angular/core";
 import { createTreeModel, injectTreeState, TREE } from "@fragiola/tree-angular";
+import { selection } from "@fragiola/tree-angular/selection";
 import { LucideChevronRight, LucideUserRound } from "@lucide/angular";
 import { ClickableButton } from "#/components/atoms/clickable";
 import { type OrgTypes, orgChart } from "../_kit/data";
 import * as styles from "./styles";
+
+/** The opt-in features of the model: the selection. */
+const features = [selection()] as const;
 
 // The kit's organization chart has `settings.selectionMode: "multiple"`: a click selects one
 // person, Ctrl/⌘ + click adds or removes one, Shift + click selects the range from the last one.
@@ -69,11 +73,15 @@ let nextId = 0;
 export default class MultiSelect {
     protected readonly styles = styles;
     // the app owns the model, so the summary outside the root can read it
-    protected readonly model = createTreeModel<OrgTypes>(orgChart());
+    protected readonly model = createTreeModel<OrgTypes, typeof features>(
+        orgChart(),
+        { features },
+    );
     // the selected ids keep their identity until the selection changes: no extra render
     private readonly selectedItemIds = injectTreeState<
         OrgTypes,
-        readonly string[]
+        readonly string[],
+        typeof features
     >((state) => state.selectedItemIds, { model: this.model });
     protected readonly names = computed(() =>
         this.selectedItemIds().map(

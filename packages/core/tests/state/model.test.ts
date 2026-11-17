@@ -34,6 +34,8 @@ describe("the model's surface", () => {
                 "runChain",
                 "chain",
                 "emit",
+                "definition",
+                "unknown",
             ]),
         );
         expect(ownFunctions.sort()).toEqual(

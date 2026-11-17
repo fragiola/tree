@@ -7,6 +7,7 @@ export default {
     category: "accessibility",
     order: 1,
     features: [
+        "selection()",
         "keyMap",
         "type-ahead",
         "start-keyboard-drag",

@@ -12,18 +12,25 @@ import { type FileTypes, fileSystem } from "../_kit/data";
 import { persistTree, restoreTree } from "../_kit/persist";
 import FileItem from "./file-item.vue";
 import * as styles from "./styles";
-import { Tree } from "./tree";
+import { features, Tree } from "./tree";
 
 /** Where the document is saved: one key per tree. */
 const STORAGE_KEY = "fragiola-tree:examples:save-restore";
 
 /** A model of the saved document when there is a valid one, else of the default. */
-function restore(): { model: TreeModel<FileTypes>; restored: boolean } {
+function restore(): {
+    model: TreeModel<FileTypes, typeof features>;
+    restored: boolean;
+} {
     const saved = restoreTree<FileTypes>(STORAGE_KEY);
     // a document saved by an older version of the app may no longer be valid
-    const restored = saved !== undefined && validateTree(saved).length === 0;
+    const restored =
+        saved !== undefined && validateTree(saved, { features }).length === 0;
     const json = restored ? saved : fileSystem();
-    return { model: createTreeModel<FileTypes>(json), restored };
+    return {
+        model: createTreeModel<FileTypes, typeof features>(json, { features }),
+        restored,
+    };
 }
 
 // the model is created once, outside Vue's reactivity
@@ -39,7 +46,7 @@ onMounted(() => {
 });
 onUnmounted(() => stop?.());
 
-const selected = useTreeState<FileTypes, number>(
+const selected = useTreeState<FileTypes, number, typeof features>(
     (state) => state.selectedItemIds.length,
     { model },
 );

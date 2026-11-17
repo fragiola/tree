@@ -16,8 +16,10 @@ import {
     type TreeItemJson,
     type TreeModel,
     type TreeRootDirective,
+    type TreeStateOf,
 } from "../src/public-api";
 import {
+    type FEATURES,
     type FileTypes,
     files,
     filesModel,
@@ -54,13 +56,16 @@ class WithProbe {
     readonly model = input.required<TreeModel<FileTypes>>();
 }
 
+/** The state of the tests' models, with the selection feature. */
+type Selected = TreeStateOf<FileTypes, typeof FEATURES>;
+
 @Component({
     selector: "test-count",
     template: `<output data-testid="count">{{ count() }}</output>`,
 })
 class Count {
     readonly count = injectTreeState<FileTypes, number>(
-        (state) => state.selectedItemIds.length,
+        (state) => (state as Selected).selectedItemIds.length,
     );
 }
 
@@ -232,10 +237,13 @@ describe("injectTreeState", () => {
     it("notifies its readers only when the selection changes (isEqual)", async () => {
         const model = filesModel({ settings: { selectionMode: "multiple" } });
         const selected = TestBed.runInInjectionContext(() =>
-            injectTreeState((state) => [...state.selectedItemIds], {
-                model,
-                isEqual: (a, b) => a.join() === b.join(),
-            }),
+            injectTreeState(
+                (state) => [...(state as Selected).selectedItemIds],
+                {
+                    model,
+                    isEqual: (a, b) => a.join() === b.join(),
+                },
+            ),
         );
         const first = selected();
         model.run("item.expand", { itemId: "utils" });

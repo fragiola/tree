@@ -36,6 +36,18 @@
             "import": "./dist/index.js",
             "default": "./dist/index.js"
         },
+        "./selection": {
+            "@fragiola/source": "./src/selection/index.ts",
+            "types": "./dist/selection.d.ts",
+            "import": "./dist/selection.js",
+            "default": "./dist/selection.js"
+        },
+        "./virtualization": {
+            "@fragiola/source": "./src/virtual/index.ts",
+            "types": "./dist/virtualization.d.ts",
+            "import": "./dist/virtualization.js",
+            "default": "./dist/virtualization.js"
+        },
         "./package.json": "./package.json"
     },
     "files": [
@@ -50,6 +62,16 @@
                 "types": "./dist/index.d.ts",
                 "import": "./dist/index.js",
                 "default": "./dist/index.js"
+            },
+            "./selection": {
+                "types": "./dist/selection.d.ts",
+                "import": "./dist/selection.js",
+                "default": "./dist/selection.js"
+            },
+            "./virtualization": {
+                "types": "./dist/virtualization.d.ts",
+                "import": "./dist/virtualization.js",
+                "default": "./dist/virtualization.js"
             },
             "./package.json": "./package.json"
         }

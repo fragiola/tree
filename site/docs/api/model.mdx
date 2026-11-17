@@ -3,8 +3,8 @@ title: Model
 description: Create a tree model from a document, read it with get and is, and find every key they take. The state only commands change.
 ---
 
-A model holds one tree: its items, what is expanded, selected, checked, focused and being
-renamed, and its settings. It runs in plain Node (no DOM), and every member is one verb:
+A model holds one tree: its items, what is expanded, checked, focused and being renamed, its
+settings, and the state of its opt-in features (what is selected, with `selection()`). It runs in plain Node (no DOM), and every member is one verb:
 
 | member | does |
 | --- | --- |
@@ -26,10 +26,10 @@ Every method is bound: `const { run, get } = model` works. The commands are on
 ## Creating a model
 
 ```ts
-function createTreeModel<T extends TreeTypes = AnyTypes>(
+function createTreeModel<T extends TreeTypes = AnyTypes, const F extends TreeFeatures = readonly []>(
     json?: TreeJson<T>,
-    options?: TreeModelOptions<T>,
-): TreeModel<T>;
+    options?: TreeModelOptions<T, F>,
+): TreeModel<T, F>;
 ```
 
 `createTreeModel` validates the document and normalizes it; without one it creates an empty tree.
@@ -37,7 +37,10 @@ An invalid document throws a `TreeValidationError` whose `issues` (`ValidationIs
 `path` and a `message` each) list every problem; `validateTree(json)` returns the same issues
 without throwing. The document's JSON Schema is exported as `treeSchema` (a `JsonSchema`).
 
-`T` is your registry ([Typed data](/docs/concepts/typed-data)): pass it explicitly.
+`T` is your registry ([Typed data](/docs/concepts/typed-data)): pass it explicitly. `F` is the
+list of features (`options.features`): inferred when `T` is, else pass it too
+(`createTreeModel<Types, typeof features>(json, { features })`). A document field of a feature
+that is not installed (`selectedItemIds` without `selection()`) is a validation issue.
 
 ### The type registry
 
@@ -51,6 +54,7 @@ below.
 
 | option | type | description |
 | --- | --- | --- |
+| `features` | `F` (`TreeFeatures`) | the opt-in features, each from its own entry (`selection()` from `@fragiola/tree/selection`, `virtualization(options)` from `@fragiola/tree/virtualization`), fixed for the model's life ([Features](#features)) |
 | `createId` | `CreateId`: `(kind: "item") => string` | generates the id of an item created without one (`item.add`, `item.set-children`); default `` `item-${n}` ``, skipping ids in use |
 | `dataSchemas` | `{ [K in KindOf<T>]?: JsonSchema }` | a JSON Schema per item kind: the document, `item.add`, `item.set-data` and `item.set-children` validate that kind's `data` with it |
 | `freeze` | `boolean` | freeze every state object (default `true`); with `false`, the state must still never be mutated |
@@ -75,7 +79,8 @@ const model = createTreeModel<Types>(json, {
 
 ## The state
 
-`TreeState<T>` is plain, frozen, JSON-shaped data:
+`TreeState<T>` is plain, frozen, JSON-shaped data; `model.state` is a `TreeStateOf<T, F>`, the
+core's fields and the installed features' (the two marked `selection()` below):
 
 | field | type | description |
 | --- | --- | --- |
@@ -83,9 +88,9 @@ const model = createTreeModel<Types>(json, {
 | `rootItemIds` | `readonly string[]` | the root items, in order |
 | `items` | `{ readonly [id: string]: ItemOf<T> }` | every item, by id |
 | `expandedItemIds` | `readonly string[]` | the expanded items |
-| `selectedItemIds` | `readonly string[]` | the selection, in the order it was made |
+| `selectedItemIds` | `readonly string[]` | `selection()`: the selection, in the order it was made |
 | `checkedItemIds` | `readonly string[]` | the checked items (in `cascade` mode, a parent with children exactly when all are) |
-| `selectionAnchorItemId` | `string \| null` | where a range selection starts |
+| `selectionAnchorItemId` | `string \| null` | `selection()`: where a range selection starts |
 | `focusedItemId` | `string \| null` | the roving tab stop, always visible |
 | `renamingItemId` | `string \| null` | the item whose label is being edited |
 
@@ -104,7 +109,10 @@ nothing needs no payload (`QueryArgs`).
 | key | payload | result |
 | --- | --- | --- |
 | `"tree-json"` | none | `TreeJson<T>`: the document of the current state, every field written (a copy) |
-| `"commands"` | none | `readonly CommandInfo[]`: every command with its description and JSON Schemas |
+| `"commands"` | none | `readonly CommandInfo[]`: every command of the core and of the installed features, with its description and JSON Schemas |
+| `"features"` | none | `readonly TreeFeatureInfo[]`: the installed features (`name`), each with the controlled root props it ships (`rootProps`) |
+| `"item-attributes-by"` | `{ itemId }` | `Readonly<Record<string, string \| undefined>>`: the ARIA and `data-*` the installed features give an item (`selection()`: `aria-selected`, `data-selected`), from the state alone; an adapter puts them all on the item's element, the `data-*` on its other parts |
+| `"root-attributes"` | none | `Readonly<Record<string, string \| undefined>>`: the ARIA and `data-*` the installed features give the root (`aria-multiselectable`) |
 | `"settings"` | none | `TreeSettings` |
 | `"item-by"` | `{ id }` | `ItemOf<T> \| undefined` |
 | `"item-parent-by"` | `{ itemId }` | `ItemOf<T> \| undefined`: undefined for a root item |
@@ -113,10 +121,10 @@ nothing needs no payload (`QueryArgs`).
 | `"visible-items"` | none | `readonly VisibleItem[]`: the render order (below) |
 | `"item-path-by"` | `{ itemId }` | `string \| undefined`: `/0/2`, its `data-tree-path` |
 | `"check-state-by"` | `{ itemId }` | `CheckState`: `"checked"`, `"unchecked"` or `"mixed"` |
-| `"selected-items"` | none | `ItemOf<T>[]`: in the order they were selected |
+| `"selected-items"` | none | `ItemOf<T>[]`: in the order they were selected (`selection()`) |
 | `"children-status-by"` | `{ itemId }` | `ChildrenStatus \| undefined`: undefined when it holds its children itself |
 | `"type-ahead-match"` | `{ text, fromItemId? }` | `ItemOf<T> \| undefined`: the next visible item after `fromItemId` (wrapping) whose label starts with `text`, ignoring case |
-| `"tab-stop-item"` | none | `ItemOf<T> \| undefined`: the focused item, else the first visible selected one, else the first visible one |
+| `"tab-stop-item"` | none | `ItemOf<T> \| undefined`: the focused item, else the first visible selected one (`selection()`), else the first visible one |
 
 A `VisibleItem` is `{ itemId, parentItemId, level, posinset, setsize }`: the items whose
 ancestors are all expanded, in render order. It is the base of the keyboard navigation, and the
@@ -135,7 +143,7 @@ const rows = model.get("visible-items").map((entry) => model.get("item-by", { id
 | key | payload | true when |
 | --- | --- | --- |
 | `"item-expanded"` | `{ itemId }` | its children are shown |
-| `"item-selected"` | `{ itemId }` | it is selected |
+| `"item-selected"` | `{ itemId }` | it is selected (`selection()`) |
 | `"item-focused"` | `{ itemId }` | it is the focused item, as stored (see `"item-tab-stop"`) |
 | `"item-checked"` | `{ itemId }` | its checkbox is checked (not mixed) |
 | `"item-renaming"` | `{ itemId }` | its label is being edited |
@@ -147,6 +155,48 @@ const rows = model.get("visible-items").map((entry) => model.get("item-by", { id
 | `"item-visible"` | `{ itemId }` | its ancestors are all expanded |
 | `"item-tab-stop"` | `{ itemId }` | it is the roving tab stop (`"tab-stop-item"`) |
 | `"item-descendant-of"` | `{ itemId, ancestorItemId }` | it is inside the other item's subtree (itself excluded) |
+
+## Features
+
+A feature is an opt-in part of the tree: its state, commands, keys and engine behaviour, in its
+own entry, so a bundle that never imports it does not ship it. The model takes them once, in
+`options.features`; a root's `features` prop does the same for the model it creates.
+
+| feature | entry | adds |
+| --- | --- | --- |
+| `selection(options?)` | `@fragiola/tree/selection` | `selectedItemIds`, `selectionAnchorItemId`, `settings.selectionMode` (`options.mode`, default `"single"`), the selection commands, `"selected-items"`, `"item-selected"`, the keys and clicks that select, `aria-selected`, and the `selectedItemIds` root prop |
+| `virtualization(options?)` | `@fragiola/tree/virtualization` | nothing in the model: each engine renders a window of the visible items (`engine.get("virtual-window")`, [The engine](/docs/api/engine#virtualization)) |
+
+A command of a feature that is not installed returns `not_found` (and does not compile); its
+`get` key reads `undefined` and its `is` key answers `false`. A feature is a `TreeFeature<N, S>`
+(`AnyTreeFeature` for any; `FeatureName` names them): a plain object whose optional parts the core
+composes once, at creation, and which only the core reads: its settings, document rules and
+fields (`FeatureDocument`, `FeatureDocumentContext`), its commands and keys on a `FeatureState`,
+its reactions to removed, disabled and reconfigured items, and its part of each engine
+(`FeatureEngine`, given a `FeatureEngineHost` with a `FeatureModel`, a key action's
+`FeatureKeyContext`, and a `FeatureViewport` for virtualization). `TreeRootProp` is a controlled
+root prop a feature ships, and `TreeFeatureInfo` what `"features"` lists of it. The core's own
+controlled lists (`expandedItemIds`, `checkedItemIds`) are `TREE_ROOT_PROPS`, so an adapter maps
+every list the same way; `FEATURE_ROOT_PROPS` names every feature's root prop with its feature,
+and `FeatureRootPropsOf<F>` types the root props of the features `F`. The concept is on
+[Features](/docs/concepts/features).
+
+The types follow the list: `TreeFeatures` is a list of features (`AnyFeatures` any of them),
+`TreeStateOf<T, F>` the state with their fields (`FeatureStateOf<F>` alone), and
+`CommandNameOf<F>`, `ModelGetKeyOf<F>`, `ModelIsKeyOf<F>`, `EngineActionKeyOf<F>`,
+`EngineGetKeyOf<F>` and `EngineIsKeyOf<F>` the commands and keys a model or engine with them
+takes. A model with more features is a model with fewer: code that takes any model takes
+`TreeModel<T>`.
+
+```ts
+import { createTreeModel } from "@fragiola/tree";
+import { selection } from "@fragiola/tree/selection";
+
+const features = [selection({ mode: "multiple" })] as const;
+const model = createTreeModel<Types, typeof features>(json, { features });
+model.run("tree.select-all", {});
+model.state.selectedItemIds;
+```
 
 ## In React
 

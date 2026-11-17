@@ -1,5 +1,7 @@
 // The whole tree: `tree.configure` (its settings), `tree.load` (a new document) and `batch` (several
 // commands as one atomic step).
+import { requiresFeature } from "../features/registry";
+import type { FeatureState } from "../features/types";
 import { idListSchema, settingsProperties, treeSchema } from "../schema/tree";
 import { normalizeChecks } from "../state/check-state";
 import type { StateField } from "../state/draft";
@@ -11,7 +13,7 @@ const settingsResultSchema = {
     properties: {
         selectionMode: {
             ...settingsProperties.selectionMode,
-            description: "how many items can be selected",
+            description: "how many items can be selected (`selection()`)",
         },
         checkMode: {
             ...settingsProperties.checkMode,
@@ -21,20 +23,14 @@ const settingsResultSchema = {
         renamable: { type: "boolean", description: "the default of renamable" },
         droppable: { type: "boolean", description: "the default of droppable" },
     },
-    required: [
-        "selectionMode",
-        "checkMode",
-        "movable",
-        "renamable",
-        "droppable",
-    ],
+    required: ["checkMode", "movable", "renamable", "droppable"],
     additionalProperties: false,
 } as const;
 
 export const treeConfigure = defineCommand({
     name: "tree.configure",
     description:
-        "Change the tree's settings: the selection mode (none, single, multiple; a narrower mode trims the selection), the check mode (cascade or independent; switching to cascade makes the checks consistent) and the defaults of the movable, renamable and droppable flags.",
+        "Change the tree's settings: the selection mode (none, single, multiple; a narrower mode trims the selection; with the selection feature), the check mode (cascade or independent; switching to cascade makes the checks consistent) and the defaults of the movable, renamable and droppable flags.",
     payloadSchema: {
         type: "object",
         properties: {
@@ -61,24 +57,22 @@ export const treeConfigure = defineCommand({
     },
     transient: false,
     reduce: (payload, { draft }) => {
+        for (const key of Object.keys(payload.settings)) {
+            const owner = draft.features.missing("settings", key);
+            if (owner !== undefined)
+                return fail(
+                    "invalid_payload",
+                    requiresFeature(owner),
+                    `/settings/${key}`,
+                );
+        }
         const before = draft.settings;
         const settings: TreeSettings = { ...before, ...payload.settings };
         const changed = (Object.keys(settings) as (keyof TreeSettings)[]).some(
             (key) => settings[key] !== before[key],
         );
         if (changed) draft.set("settings", settings);
-        if (settings.selectionMode === "none") {
-            draft.set("selectedItemIds", []);
-            draft.set("selectionAnchorItemId", null);
-        } else if (
-            settings.selectionMode === "single" &&
-            draft.state.selectedItemIds.length > 1
-        ) {
-            draft.set(
-                "selectedItemIds",
-                draft.state.selectedItemIds.slice(0, 1),
-            );
-        }
+        draft.features.configured(draft, before as FeatureState["settings"]);
         if (
             settings.checkMode === "cascade" &&
             before.checkMode !== "cascade"
@@ -97,14 +91,12 @@ export const treeConfigure = defineCommand({
     },
 });
 
-/** The fields of a state a load replaces, besides the items. */
+/** The fields of a state a load replaces, besides the items (and the installed features'). */
 const FIELDS: readonly StateField[] = [
     "settings",
     "rootItemIds",
     "expandedItemIds",
-    "selectedItemIds",
     "checkedItemIds",
-    "selectionAnchorItemId",
     "focusedItemId",
     "renamingItemId",
 ];
@@ -152,6 +144,12 @@ export const treeLoad = defineCommand({
             const current = draft.state[field];
             if (JSON.stringify(current) !== JSON.stringify(value)) {
                 draft.set(field, value as never);
+            }
+        }
+        for (const field of draft.features.fields) {
+            const value = (next as unknown as Record<string, unknown>)[field];
+            if (JSON.stringify(draft.field(field)) !== JSON.stringify(value)) {
+                draft.setField(field, value);
             }
         }
         return ok({ itemIds: Object.keys(next.items) });

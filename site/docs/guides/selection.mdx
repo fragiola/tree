@@ -3,13 +3,57 @@ title: Selection
 description: Choose a selection mode, select with the pointer, the keyboard or commands, and read the selection back to act on it.
 ---
 
-The selection is model state: `state.selectedItemIds`, in the order the items were selected. The
-package selects on a press and on the keys of the WAI-ARIA tree view, and sets `aria-selected`
-and `data-selected`; what a selection means (open a file, delete, move) is yours.
+The selection is a feature ([Features](/docs/concepts/features)): a tree without it focuses and
+expands, and selects nothing. With it, the selection is model state: `state.selectedItemIds`, in
+the order the items were selected. The package selects on a press and on the keys of the WAI-ARIA
+tree view, and sets `aria-selected` and `data-selected`; what a selection means (open a file,
+delete, move) is yours.
+
+## Installing it
+
+Install `selection(options?)` in the model's features. Its `mode` is the selection mode a document
+without one gets: `"single"` (the default), `"multiple"` or `"none"`.
+
+<Framework name="react">
+
+```tsx
+import { createTreeModel } from "@fragiola/tree-react";
+import { selection } from "@fragiola/tree-react/selection";
+
+const features = [selection({ mode: "multiple" })] as const;
+const model = createTreeModel<Types, typeof features>(json, { features });
+```
+
+</Framework>
+
+<Framework name="vue">
+
+```ts title="tree.ts"
+import { typedTree } from "@fragiola/tree-vue";
+import { selection } from "@fragiola/tree-vue/selection";
+
+export const features = [selection({ mode: "multiple" })] as const;
+export const Tree = typedTree<Types, typeof features>();
+```
+
+</Framework>
+
+<Framework name="angular">
+
+```ts
+import { createTreeModel } from "@fragiola/tree-angular";
+import { selection } from "@fragiola/tree-angular/selection";
+
+const features = [selection({ mode: "multiple" })] as const;
+// a component's field
+readonly model = createTreeModel<Types, typeof features>(json, { features });
+```
+
+</Framework>
 
 ## Choosing a mode
 
-The document's `settings.selectionMode` is `"single"` (the default), `"multiple"` or `"none"`:
+The document's `settings.selectionMode` (with the feature) wins over the option:
 
 ```ts
 const json: TreeJson<Types> = {
@@ -73,10 +117,13 @@ only then; in Angular, `injectTreeState`, a signal):
 
 ```tsx
 import { useTree, useTreeState } from "@fragiola/tree-react";
+import { features, type Types } from "./tree";
 
 function SelectionBar() {
-    const { model } = useTree<Types>();
-    const selected = useTreeState<Types, readonly string[]>((state) => state.selectedItemIds);
+    const { model } = useTree<Types, typeof features>();
+    const selected = useTreeState<Types, readonly string[], typeof features>(
+        (state) => state.selectedItemIds,
+    );
     if (selected.length === 0) return null;
     return (
         <div role="toolbar" aria-label="Selection">
@@ -99,10 +146,12 @@ function SelectionBar() {
 ```vue title="selection-bar.vue"
 <script setup lang="ts">
 import { useTree, useTreeState } from "@fragiola/tree-vue";
-import type { Types } from "./tree";
+import { features, type Types } from "./tree";
 
-const { model } = useTree<Types>();
-const selected = useTreeState<Types, readonly string[]>((state) => state.selectedItemIds);
+const { model } = useTree<Types, typeof features>();
+const selected = useTreeState<Types, readonly string[], typeof features>(
+    (state) => state.selectedItemIds,
+);
 </script>
 
 <template>
@@ -123,7 +172,7 @@ const selected = useTreeState<Types, readonly string[]>((state) => state.selecte
 ```ts title="selection-bar.ts"
 import { Component } from "@angular/core";
 import { injectTree, injectTreeState } from "@fragiola/tree-angular";
-import type { Types } from "./tree";
+import { features, type Types } from "./tree";
 
 @Component({
     selector: "app-selection-bar",
@@ -138,8 +187,8 @@ import type { Types } from "./tree";
     `,
 })
 export class SelectionBar {
-    protected readonly model = injectTree<Types>().model;
-    protected readonly selected = injectTreeState<Types, readonly string[]>(
+    protected readonly model = injectTree<Types, typeof features>().model;
+    protected readonly selected = injectTreeState<Types, readonly string[], typeof features>(
         (state) => state.selectedItemIds,
     );
 

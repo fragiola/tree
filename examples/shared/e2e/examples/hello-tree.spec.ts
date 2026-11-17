@@ -33,13 +33,13 @@ test("expands and collapses with the toggle and the arrows", async ({
     await expect(item(docs, "Plan.md")).toHaveCount(0);
 });
 
-test("selects an item on a click", async ({ page }) => {
+test("a click focuses an item; the tree, with no feature, selects nothing", async ({
+    page,
+}) => {
     await openExample(page, "hello-tree");
     const docs = tree(page, "Documents");
     await row(item(docs, "Budget.csv")).click();
-    await expect(item(docs, "Budget.csv")).toHaveAttribute(
-        "aria-selected",
-        "true",
-    );
-    await expect(item(docs, "Budget.csv")).toHaveAttribute("data-selected", "");
+    await expect(item(docs, "Budget.csv")).toBeFocused();
+    await expect(docs.locator("[aria-selected]")).toHaveCount(0);
+    await expect(docs.locator("[data-selected]")).toHaveCount(0);
 });

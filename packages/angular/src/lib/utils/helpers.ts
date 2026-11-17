@@ -151,3 +151,34 @@ export function beforeInputs<V>(fallback: V, read: () => V): V {
         throw error;
     }
 }
+
+/**
+ * Keeps the installed features' attributes on an element (`aria-selected`, `data-selected`): sets
+ * the ones given, removes the ones no longer given. `prefix` keeps only those it starts (the parts
+ * of an item get the `data-*`, the item its ARIA too). A host binding is static; these depend on
+ * the features a model has.
+ */
+export function bindFeatureAttributes(
+    element: HTMLElement,
+    attributes: () => Readonly<Record<string, string | undefined>>,
+    prefix?: "data-",
+): void {
+    let applied = new Set<string>();
+    effect(() => {
+        const next = attributes();
+        untracked(() => {
+            const now = new Set<string>();
+            for (const [name, value] of Object.entries(next)) {
+                if (value === undefined) continue;
+                if (prefix !== undefined && !name.startsWith(prefix)) continue;
+                if (element.getAttribute(name) !== value)
+                    element.setAttribute(name, value);
+                now.add(name);
+            }
+            for (const name of applied) {
+                if (!now.has(name)) element.removeAttribute(name);
+            }
+            applied = now;
+        });
+    });
+}

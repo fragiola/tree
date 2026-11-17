@@ -15,6 +15,7 @@ import type {
     treeCollapseAll,
     treeExpandAll,
 } from "../../src/commands/expansion";
+import type { itemFocus } from "../../src/commands/focus";
 import type {
     itemAdd,
     itemMove,
@@ -27,13 +28,6 @@ import type {
     itemRename,
     itemStartRename,
 } from "../../src/commands/rename";
-import type {
-    itemFocus,
-    itemSelect,
-    treeClearSelection,
-    treeSelect,
-    treeSelectAll,
-} from "../../src/commands/selection";
 import type { treeConfigure, treeLoad } from "../../src/commands/tree";
 import type {
     CommandName,
@@ -42,6 +36,12 @@ import type {
 } from "../../src/commands/types";
 import type { FromSchema } from "../../src/schema/from-schema";
 import type { treeSchema } from "../../src/schema/tree";
+import type {
+    itemSelect,
+    treeClearSelection,
+    treeSelect,
+    treeSelectAll,
+} from "../../src/selection/commands";
 import type { TreeJson } from "../../src/state/json";
 import type { AnyTypes } from "../../src/state/types";
 

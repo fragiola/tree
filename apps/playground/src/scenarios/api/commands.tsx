@@ -3,6 +3,10 @@ import {
     createTreeModel,
     type TreeJson,
 } from "@fragiola/tree-react";
+import {
+    type SelectionFeature,
+    selection,
+} from "@fragiola/tree-react/selection";
 import { useRef, useState } from "react";
 import { StyledTree } from "../../fixture/styled";
 import { useInspector } from "../../inspector/context";
@@ -33,7 +37,11 @@ function describe(result: CommandResult<unknown>): string {
 }
 
 export default function CommandsScenario() {
-    const [model] = useState(() => createTreeModel<Types>(json));
+    const [model] = useState(() =>
+        createTreeModel<Types, readonly [SelectionFeature]>(json, {
+            features: [selection()],
+        }),
+    );
     const added = useRef(0);
     const [last, setLast] = useState("");
     useInspector(model);

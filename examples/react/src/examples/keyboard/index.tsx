@@ -9,10 +9,14 @@ import {
     type TreeModel,
     useTreeItemRename,
 } from "@fragiola/tree-react";
+import { selection } from "@fragiola/tree-react/selection";
 import { ChevronRight, File, Folder } from "lucide-react";
 import { Fragment, useId, useState } from "react";
 import { type FileTypes, fileSystem } from "../_kit/data";
 import * as styles from "./styles";
+
+/** The opt-in features of the model: the selection. */
+const features = [selection()] as const;
 
 // Every key is the engine's (the WAI-ARIA APG tree view, `DEFAULT_KEY_MAP`): the example only
 // lists them. `keyMap` on the root would change any of them.
@@ -73,10 +77,13 @@ function announcer(model: TreeModel<FileTypes>) {
 
 export default function Keyboard() {
     const [model] = useState(() =>
-        createTreeModel<FileTypes>({
-            ...fileSystem(),
-            settings: { selectionMode: "multiple" },
-        }),
+        createTreeModel<FileTypes, typeof features>(
+            {
+                ...fileSystem(),
+                settings: { selectionMode: "multiple" },
+            },
+            { features },
+        ),
     );
     const [announce] = useState(() => announcer(model));
     const legendId = useId();

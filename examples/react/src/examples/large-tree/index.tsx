@@ -3,7 +3,6 @@
 import {
     type AnnounceEvent,
     createTreeModel,
-    createTreeVirtualizer,
     type DropTarget,
     type ItemOf,
     Tree,
@@ -12,6 +11,10 @@ import {
     useTreeRef,
     useTreeState,
 } from "@fragiola/tree-react";
+import {
+    VirtualItems,
+    virtualization,
+} from "@fragiola/tree-react/virtualization";
 import { ChevronRight, File, Folder } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Clickable } from "#/components/atoms/clickable";
@@ -44,10 +47,11 @@ function largeTree(): TreeJson<Types> {
     return { version: 1, rootItemIds, items, expandedItemIds: rootItemIds };
 }
 
-// The virtualizer: the engine renders only the rows in view, plus 10 on each side. Each theme
-// sizes the rows, so they are measured (estimated at 28px until then). Create it once: it holds
-// options only, and another one would make another engine.
-const virtual = createTreeVirtualizer({ estimateRowSize: 28, overscan: 10 });
+// The virtualization feature: the engine renders only the rows in view, plus 10 on each side. Each
+// theme sizes the rows, so they are measured (estimated at 28px until then).
+const features = [
+    virtualization({ estimateRowSize: 28, overscan: 10 }),
+] as const;
 
 /** The live region's text for each step of a drag (pointer or keyboard): the package writes none. */
 function announcer(model: TreeModel<Types>) {
@@ -80,9 +84,11 @@ function announcer(model: TreeModel<Types>) {
 }
 
 export default function LargeTree() {
-    const [model] = useState(() => createTreeModel<Types>(largeTree()));
+    const [model] = useState(() =>
+        createTreeModel<Types, typeof features>(largeTree(), { features }),
+    );
     const [announce] = useState(() => announcer(model));
-    const tree = useTreeRef<Types>();
+    const tree = useTreeRef<Types, typeof features>();
     const visible = useTreeState(
         (_state, current) => current.get("visible-items").length,
         { model },
@@ -125,9 +131,8 @@ export default function LargeTree() {
                     {visible.toLocaleString("en")} rows in the DOM
                 </span>
             </div>
-            <Tree.Root<Types>
+            <Tree.Root<Types, typeof features>
                 model={model}
-                virtual={virtual}
                 treeRef={tree}
                 indicatorInset={styles.indicatorInset}
                 announce={announce}
@@ -135,9 +140,9 @@ export default function LargeTree() {
                 className={styles.root}
             >
                 {/* flat rows: each item carries its level, position and set size */}
-                <Tree.VirtualItems<Types>>
+                <VirtualItems<Types>>
                     {(item) => <Row item={item} />}
-                </Tree.VirtualItems>
+                </VirtualItems>
                 <Tree.DropIndicator className={styles.dropIndicator} />
                 <Tree.LiveRegion className={styles.liveRegion} />
             </Tree.Root>

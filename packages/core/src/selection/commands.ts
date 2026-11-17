@@ -1,14 +1,21 @@
-// The selection and the focused item: `item.select` (replace, toggle, extend), `tree.select`,
-// `tree.select-all`, `tree.clear-selection` and `item.focus`. Every selection command honours
-// `settings.selectionMode`: `none` refuses them, `single` never holds two items.
+// The selection's commands: `item.select` (replace, toggle, extend), `tree.select`,
+// `tree.select-all` and `tree.clear-selection`. Every one honours `settings.selectionMode`: `none`
+// refuses them, `single` never holds two items.
+import { defineCommand, type Failure, fail, ok } from "../commands/define";
+import { noPayload } from "../commands/expansion";
+import { isFailure, requireEnabled, resolveFlags } from "../commands/rules";
 import { idListSchema } from "../schema/tree";
 import type { Draft } from "../state/draft";
-import { isVisible } from "../state/structure";
 import type { TreeItem } from "../state/types";
 import { visibleIndex, visibleItems } from "../state/visible-items";
-import { defineCommand, type Failure, fail, ok } from "./define";
-import { itemIdPayload, itemIdResult, noPayload } from "./expansion";
-import { isFailure, requireEnabled, requireItem, resolveFlags } from "./rules";
+import {
+    anchorOf,
+    draftSlice,
+    modeOf,
+    selectedOf,
+    setAnchor,
+    setSelected,
+} from "./state";
 
 const selectionResult = {
     type: "object",
@@ -24,7 +31,7 @@ const selectionResult = {
 
 /** Refused when the selection mode is `none`. */
 function selectable(draft: Draft): Failure | undefined {
-    return draft.settings.selectionMode === "none"
+    return modeOf(draftSlice(draft)) === "none"
         ? fail(
               "refused",
               'the selection mode is "none": nothing can be selected',
@@ -38,10 +45,11 @@ function isEnabled(draft: Draft, item: TreeItem | undefined): boolean {
 
 function select(draft: Draft, ids: readonly string[]): string[] {
     const next = [...ids];
+    const current = selectedOf(draftSlice(draft));
     const same =
-        next.length === draft.state.selectedItemIds.length &&
-        next.every((id, i) => draft.state.selectedItemIds[i] === id);
-    if (!same) draft.set("selectedItemIds", next);
+        next.length === current.length &&
+        next.every((id, i) => current[i] === id);
+    if (!same) setSelected(draft, next);
     return next;
 }
 
@@ -69,11 +77,11 @@ export const itemSelect = defineCommand({
         if (refused) return refused;
         const item = requireEnabled(draft, payload.itemId, "be selected");
         if (isFailure(item)) return item;
-        const single = draft.settings.selectionMode === "single";
+        const single = modeOf(draftSlice(draft)) === "single";
         const mode = payload.mode ?? "replace";
-        const current = draft.state.selectedItemIds;
+        const current = selectedOf(draftSlice(draft));
         if (mode === "toggle") {
-            draft.set("selectionAnchorItemId", item.id);
+            setAnchor(draft, item.id);
             if (current.includes(item.id)) {
                 return ok({
                     selectedItemIds: select(
@@ -93,15 +101,15 @@ export const itemSelect = defineCommand({
             const visible = visibleItems(draft.state);
             const index = visibleIndex(draft.state);
             const anchor = [
-                draft.state.selectionAnchorItemId,
+                anchorOf(draftSlice(draft)),
                 draft.state.focusedItemId,
             ].find((id) => id !== null && index.has(id));
             const to = index.get(item.id);
             if (anchor === undefined || anchor === null || to === undefined) {
-                draft.set("selectionAnchorItemId", item.id);
+                setAnchor(draft, item.id);
                 return ok({ selectedItemIds: select(draft, [item.id]) });
             }
-            draft.set("selectionAnchorItemId", anchor);
+            setAnchor(draft, anchor);
             const from = index.get(anchor) ?? to;
             const range = visible
                 .slice(Math.min(from, to), Math.max(from, to) + 1)
@@ -109,7 +117,7 @@ export const itemSelect = defineCommand({
                 .filter((id) => isEnabled(draft, draft.item(id)));
             return ok({ selectedItemIds: select(draft, range) });
         }
-        draft.set("selectionAnchorItemId", item.id);
+        setAnchor(draft, item.id);
         return ok({ selectedItemIds: select(draft, [item.id]) });
     },
 });
@@ -132,7 +140,7 @@ export const treeSelect = defineCommand({
         const refused = selectable(draft);
         if (refused) return refused;
         if (
-            draft.settings.selectionMode === "single" &&
+            modeOf(draftSlice(draft)) === "single" &&
             payload.itemIds.length > 1
         ) {
             return fail(
@@ -151,7 +159,7 @@ export const treeSelect = defineCommand({
             if (isFailure(item)) return item;
         }
         const last = payload.itemIds.at(-1);
-        if (last !== undefined) draft.set("selectionAnchorItemId", last);
+        if (last !== undefined) setAnchor(draft, last);
         return ok({ selectedItemIds: select(draft, payload.itemIds) });
     },
 });
@@ -164,10 +172,11 @@ export const treeSelectAll = defineCommand({
     resultSchema: selectionResult,
     transient: false,
     reduce: (_payload, { draft }) => {
-        if (draft.settings.selectionMode !== "multiple") {
+        const mode = modeOf(draftSlice(draft));
+        if (mode !== "multiple") {
             return fail(
                 "refused",
-                `the selection mode is "${draft.settings.selectionMode}": only multiple selects all`,
+                `the selection mode is "${mode}": only multiple selects all`,
             );
         }
         const ids = visibleItems(draft.state)
@@ -184,29 +193,7 @@ export const treeClearSelection = defineCommand({
     resultSchema: selectionResult,
     transient: false,
     reduce: (_payload, { draft }) => {
-        draft.set("selectionAnchorItemId", null);
+        setAnchor(draft, null);
         return ok({ selectedItemIds: select(draft, []) });
-    },
-});
-
-export const itemFocus = defineCommand({
-    name: "item.focus",
-    description:
-        "Make an item the tree's focused item: the roving tab stop, the one item with tabindex 0 (moving DOM focus is the engine's `focus` action). Disabled items can be focused. Refused for an item that is not visible (an ancestor is collapsed).",
-    payloadSchema: itemIdPayload,
-    resultSchema: itemIdResult,
-    transient: false,
-    reduce: (payload, { draft }) => {
-        const item = requireItem(draft, payload.itemId);
-        if (isFailure(item)) return item;
-        if (!isVisible(draft.state, item.id)) {
-            return fail(
-                "refused",
-                `"${item.id}" is not visible: expand its ancestors first`,
-                "/itemId",
-            );
-        }
-        draft.set("focusedItemId", item.id);
-        return ok({ itemId: item.id });
     },
 });

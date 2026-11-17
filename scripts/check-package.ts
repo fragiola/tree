@@ -261,6 +261,7 @@ const REACT_SMOKE_MAIN = `import {
     type TreeJson,
     type TreeModel,
 } from "@fragiola/tree-react";
+import { selection } from "@fragiola/tree-react/selection";
 import { createRoot } from "react-dom/client";
 
 type Types = { items: { folder: undefined; file: { size: number } } };
@@ -276,7 +277,12 @@ const json: TreeJson<Types> = {
     expandedItemIds: ["src"],
 };
 
-const model: TreeModel<Types> = createTreeModel<Types>(json);
+// a feature, from its own entry of the package
+const features = [selection()] as const;
+const model: TreeModel<Types, typeof features> = createTreeModel<
+    Types,
+    typeof features
+>(json, { features });
 
 function size(item: ItemOf<Types>): string {
     return item.kind === "file" ? \` (\${item.data.size} B)\` : "";
@@ -488,17 +494,20 @@ function examplesVersion(framework: Framework, name: string): string {
 // with the recursion in a self-referencing component, and a button on a tree ref
 // (`:tree-ref="tree"`, read as `tree.value`). Everything comes from the Vue package.
 const VUE_SMOKE_TREE = `import { typedTree } from "@fragiola/tree-vue";
+import { selection } from "@fragiola/tree-vue/selection";
 
 export type Types = { items: { folder: undefined; file: { size: number } } };
-export const Tree = typedTree<Types>();
+// a feature, from its own entry of the package: it types v-model:selected-item-ids
+export const features = [selection()] as const;
+export const Tree = typedTree<Types, typeof features>();
 `;
 
 const VUE_SMOKE_MAIN = `import { createTreeModel } from "@fragiola/tree-vue";
 import { createApp } from "vue";
 import App from "./app.vue";
-import type { Types } from "./tree";
+import { features, type Types } from "./tree";
 
-const model = createTreeModel<Types>({
+const model = createTreeModel<Types, typeof features>({
     version: 1,
     rootItemIds: ["src", "readme"],
     items: {
@@ -507,7 +516,7 @@ const model = createTreeModel<Types>({
         readme: { kind: "file", label: "README.md", data: { size: 3 } },
     },
     expandedItemIds: ["src"],
-});
+}, { features });
 
 createApp(App, { model }).mount("#root");
 `;
@@ -516,11 +525,11 @@ const VUE_SMOKE_APP = `<script setup lang="ts">
 import { type TreeModel, useTreeRef } from "@fragiola/tree-vue";
 import { ref } from "vue";
 import FileItem from "./file-item.vue";
-import { Tree, type Types } from "./tree";
+import { type features, Tree, type Types } from "./tree";
 
-defineProps<{ model: TreeModel<Types> }>();
+defineProps<{ model: TreeModel<Types, typeof features> }>();
 const selected = ref<string[]>([]);
-const tree = useTreeRef<Types>();
+const tree = useTreeRef<Types, typeof features>();
 </script>
 
 <template>
@@ -650,8 +659,12 @@ import {
     TREE,
     type TreeJson,
 } from "@fragiola/tree-angular";
+import { selection } from "@fragiola/tree-angular/selection";
 
 type Types = { items: { folder: undefined; file: { size: number } } };
+
+// a feature, from its own entry of the package (a secondary entry point)
+const features = [selection()] as const;
 
 const json: TreeJson<Types> = {
     version: 1,
@@ -687,7 +700,7 @@ const json: TreeJson<Types> = {
     \`,
 })
 class App {
-    readonly model = createTreeModel<Types>(json);
+    readonly model = createTreeModel<Types, typeof features>(json, { features });
     readonly selected = signal<readonly string[]>([]);
 
     label(item: ItemOf<Types>): string {

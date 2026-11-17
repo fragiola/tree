@@ -1,7 +1,8 @@
-import type { AnyTypes, ItemOf, TreeTypes, VirtualRow } from "@fragiola/tree";
+import type { AnyTypes, ItemOf, TreeTypes } from "@fragiola/tree";
+import type { VirtualRow } from "@fragiola/tree/virtualization";
 import * as React from "react";
 import { useTreeContext } from "../context";
-import { useTreeVirtualWindow } from "../hooks/use-tree-virtual-window";
+import { useTreeVirtualWindow } from "./use-tree-virtual-window";
 
 export interface VirtualItemsProps<T extends TreeTypes = AnyTypes> {
     /**
@@ -23,13 +24,16 @@ function spacer(key: string, size: number): React.ReactElement {
 }
 
 /**
- * The rows of a virtualized tree (`Tree.Root` with `virtual`): only the visible items in view plus
- * the overscan, flat (each item carries its `aria-level`, `aria-posinset` and `aria-setsize`),
- * between spacers that take the place of the others. It renders no element of its own.
+ * The rows of a virtualized tree (a `Tree.Root` whose model has `virtualization()`): only the
+ * visible items in view plus the overscan, flat (each item carries its `aria-level`,
+ * `aria-posinset` and `aria-setsize`), between spacers that take the place of the others. It renders no element of its own.
  *
  * ```tsx
- * <Tree.Root model={model} virtual={virtual} style={{ height: 400, overflow: "auto" }}>
- *     <Tree.VirtualItems<Types>>{(item) => <FileRow item={item} />}</Tree.VirtualItems>
+ * import { VirtualItems, virtualization } from "@fragiola/tree-react/virtualization";
+ *
+ * const model = createTreeModel(json, { features: [virtualization({ rowSize: 28 })] });
+ * <Tree.Root model={model} style={{ height: 400, overflow: "auto" }}>
+ *     <VirtualItems<Types>>{(item) => <FileRow item={item} />}</VirtualItems>
  * </Tree.Root>
  * ```
  */

@@ -19,5 +19,5 @@
             "defaultCategory": "error"
         }
     },
-    "include": ["src", "tests", "*.config.ts"]
+    "include": ["src", "selection", "virtualization", "tests", "*.config.ts"]
 }

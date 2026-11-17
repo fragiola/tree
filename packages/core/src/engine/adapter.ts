@@ -37,7 +37,10 @@ export interface TreeEngineAdapter<T extends TreeTypes = AnyTypes> {
     handleKeyDown(event: KeyEventInput): boolean;
     /** a pointer pressed an item's content: it may become a drag */
     handlePointerDown(itemId: string, event: PointerEvent): void;
-    /** a click on an item's content: focus, select (Shift extends, Ctrl/Cmd toggles), and expand with `expandOnClick` */
+    /**
+     * a click on an item's content: focus, the features' clicks (`selection()`: select, Shift
+     * extends, Ctrl/Cmd toggles), and expand with `expandOnClick`
+     */
     handleClick(itemId: string, event: PressInput): void;
     /** a press on an item's toggle (`Tree.Toggle`): expand or collapse */
     handleToggleClick(itemId: string): void;

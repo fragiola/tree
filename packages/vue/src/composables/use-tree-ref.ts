@@ -1,4 +1,4 @@
-import type { AnyTypes, TreeTypes } from "@fragiola/tree";
+import type { AnyTypes, TreeFeatures, TreeTypes } from "@fragiola/tree";
 import { createTreeRef, type TreeRef } from "./create-tree-ref";
 
 /**
@@ -18,6 +18,9 @@ import { createTreeRef, type TreeRef } from "./create-tree-ref";
  * </template>
  * ```
  */
-export function useTreeRef<T extends TreeTypes = AnyTypes>(): TreeRef<T> {
-    return createTreeRef<T>();
+export function useTreeRef<
+    T extends TreeTypes = AnyTypes,
+    F extends TreeFeatures = readonly [],
+>(): TreeRef<T, F> {
+    return createTreeRef<T, F>();
 }

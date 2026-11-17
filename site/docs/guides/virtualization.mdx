@@ -4,30 +4,33 @@ description: Render trees of hundreds of thousands of visible items - a window o
 ---
 
 A tree renders every visible item by default. That is right for most trees, and it stops being
-right somewhere past a few thousand visible rows. Give the root a virtualizer and it renders only
-the rows in view, plus a few on each side: a hundred thousand expanded items scroll, move the
-focus and drag like a dozen.
+right somewhere past a few thousand visible rows. Install the virtualization feature and the tree
+renders only the rows in view, plus a few on each side: a hundred thousand expanded items scroll,
+move the focus and drag like a dozen.
 
-Virtualization is opt-in, and costs nothing without it: the virtualizer lives in the core (no
-library, no dependency) and only `createTreeVirtualizer` reaches it, so a bundle that never
-imports it leaves it out.
+Virtualization is a feature ([Features](/docs/concepts/features)), and costs nothing without it:
+`virtualization()`, `VirtualItems` and `useTreeVirtualWindow` come from its own entry
+(`@fragiola/tree-react/virtualization`), the virtualizer lives in the core (no library, no
+dependency), and a bundle that never imports the entry leaves all of it out.
 
-## Turning it on
+## Installing it
 
-Create a virtualizer once (it holds options only: another one would make another engine), pass
-it to the root, render the rows with `Tree.VirtualItems`, and give the root a height and a scroll:
+Install `virtualization(options)` in the model's features, render the rows with `VirtualItems`,
+and give the root a height and a scroll:
 
 <Framework name="react">
 
 ```tsx
-import { createTreeVirtualizer, type ItemOf, Tree } from "@fragiola/tree-react";
+import { createTreeModel, type ItemOf, Tree } from "@fragiola/tree-react";
+import { VirtualItems, virtualization } from "@fragiola/tree-react/virtualization";
 
-const virtual = createTreeVirtualizer({ estimateRowSize: 28 });
+const features = [virtualization({ estimateRowSize: 28 })] as const;
 
-export function Files({ model }: { model: TreeModel<Types> }) {
+export function Files() {
+    const [model] = useState(() => createTreeModel<Types, typeof features>(json, { features }));
     return (
-        <Tree.Root<Types> model={model} virtual={virtual} aria-label="Files" className="files">
-            <Tree.VirtualItems<Types>>{(item) => <Row item={item} />}</Tree.VirtualItems>
+        <Tree.Root model={model} aria-label="Files" className="files">
+            <VirtualItems<Types>>{(item) => <Row item={item} />}</VirtualItems>
             <Tree.DropIndicator className="drop-indicator" />
         </Tree.Root>
     );
@@ -52,23 +55,26 @@ function Row({ item }: { item: ItemOf<Types> }) {
 
 ```vue
 <script setup lang="ts">
-import { createTreeVirtualizer } from "@fragiola/tree-vue";
-import { Tree } from "./tree";
+import { createTreeModel } from "@fragiola/tree-vue";
+import { typedVirtualItems, virtualization } from "@fragiola/tree-vue/virtualization";
+import { Tree, type Types } from "./tree";
 
-const virtual = createTreeVirtualizer({ estimateRowSize: 28 });
+const features = [virtualization({ estimateRowSize: 28 })] as const;
+const model = createTreeModel<Types, typeof features>(json, { features });
+const VirtualItems = typedVirtualItems<Types>();
 </script>
 
 <template>
-    <Tree.Root :model="model" :virtual="virtual" aria-label="Files" class="files">
+    <Tree.Root :model="model" aria-label="Files" class="files">
         <!-- no Tree.Group: a virtualized tree is flat -->
-        <Tree.VirtualItems v-slot="{ item }">
+        <VirtualItems v-slot="{ item }">
             <Tree.Item :item="item">
                 <Tree.ItemContent class="row">
                     <Tree.Toggle />
                     <span>{{ item.label }}</span>
                 </Tree.ItemContent>
             </Tree.Item>
-        </Tree.VirtualItems>
+        </VirtualItems>
         <Tree.DropIndicator class="drop-indicator" />
     </Tree.Root>
 </template>
@@ -79,13 +85,16 @@ const virtual = createTreeVirtualizer({ estimateRowSize: 28 });
 <Framework name="angular">
 
 ```ts
-const virtual = createTreeVirtualizer({ estimateRowSize: 28 });
+import { createTreeModel, TREE } from "@fragiola/tree-angular";
+import { TreeVirtualItemsDirective, virtualization } from "@fragiola/tree-angular/virtualization";
+
+const features = [virtualization({ estimateRowSize: 28 })] as const;
 
 @Component({
     selector: "app-files",
-    imports: [TREE],
+    imports: [TREE, TreeVirtualItemsDirective],
     template: `
-        <div [treeRoot]="model" [virtual]="virtual" #tree="treeRoot" aria-label="Files" class="files">
+        <div [treeRoot]="model" #tree="treeRoot" aria-label="Files" class="files">
             <!-- no treeGroup: a virtualized tree is flat -->
             <ng-template [treeVirtualItems]="model" let-item>
                 <div [treeItem]="item">
@@ -102,8 +111,7 @@ const virtual = createTreeVirtualizer({ estimateRowSize: 28 });
     `,
 })
 export class Files {
-    readonly model = createTreeModel<Types>(json);
-    readonly virtual = virtual;
+    readonly model = createTreeModel<Types, typeof features>(json, { features });
 }
 ```
 
@@ -116,7 +124,7 @@ export class Files {
 }
 ```
 
-The root is the element that scrolls (or give the virtualizer a `scrollElement`), and the rows
+The root is the element that scrolls (or give `virtualization()` a `scrollElement`), and the rows
 start at the top of its content box: put a header outside the root.
 
 ## A flat tree
@@ -127,7 +135,7 @@ tree pattern describes a flat tree, so a screen reader reads the same structure.
 is the item's depth: `--tree-depth` is on every part of an item, as in a nested tree
 ([Styling the depth](/docs/getting-started/depth)).
 
-Between the rows, `Tree.VirtualItems` puts spacers (`data-tree-part="spacer"`, `aria-hidden`)
+Between the rows, `VirtualItems` puts spacers (`data-tree-part="spacer"`, `aria-hidden`)
 that take the place of the rows it does not render, so the scrollbar is the whole tree's.
 
 ## Row sizes
@@ -167,11 +175,12 @@ indicator is placed by the rows' offsets, rendered or not.
 
 ## Reading the window
 
-`engine.get("virtual-window")` is what `Tree.VirtualItems` renders: the rows (each a
+`engine.get("virtual-window")` is what `VirtualItems` renders: the rows (each a
 `VirtualRow`, with its `offset`, `size` and the `spaceBefore` to leave empty), the range in view
 plus the overscan, the `totalSize` and the `spaceAfter`. Read it with `useTreeVirtualWindow()`
-(Vue: the composable of the same name; Angular: `injectTreeVirtualWindow()`) inside the root, to
-render the rows your own way.
+(Vue: the composable of the same name; Angular: `injectTreeVirtualWindow()`), from the same entry,
+inside the root, to render the rows your own way; outside it, a tree ref typed by the features
+(`useTreeRef<Types, typeof features>()`) reads `engine.get("virtual-window")`.
 
 <Example id="large-tree" />
 

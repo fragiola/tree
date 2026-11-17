@@ -4,12 +4,19 @@ import {
     createTreeRef,
     type ItemOf,
     Tree,
+    type TreeStateOf,
     useTree,
     useTreeItem,
     useTreeRef,
     useTreeState,
 } from "../src";
-import { FileTree, type FileTypes, files, filesModel } from "./tree";
+import {
+    type FEATURES,
+    FileTree,
+    type FileTypes,
+    files,
+    filesModel,
+} from "./tree";
 
 describe("the hooks", () => {
     it("useTree gives the root's model and its engine", () => {
@@ -41,7 +48,9 @@ describe("the hooks", () => {
     it("useTreeState re-renders with the selection it selects", () => {
         function Count() {
             const count = useTreeState<FileTypes, number>(
-                (state) => state.selectedItemIds.length,
+                (state) =>
+                    (state as TreeStateOf<FileTypes, typeof FEATURES>)
+                        .selectedItemIds.length,
             );
             return <output data-testid="count">{count}</output>;
         }

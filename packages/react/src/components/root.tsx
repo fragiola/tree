@@ -3,16 +3,18 @@ import {
     type AnyTypes,
     createTreeEngine,
     createTreeModel,
+    FEATURE_ROOT_PROPS,
+    type FeatureRootPropsOf,
     type KeyMap,
     type LoadChildren,
     type TransferHandler,
     type TreeDropOutside,
     type TreeEngine,
+    type TreeFeatures,
     type TreeForeignDrop,
     type TreeJson,
     type TreeModel,
     type TreeTypes,
-    type TreeVirtualizer,
 } from "@fragiola/tree";
 import * as React from "react";
 import { eraseModel, TreeContext, type TreeContextValue } from "../context";
@@ -30,7 +32,7 @@ import {
 } from "../utils/use-render";
 
 export interface RootState {
-    /** the selection mode is `multiple` (`aria-multiselectable`) */
+    /** the selection mode is `multiple` (`aria-multiselectable`, with `selection()`) */
     multiselectable: boolean;
     /** a drag is under way (pointer or keyboard) */
     dragging: boolean;
@@ -42,24 +44,31 @@ export interface RootState {
     empty: boolean;
 }
 
-export interface RootProps<T extends TreeTypes = AnyTypes>
-    extends DivPrimitiveProps<RootState> {
+/**
+ * The props of `Tree.Root` every tree has. `RootProps<T, F>` adds the root props the features `F`
+ * ship (`selectedItemIds` with `selection()`).
+ */
+export interface RootBaseProps<
+    T extends TreeTypes = AnyTypes,
+    F extends TreeFeatures = readonly [],
+> extends DivPrimitiveProps<RootState> {
     /**
      * the tree model. Its middleware (`model.use`) sees every command the tree runs, and its
      * listeners (`model.subscribe`) every change. A new model identity creates a new engine. Give
      * either `model` or `defaultTree`
      */
-    model?: TreeModel<T> | undefined;
+    model?: TreeModel<T, F> | undefined;
     /** the document of a model the root creates and keeps (read once, at mount) */
     defaultTree?: TreeJson<T> | undefined;
+    /**
+     * the opt-in features of the model the root creates from `defaultTree` (read once, at mount):
+     * `[selection(), virtualization({ rowSize: 28 })]`. A `model` has its own
+     */
+    features?: F | undefined;
     /** controlled expansion: the expanded items (with `onExpandedItemIdsChange`) */
     expandedItemIds?: readonly string[] | undefined;
     /** called with the expanded items after every command that changes them */
     onExpandedItemIdsChange?: ((itemIds: string[]) => void) | undefined;
-    /** controlled selection: the selected items (with `onSelectedItemIdsChange`) */
-    selectedItemIds?: readonly string[] | undefined;
-    /** called with the selection after every command that changes it */
-    onSelectedItemIdsChange?: ((itemIds: string[]) => void) | undefined;
     /** controlled checkboxes: the checked items (with `onCheckedItemIdsChange`) */
     checkedItemIds?: readonly string[] | undefined;
     /** called with the checked items after every command that changes them */
@@ -85,12 +94,6 @@ export interface RootProps<T extends TreeTypes = AnyTypes>
     /** how long (ms) between two typed characters keeps one type-ahead search (default 500) */
     typeAheadTimeout?: number | undefined;
     /**
-     * renders only the visible items in view (`createTreeVirtualizer(options)`, rendered by
-     * `Tree.VirtualItems`). Create it once (at module level, or memoized): another virtualizer
-     * creates another engine
-     */
-    virtual?: TreeVirtualizer | undefined;
-    /**
      * joins the trees of the document with the same group name: items drag between them, by pointer
      * and keyboard (over one model a drop is one `item.move`, over two a transfer)
      */
@@ -115,8 +118,44 @@ export interface RootProps<T extends TreeTypes = AnyTypes>
      */
     dropOutside?: TreeDropOutside<T> | undefined;
     /** access to the model and the engine from outside the root (`useTreeRef`, `createTreeRef`) */
-    treeRef?: TreeRef<T> | undefined;
+    treeRef?: TreeRef<T, F> | undefined;
     children?: React.ReactNode;
+}
+
+/**
+ * The props of `Tree.Root`: every tree's, and the root props the features `F` ship. A feature's
+ * prop compiles only when the feature is installed: `<Tree.Root<Types, typeof features>>`, or a
+ * `model` of those features.
+ */
+export type RootProps<
+    T extends TreeTypes = AnyTypes,
+    F extends TreeFeatures = readonly [],
+> = RootBaseProps<T, F> & FeatureRootPropsOf<F>;
+
+/** Splits the features' root props (by name: `FEATURE_ROOT_PROPS`) from the element's props. */
+function splitFeatureProps(props: Record<string, unknown>) {
+    const featureProps: Record<string, unknown> = {};
+    const rest: Record<string, unknown> = {};
+    for (const [name, value] of Object.entries(props)) {
+        if (Object.hasOwn(FEATURE_ROOT_PROPS, name)) featureProps[name] = value;
+        else rest[name] = value;
+    }
+    return { featureProps, rest };
+}
+
+/** A list of features by their names, in order: an equal new list (`features={[selection()]}`) is the same. */
+function featureNames(features: TreeFeatures | undefined): string {
+    return (features ?? []).map((feature) => feature.name).join(",");
+}
+
+/** Warns once per message and root: misuse that the root ignores. */
+function useWarnOnce() {
+    const warned = React.useRef(new Set<string>());
+    return (message: string) => {
+        if (warned.current.has(message)) return;
+        warned.current.add(message);
+        console.warn(`[@fragiola/tree-react] ${message}`);
+    };
 }
 
 const noSubscribe = () => () => {};
@@ -127,14 +166,16 @@ const noRevision = () => 0;
  * forwards the keys to it and re-renders when the tree changes. It renders only its children; no
  * Provider is needed above it.
  */
-export function Root<T extends TreeTypes = AnyTypes>(props: RootProps<T>) {
+export function Root<
+    T extends TreeTypes = AnyTypes,
+    F extends TreeFeatures = readonly [],
+>(props: RootProps<T, F>) {
     const {
         model: modelProp,
         defaultTree,
+        features,
         expandedItemIds,
         onExpandedItemIdsChange,
-        selectedItemIds,
-        onSelectedItemIdsChange,
         checkedItemIds,
         onCheckedItemIdsChange,
         loadChildren,
@@ -147,21 +188,39 @@ export function Root<T extends TreeTypes = AnyTypes>(props: RootProps<T>) {
         indentation,
         indicatorInset,
         typeAheadTimeout,
-        virtual,
         dragGroup,
         transfer,
         foreignDrop,
         dropOutside,
         treeRef,
         children,
-        ...rest
-    } = props;
+        ...others
+    } = props as RootBaseProps<T, F>;
+    const { featureProps, rest } = splitFeatureProps(others);
     const [ownModel] = React.useState(() =>
-        modelProp ? null : createTreeModel<T>(defaultTree),
+        modelProp ? null : createTreeModel<T, F>(defaultTree, { features }),
     );
-    const typed = (modelProp ?? ownModel) as TreeModel<T>;
+    const typed = (modelProp ?? ownModel) as TreeModel<T, F>;
     // the parts below work on the erased registry; the typed surface is their props
-    const model = eraseModel(typed);
+    const model = eraseModel(typed as unknown as TreeModel<T>);
+
+    // the features are the model's, fixed when it is created: a later change is ignored
+    const warn = useWarnOnce();
+    const [firstFeatures] = React.useState(() => featureNames(features));
+    if (!modelProp && featureNames(features) !== firstFeatures) {
+        warn(
+            "the features prop changed after the root created its model: the change is ignored (the features are fixed when the model is created)",
+        );
+    }
+    const installed = new Set(model.get("features").map(({ name }) => name));
+    for (const [name, value] of Object.entries(featureProps)) {
+        const feature = FEATURE_ROOT_PROPS[name];
+        if (value !== undefined && feature && !installed.has(feature)) {
+            warn(
+                `${name} needs the ${feature} feature (\`${feature}()\` in the model's features): it is ignored`,
+            );
+        }
+    }
 
     // the callbacks are read when called: a new function each render recreates nothing
     const latest = React.useRef({ loadChildren, announce, transfer });
@@ -195,7 +254,6 @@ export function Root<T extends TreeTypes = AnyTypes>(props: RootProps<T>) {
             indentation,
             indicatorInset,
             typeAheadTimeout,
-            virtual,
             dragGroup,
             transfer: hasTransfer
                 ? (event) => latest.current.transfer?.(event)
@@ -223,7 +281,6 @@ export function Root<T extends TreeTypes = AnyTypes>(props: RootProps<T>) {
         indentation,
         indicatorInset,
         typeAheadTimeout,
-        virtual,
         dragGroup,
         hasTransfer,
         foreignDrop,
@@ -236,7 +293,7 @@ export function Root<T extends TreeTypes = AnyTypes>(props: RootProps<T>) {
         if (!treeRef) return;
         setTreeRef(treeRef, {
             model: typed,
-            engine: facade.engine as unknown as TreeEngine<T>,
+            engine: facade.engine as unknown as TreeEngine<T, F>,
         });
         return () => setTreeRef(treeRef, null);
     }, [treeRef, typed, facade]);
@@ -244,10 +301,9 @@ export function Root<T extends TreeTypes = AnyTypes>(props: RootProps<T>) {
     const controlled: ControlledProps = {
         expandedItemIds,
         onExpandedItemIdsChange,
-        selectedItemIds,
-        onSelectedItemIdsChange,
         checkedItemIds,
         onCheckedItemIdsChange,
+        ...featureProps,
     };
     useControlledState(model, controlled);
 
@@ -302,8 +358,10 @@ export function Root<T extends TreeTypes = AnyTypes>(props: RootProps<T>) {
         [model, live, facade, state, revision, tabStopItemId, isCheckboxes],
     );
 
+    // the installed features' ARIA and data-* (`aria-multiselectable` with `selection()`)
+    const rootAttributes = model.get("root-attributes");
     const rootState: RootState = {
-        multiselectable: state.settings.selectionMode === "multiple",
+        multiselectable: rootAttributes["aria-multiselectable"] === "true",
         dragging: live?.is("dragging") ?? false,
         keyboardDragging: live?.is("keyboard-dragging") ?? false,
         draggingFromOtherTree: live?.is("dragging-from-other-tree") ?? false,
@@ -314,7 +372,7 @@ export function Root<T extends TreeTypes = AnyTypes>(props: RootProps<T>) {
         ref: rootRef,
         props: {
             role: "tree",
-            "aria-multiselectable": rootState.multiselectable || undefined,
+            ...rootAttributes,
             "data-tree-part": "root",
             ...dataAttributes({
                 dragging: rootState.dragging,

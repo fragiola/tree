@@ -4,8 +4,9 @@
 // as JSON. With `--check`, fails instead when the committed page differs. From Dockable
 // (fragiola/dockable, packages/core/scripts/generate-command-docs.ts), same author and licence.
 //
-// It reads the built package (`dist/index.js`, `pnpm --filter @fragiola/tree build`) and the
-// `CommandMap` source for the type names.
+// It reads the built package (`dist/index.js` and every feature's entry, `pnpm --filter
+// @fragiola/tree build`) and the `CommandMap` source for the type names. A feature's commands are
+// listed in their own section, which says how to install the feature.
 //
 //   node packages/core/scripts/generate-command-docs.ts [--check]
 import { readFileSync, writeFileSync } from "node:fs";
@@ -35,7 +36,10 @@ interface CommandInfo {
 }
 
 interface Core {
-    createTreeModel(json?: unknown): {
+    createTreeModel(
+        json?: unknown,
+        options?: { features?: readonly unknown[] },
+    ): {
         get(key: "commands"): readonly CommandInfo[];
         dispatch(input: unknown): {
             ok: boolean;
@@ -49,21 +53,33 @@ const ROOT = join(here, "../../..");
 const OUT = join(ROOT, "site/docs/api/commands.mdx");
 const COMMAND_TYPES = join(here, "../src/commands/types.ts");
 const COMMAND_SOURCES = [
-    "expansion",
-    "selection",
-    "check",
-    "rename",
-    "children",
-    "item",
-    "tree",
-    "rules",
-].map((file) => join(here, `../src/commands/${file}.ts`));
+    "commands/expansion",
+    "commands/focus",
+    "selection/commands",
+    "commands/check",
+    "commands/rename",
+    "commands/children",
+    "commands/item",
+    "commands/tree",
+    "commands/rules",
+].map((file) => join(here, `../src/${file}.ts`));
+
+/** The features, by their entry (`dist/<entry>.js`) and factory: every one is installed here. */
+const FEATURES = [
+    { entry: "selection", factory: "selection" },
+    { entry: "virtualization", factory: "virtualization" },
+] as const;
 
 /** The error codes a command's own rules return (the ones every command can return aside). */
 const RULE_CODES = ["not_found", "refused"] as const;
 
 /** The sections of the page, and the commands in each. */
-const GROUPS: readonly [title: string, names: readonly string[]][] = [
+const GROUPS: readonly [
+    title: string,
+    names: readonly string[],
+    /** the feature whose commands these are */
+    feature?: string,
+][] = [
     [
         "Expanding and collapsing",
         [
@@ -75,15 +91,16 @@ const GROUPS: readonly [title: string, names: readonly string[]][] = [
             "tree.collapse-all",
         ],
     ],
+    ["Focus", ["item.focus"]],
     [
-        "Selection and focus",
+        "Selection",
         [
             "item.select",
             "tree.select",
             "tree.select-all",
             "tree.clear-selection",
-            "item.focus",
         ],
+        "selection",
     ],
     ["Checkboxes", ["item.check", "item.toggle-check"]],
     ["Rename", ["item.start-rename", "item.rename", "item.cancel-rename"]],
@@ -359,12 +376,23 @@ async function render(): Promise<string> {
     const core = (await import(
         join(here, "../dist/index.js")
     )) as unknown as Core;
-    // a model with none of the examples' ids: only their shape is checked (not_found is fine)
-    const model = core.createTreeModel({
-        version: 1,
-        rootItemIds: [],
-        items: {},
-    });
+    const features = await Promise.all(
+        FEATURES.map(async ({ entry, factory }) => {
+            const module = (await import(
+                join(here, `../dist/${entry}.js`)
+            )) as Record<string, () => unknown>;
+            const make = module[factory];
+            if (typeof make !== "function")
+                throw new Error(`dist/${entry}.js exports no ${factory}()`);
+            return make();
+        }),
+    );
+    // a model with none of the examples' ids, and every feature: only their shape is checked
+    // (not_found is fine)
+    const model = core.createTreeModel(
+        { version: 1, rootItemIds: [], items: {} },
+        { features },
+    );
     const commands = model.get("commands");
     const types = commandTypes();
     const codes = commandCodes();
@@ -404,8 +432,9 @@ async function render(): Promise<string> {
         }
     }
 
-    const groups = GROUPS.map(([title, names]) => ({
+    const groups = GROUPS.map(([title, names, feature]) => ({
         title,
+        feature,
         members: names.flatMap((name) => {
             const info = commands.find((command) => command.name === name);
             if (!info) throw new Error(`${name} is not a command`);
@@ -419,9 +448,14 @@ async function render(): Promise<string> {
     if (listed !== commands.length) {
         throw new Error("a command belongs to no section of the page");
     }
-    const grouped = groups.map(({ title, members }) =>
+    const grouped = groups.map(({ title, feature, members }) =>
         [
             `## ${title}`,
+            ...(feature
+                ? [
+                      `These commands come with the ${feature} feature: install \`${feature}()\` from \`@fragiola/tree/${feature}\` (\`createTreeModel(json, { features: [${feature}()] })\`). Without it, each one returns \`not_found\`.`,
+                  ]
+                : []),
             ...members.map((info) =>
                 section(info, types.get(info.name), codes.get(info.name)),
             ),

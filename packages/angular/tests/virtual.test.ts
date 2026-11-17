@@ -1,11 +1,8 @@
 import { Component } from "@angular/core";
 import { describe, expect, it } from "vitest";
-import {
-    createTreeModel,
-    injectTreeVirtualWindow,
-    TREE,
-} from "../src/public-api";
-import { BigTree, bigTree, virtual } from "./big-tree";
+import { TREE } from "../src/public-api";
+import { injectTreeVirtualWindow } from "../virtualization/public-api";
+import { BigTree, virtualModel } from "./big-tree";
 import { render, settle } from "./tree";
 
 const treeItems = () => [
@@ -69,11 +66,10 @@ describe("ng-template[treeVirtualItems]", () => {
         @Component({
             selector: "test-host",
             imports: [TREE, Count],
-            template: `<div [treeRoot]="model" [virtual]="virtual"><test-count /></div>`,
+            template: `<div [treeRoot]="model"><test-count /></div>`,
         })
         class Host {
-            readonly model = createTreeModel(bigTree());
-            readonly virtual = virtual;
+            readonly model = virtualModel();
         }
         const rendered = await render(Host);
         const count = rendered.fixture.debugElement.query(

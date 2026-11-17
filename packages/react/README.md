@@ -6,8 +6,8 @@ single and multiple selection, the WAI-ARIA keyboard model with type-ahead, drag
 children, inline rename and tri-state checkboxes.
 
 Fragiola Tree is **headless**. It ships the behaviour, the accessibility and the primitives
-(`Tree.Root`, `Items`, `VirtualItems`, `Item`, `ItemContent`, `Group`, `Toggle`, `DropIndicator`,
-`LiveRegion`) and the hooks below them (`useTreeItem`, `useTreeItemRename`, …), and **no CSS, no
+(`Tree.Root`, `Items`, `Item`, `ItemContent`, `Group`, `Toggle`, `DropIndicator`, `LiveRegion`,
+and `VirtualItems` with the virtualization feature) and the hooks below them (`useTreeItem`, `useTreeItemRename`, …), and **no CSS, no
 icons and no text**: you style every part with
 `className`, `style` and the `data-*` attributes it exposes, and every visible word and accessible
 name comes from you.
@@ -68,6 +68,26 @@ export function App() {
 ```
 
 Indent the rows with the depth every part carries: `padding-inline-start: calc(var(--tree-depth) * 1rem)`.
+
+## Features
+
+The package is a minimal tree and opt-in features, each from its own entry: an app that does not
+import a feature does not ship it.
+
+| feature | entry |
+| --- | --- |
+| `selection(options?)`: the selected items, the selection keys and clicks, `aria-selected` | `@fragiola/tree-react/selection` |
+| `virtualization(options?)`: a window of the rows in view, rendered by `VirtualItems` | `@fragiola/tree-react/virtualization` |
+
+```ts
+import { createTreeModel } from "@fragiola/tree-react";
+import { selection } from "@fragiola/tree-react/selection";
+
+const features = [selection()] as const;
+const model = createTreeModel<Types, typeof features>(json, { features });
+```
+
+The guide is <https://fragiola.com/tree/docs/concepts/features>.
 
 ## The model and the engine
 

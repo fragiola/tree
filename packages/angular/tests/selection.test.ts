@@ -5,9 +5,11 @@ import {
     injectTreeState,
     TREE,
     type TreeModel,
+    type TreeStateOf,
 } from "../src/public-api";
 import {
     content,
+    type FEATURES,
     type FileTypes,
     filesModel,
     fire,
@@ -45,9 +47,12 @@ async function setup(selectionMode: "single" | "multiple" = "multiple") {
     `,
 })
 class Retry {
-    readonly model = input.required<TreeModel<FileTypes>>();
+    readonly model = input.required<TreeModel<FileTypes, typeof FEATURES>>();
     readonly srcSelected = injectTreeState(
-        (state) => state.selectedItemIds.includes("src"),
+        (state) =>
+            (
+                state as TreeStateOf<FileTypes, typeof FEATURES>
+            ).selectedItemIds.includes("src"),
         { model: this.model },
     );
     readonly presses: string[] = [];

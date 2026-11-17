@@ -5,7 +5,7 @@ import { Switch } from "#/components/ui/switch";
 import { fileSystem } from "../_kit/data";
 import FileItem from "./file-item.vue";
 import * as styles from "./styles";
-import { Tree } from "./tree";
+import { features, Tree } from "./tree";
 
 const json = fileSystem();
 /** Every folder: what "Expand all" opens. */
@@ -84,7 +84,7 @@ const changeKeepSrcOpen = (checked: boolean) => {
             <!-- v-model:selected-item-ids binds the selection both ways; the expansion goes through
                  the app's own rule -->
             <Tree.Root
-                :default-tree="json"
+                :default-tree="json" :features="features"
                 :expanded-item-ids="expandedItemIds"
                 @update:expanded-item-ids="changeExpanded"
                 v-model:selected-item-ids="selectedItemIds"

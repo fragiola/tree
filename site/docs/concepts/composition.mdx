@@ -288,7 +288,10 @@ value of the state with `useTreeState`:
 
 ```tsx
 function SelectionCount() {
-    const count = useTreeState<Types, number>((state) => state.selectedItemIds.length);
+    // the selection feature's field: pass the features with the registry
+    const count = useTreeState<Types, number, typeof features>(
+        (state) => state.selectedItemIds.length,
+    );
     return <p>{count} selected</p>;
 }
 ```
@@ -307,7 +310,9 @@ value of the state with `useTreeState`, a read-only ref:
 <script setup lang="ts">
 import { useTreeState } from "@fragiola/tree-vue";
 
-const count = useTreeState<Types, number>((state) => state.selectedItemIds.length);
+const count = useTreeState<Types, number, typeof features>(
+    (state) => state.selectedItemIds.length,
+);
 </script>
 
 <template>
@@ -346,7 +351,7 @@ a value of the state with `injectTreeState`, a signal:
     template: `<p>{{ count() }} selected</p>`,
 })
 export class SelectionCount {
-    protected readonly count = injectTreeState<Types, number>(
+    protected readonly count = injectTreeState<Types, number, typeof features>(
         (state) => state.selectedItemIds.length,
     );
 }

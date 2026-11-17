@@ -7,6 +7,8 @@
 //       a.ts
 //       b.ts
 //   readme.md
+import type { TreeFeatures } from "../src/features/types";
+import { type SelectionFeature, selection } from "../src/selection/selection";
 import type { TreeJson } from "../src/state/json";
 import {
     createTreeModel,
@@ -42,11 +44,20 @@ export function files(
     };
 }
 
-export function filesModel(
+/**
+ * A model of `files()`, with the selection feature unless `options.features` says otherwise
+ * (`features: []`: a bare tree).
+ */
+export function filesModel<
+    const F extends TreeFeatures = readonly [SelectionFeature],
+>(
     patch: Partial<TreeJson<FileTypes>> = {},
-    options: TreeModelOptions<FileTypes> = {},
-) {
-    return createTreeModel<FileTypes>(files(patch), options);
+    options: TreeModelOptions<FileTypes, F> = {},
+): TreeModel<FileTypes, F> {
+    return createTreeModel<FileTypes, F>(files(patch), {
+        features: [selection()] as unknown as F,
+        ...options,
+    });
 }
 
 /** The ids of the visible items, in render order. */

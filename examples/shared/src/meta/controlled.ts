@@ -7,6 +7,7 @@ export default {
     category: "data",
     order: 2,
     features: [
+        "selection()",
         "expandedItemIds",
         "onExpandedItemIdsChange",
         "selectedItemIds",

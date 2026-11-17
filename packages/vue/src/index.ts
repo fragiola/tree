@@ -19,16 +19,13 @@ export type {
     LiveRegionState,
 } from "./components/live-region";
 export type {
+    RootBaseProps,
     RootEmits,
     RootProps,
     RootSlots,
     RootState,
 } from "./components/root";
 export type { ToggleProps, ToggleSlots } from "./components/toggle";
-export type {
-    VirtualItemsProps,
-    VirtualItemsSlots,
-} from "./components/virtual-items";
 export {
     createTreeRef,
     type TreeHandle,
@@ -53,7 +50,6 @@ export {
     type UseTreeStateOptions,
     useTreeState,
 } from "./composables/use-tree-state";
-export { useTreeVirtualWindow } from "./composables/use-tree-virtual-window";
 export * as Tree from "./parts";
 export { type TypedTree, typedTree } from "./typed";
 export type {

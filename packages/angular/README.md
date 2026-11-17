@@ -6,7 +6,7 @@ single and multiple selection, the WAI-ARIA keyboard model with type-ahead, drag
 children, inline rename and tri-state checkboxes.
 
 Fragiola Tree is **headless**. It ships the behaviour, the accessibility and the primitives, here
-standalone attribute directives you put on your own elements (`[treeRoot]`, `treeItems`, `treeVirtualItems`,
+standalone attribute directives you put on your own elements (`[treeRoot]`, `treeItems`,
 `[treeItem]`, `treeItemContent`, `treeGroup`, `treeToggle`, `treeDropIndicator`, `treeLiveRegion`,
 and `treeItemRename` on your rename input), and **no CSS, no icons and no text**: you style every
 element with `class`, `style` and the `data-*` attributes the directives set, and every visible
@@ -72,6 +72,26 @@ export class Files {
 ```
 
 Indent the rows with the depth every part carries: `padding-inline-start: calc(var(--tree-depth) * 1rem)`.
+
+## Features
+
+The package is a minimal tree and opt-in features, each from its own entry: an app that does not
+import a feature does not ship it.
+
+| feature | entry |
+| --- | --- |
+| `selection(options?)`: the selected items, the selection keys and clicks, `aria-selected` | `@fragiola/tree-angular/selection` |
+| `virtualization(options?)`: a window of the rows in view, rendered by `TreeVirtualItemsDirective` (`ng-template[treeVirtualItems]`) | `@fragiola/tree-angular/virtualization` |
+
+```ts
+import { createTreeModel } from "@fragiola/tree-angular";
+import { selection } from "@fragiola/tree-angular/selection";
+
+const features = [selection()] as const;
+const model = createTreeModel<Types, typeof features>(json, { features });
+```
+
+The guide is <https://fragiola.com/tree/docs/concepts/features>.
 
 ## The model and the engine
 

@@ -1,4 +1,4 @@
-import type { AnyTypes, TreeTypes } from "@fragiola/tree";
+import type { AnyTypes, TreeFeatures, TreeTypes } from "@fragiola/tree";
 import * as React from "react";
 import {
     createTreeRef,
@@ -16,8 +16,11 @@ import {
  * <Tree.Root treeRef={tree} defaultTree={json}>…</Tree.Root>
  * ```
  */
-export function useTreeRef<T extends TreeTypes = AnyTypes>(): TreeRef<T> {
-    const [ref] = React.useState(() => createTreeRef<T>());
+export function useTreeRef<
+    T extends TreeTypes = AnyTypes,
+    F extends TreeFeatures = readonly [],
+>(): TreeRef<T, F> {
+    const [ref] = React.useState(() => createTreeRef<T, F>());
     const subscribe = React.useCallback(
         (onChange: () => void) => subscribeTreeRef(ref, onChange),
         [ref],

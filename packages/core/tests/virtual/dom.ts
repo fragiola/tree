@@ -7,10 +7,25 @@ import {
     type TreeEngine,
     type TreeEngineOptions,
 } from "../../src/engine/tree-engine";
+import { featuresOf } from "../../src/features/registry";
+import {
+    type SelectionFeature,
+    selection,
+} from "../../src/selection/selection";
 import type { TreeJson } from "../../src/state/json";
 import { createTreeModel, type TreeModel } from "../../src/state/model";
-import type { TreeVirtualizer } from "../../src/virtual/virtualizer";
+import {
+    type VirtualizationFeature,
+    virtualization,
+} from "../../src/virtual/virtualization";
+import type { TreeVirtualizerOptions } from "../../src/virtual/virtualizer";
 import type { FileTypes } from "../fixture";
+
+/** The features of a virtualized test tree. */
+export type VirtualFeatures = readonly [
+    SelectionFeature,
+    VirtualizationFeature,
+];
 
 export const WIDTH = 300;
 
@@ -32,25 +47,23 @@ function rect(top: number, left: number, width: number, height: number) {
 export function flatModel(
     count: number,
     label: (index: number) => string = (index) => `item ${index}`,
-): TreeModel<FileTypes> {
+): TreeModel<FileTypes, readonly [SelectionFeature]> {
     const items: TreeJson<FileTypes>["items"] = {};
     const rootItemIds: string[] = [];
     for (let i = 0; i < count; i++) {
         rootItemIds.push(`n${i}`);
         items[`n${i}`] = { kind: "file", label: label(i), data: { size: i } };
     }
-    return createTreeModel<FileTypes>({
-        version: 1,
-        rootItemIds,
-        items,
-        expandedItemIds: [],
-    });
+    return createTreeModel<FileTypes, readonly [SelectionFeature]>(
+        { version: 1, rootItemIds, items, expandedItemIds: [] },
+        { features: [selection()] },
+    );
 }
 
 export interface VirtualMounted {
     readonly root: HTMLElement;
-    readonly engine: TreeEngine<FileTypes>;
-    readonly model: TreeModel<FileTypes>;
+    readonly engine: TreeEngine<FileTypes, VirtualFeatures>;
+    readonly model: TreeModel<FileTypes, VirtualFeatures>;
     /** the item's element, when rendered */
     item(itemId: string): HTMLElement | undefined;
     content(itemId: string): HTMLElement | undefined;
@@ -62,9 +75,13 @@ export interface VirtualMounted {
     unmount(): void;
 }
 
+/**
+ * Mounts a virtualized tree of `source`'s document: a new model with the selection and the
+ * virtualization features (`mounted.model`).
+ */
 export function mountVirtual(
-    model: TreeModel<FileTypes>,
-    virtual: TreeVirtualizer,
+    source: TreeModel<FileTypes>,
+    virtual: TreeVirtualizerOptions,
     {
         viewport = 200,
         ...options
@@ -77,7 +94,18 @@ export function mountVirtual(
     root.setAttribute("data-tree-part", "root");
     root.style.overflowY = "auto";
     let scrollTop = 0;
-    let engine: TreeEngine<FileTypes> | undefined;
+    const installed = featuresOf(source).list.some(
+        (feature) => feature.name === "selection",
+    );
+    const model = createTreeModel<FileTypes, VirtualFeatures>(
+        source.get("tree-json"),
+        {
+            features: (installed
+                ? [selection(), virtualization(virtual)]
+                : [virtualization(virtual)]) as unknown as VirtualFeatures,
+        },
+    );
+    let engine: TreeEngine<FileTypes, VirtualFeatures> | undefined;
     Object.defineProperty(root, "scrollTop", {
         configurable: true,
         get: () => scrollTop,
@@ -93,7 +121,7 @@ export function mountVirtual(
     Object.defineProperty(root, "clientHeight", { get: () => viewport });
     root.getBoundingClientRect = () => rect(0, 0, WIDTH, viewport);
     document.body.append(root);
-    engine = createTreeEngine(model, { root, virtual, ...options });
+    engine = createTreeEngine(model, { root, ...options });
     const mounted = engine;
     const items = new Map<string, HTMLElement>();
     const contents = new Map<string, HTMLElement>();

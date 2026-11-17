@@ -1,7 +1,13 @@
 import { defineConfig } from "tsdown";
 
 export default defineConfig({
-    entry: ["src/index.ts"],
+    // the main entry and one entry per opt-in feature (`@fragiola/tree/<feature>`): the main entry
+    // never imports a feature's code (scripts/check-features.ts checks the built chunks)
+    entry: {
+        index: "src/index.ts",
+        selection: "src/selection/index.ts",
+        virtualization: "src/virtual/index.ts",
+    },
     format: "esm",
     platform: "browser",
     dts: true,

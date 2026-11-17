@@ -179,6 +179,50 @@ API pages onto the directives.
 
 </Framework>
 
+## Features
+
+The package is a minimal tree and **opt-in features**, each from its own entry of the same
+package: `selection()` from `@fragiola/tree-react/selection`, and `virtualization()` (with
+`VirtualItems`) from `@fragiola/tree-react/virtualization` (`@fragiola/tree-vue/…`,
+`@fragiola/tree-angular/…`). A feature you do not import is not in your bundle; one you import,
+you install in the model's features ([Features](/docs/concepts/features)).
+
+<Framework name="react">
+
+```tsx
+import { createTreeModel } from "@fragiola/tree-react";
+import { selection } from "@fragiola/tree-react/selection";
+
+const features = [selection()] as const;
+const model = createTreeModel<Types, typeof features>(json, { features });
+```
+
+</Framework>
+
+<Framework name="vue">
+
+```ts
+import { createTreeModel } from "@fragiola/tree-vue";
+import { selection } from "@fragiola/tree-vue/selection";
+
+const features = [selection()] as const;
+const model = createTreeModel<Types, typeof features>(json, { features });
+```
+
+</Framework>
+
+<Framework name="angular">
+
+```ts
+import { createTreeModel } from "@fragiola/tree-angular";
+import { selection } from "@fragiola/tree-angular/selection";
+
+const features = [selection()] as const;
+const model = createTreeModel<Types, typeof features>(json, { features });
+```
+
+</Framework>
+
 ## Without a framework
 
 The core is published on its own as `@fragiola/tree`, for code that renders nothing: handling tree

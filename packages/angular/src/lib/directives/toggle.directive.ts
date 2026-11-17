@@ -1,5 +1,6 @@
 import { computed, Directive, type Signal } from "@angular/core";
 import { injectItemContext, injectTreeContext } from "../context";
+import { bindFeatureAttributes, injectHost } from "../utils/helpers";
 import {
     ITEM_DATA_HOST,
     itemData,
@@ -30,6 +31,15 @@ export class TreeToggleDirective {
     readonly state: Signal<TreeItemState> = this.item.state;
 
     protected readonly itemData = computed(() => itemData(this.state()));
+
+    constructor() {
+        // the installed features' data-* (`data-selected` with `selection()`)
+        bindFeatureAttributes(
+            injectHost(),
+            () => this.state().attributes,
+            "data-",
+        );
+    }
 
     protected onClick(): void {
         this.context.engine()?.adapter.handleToggleClick(this.item.item().id);

@@ -7,6 +7,8 @@ import {
     type TreeEngine,
     type TreeEngineOptions,
 } from "../../src/engine/tree-engine";
+import type { TreeFeatures } from "../../src/features/types";
+import type { SelectionFeature } from "../../src/selection/selection";
 import type { TreeModel } from "../../src/state/model";
 import type { FileTypes } from "../fixture";
 
@@ -34,10 +36,10 @@ function setRect(
         }) as DOMRect;
 }
 
-export interface Mounted {
+export interface Mounted<F extends TreeFeatures = readonly [SelectionFeature]> {
     readonly root: HTMLElement;
-    readonly engine: TreeEngine<FileTypes>;
-    readonly model: TreeModel<FileTypes>;
+    readonly engine: TreeEngine<FileTypes, F>;
+    readonly model: TreeModel<FileTypes, F>;
     item(itemId: string): HTMLElement;
     content(itemId: string): HTMLElement;
     /** presses a key on the tree: `key("ArrowDown")`, `key("a", { ctrlKey: true })` */
@@ -52,13 +54,13 @@ export interface Mounted {
     unmount(): void;
 }
 
-export function mount(
-    model: TreeModel<FileTypes>,
+export function mount<F extends TreeFeatures = readonly [SelectionFeature]>(
+    model: TreeModel<FileTypes, F>,
     options: TreeEngineOptions<FileTypes> = {},
     host: Document = document,
     /** where the root's inline start is (a second tree beside the first) */
     left = 0,
-): Mounted {
+): Mounted<F> {
     const root = host.createElement("div");
     root.setAttribute("role", "tree");
     root.setAttribute("data-tree-part", "root");

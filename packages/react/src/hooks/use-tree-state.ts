@@ -1,15 +1,22 @@
 // From Dockable (fragiola/dockable, packages/react/src/hooks/use-model-state.ts), same author and
 // licence.
-import type { AnyTypes, TreeModel, TreeState, TreeTypes } from "@fragiola/tree";
+import type {
+    AnyTypes,
+    TreeFeatures,
+    TreeModel,
+    TreeStateOf,
+    TreeTypes,
+} from "@fragiola/tree";
 import * as React from "react";
 import { TreeContext, typedModel } from "../context";
 
 export interface UseTreeStateOptions<
     T extends TreeTypes = AnyTypes,
     S = unknown,
+    F extends TreeFeatures = readonly [],
 > {
     /** the model to read; default: the enclosing `Tree.Root`'s (then the hook needs one) */
-    model?: TreeModel<T> | undefined;
+    model?: TreeModel<T, F> | undefined;
     /** whether two selections are the same, so the component does not re-render (`Object.is`) */
     isEqual?: ((a: S, b: S) => boolean) | undefined;
 }
@@ -24,14 +31,18 @@ export interface UseTreeStateOptions<
  * const visible = useTreeState((_state, model) => model.get("visible-items").length, { model });
  * ```
  */
-export function useTreeState<T extends TreeTypes = AnyTypes, S = unknown>(
-    selector: (state: TreeState<T>, model: TreeModel<T>) => S,
-    options: UseTreeStateOptions<T, S> = {},
+export function useTreeState<
+    T extends TreeTypes = AnyTypes,
+    S = unknown,
+    F extends TreeFeatures = readonly [],
+>(
+    selector: (state: TreeStateOf<T, F>, model: TreeModel<T, F>) => S,
+    options: UseTreeStateOptions<T, S, F> = {},
 ): S {
     const { isEqual = Object.is } = options;
     const context = React.useContext(TreeContext)?.model;
     const model =
-        options.model ?? (context ? typedModel<T>(context) : undefined);
+        options.model ?? (context ? typedModel<T, F>(context) : undefined);
     if (!model) {
         throw new Error(
             "useTreeState must be used inside Tree.Root, or be given a model",
@@ -43,9 +54,9 @@ export function useTreeState<T extends TreeTypes = AnyTypes, S = unknown>(
     // over new props) selects again
     const cache = React.useRef<
         | {
-              state: TreeState<T>;
+              state: TreeStateOf<T, F>;
               value: S;
-              model: TreeModel<T>;
+              model: TreeModel<T, F>;
               selector: typeof selector;
           }
         | undefined

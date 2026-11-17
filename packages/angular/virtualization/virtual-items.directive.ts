@@ -8,12 +8,27 @@ import {
     untracked,
     ViewContainerRef,
 } from "@angular/core";
-import type { AnyTypes, TreeTypes } from "@fragiola/tree";
-import { injectTreeContext } from "../context";
-import { injectTreeVirtualWindow } from "../inject/inject-tree-virtual-window";
-import { onDestroy } from "../utils/helpers";
-import { KeyedViews, type SignalContext, signalContext } from "../utils/views";
-import type { TreeVirtualItemsContext, TypedBy } from "./templates.directive";
+import type { AnyTypes, ItemOf, TreeTypes } from "@fragiola/tree";
+import type { VirtualRow } from "@fragiola/tree/virtualization";
+import {
+    ɵinjectTreeContext as injectTreeContext,
+    ɵKeyedViews as KeyedViews,
+    ɵonDestroy as onDestroy,
+    type ɵSignalContext as SignalContext,
+    ɵsignalContext as signalContext,
+    type TypedBy,
+} from "@fragiola/tree-angular";
+import { injectTreeVirtualWindow } from "./inject-tree-virtual-window";
+
+/** The context of an `<ng-template treeVirtualItems>`: the item to render, and its row. */
+export interface TreeVirtualItemsContext<T extends TreeTypes = AnyTypes> {
+    /** the item (`let-item`), as the model holds it (plain, immutable) */
+    $implicit: ItemOf<T>;
+    /** the same item (`let-item="item"`) */
+    item: ItemOf<T>;
+    /** its row (`let-row="row"`): its level, offset and size */
+    row: VirtualRow;
+}
 
 /** A spacer: the space of the rows that are not rendered (`data-tree-part="spacer"`). */
 function createSpacer(document: Document): HTMLElement {
@@ -24,7 +39,8 @@ function createSpacer(document: Document): HTMLElement {
 }
 
 /**
- * The rows of a virtualized tree (`[treeRoot]` with `virtual`): renders its template for each
+ * The rows of a virtualized tree (a `[treeRoot]` whose model has `virtualization()`, from
+ * `@fragiola/tree-angular/virtualization`, in your component's `imports`): renders its template for each
  * visible item in view plus the overscan, in order, keyed by its id, flat (each item carries its
  * `aria-level`, `aria-posinset` and `aria-setsize`), between spacers that take the place of the
  * others. Put it directly inside `[treeRoot]`; render a `[treeItem]` with no `[treeGroup]`.

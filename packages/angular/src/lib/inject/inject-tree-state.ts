@@ -8,15 +8,22 @@ import {
     signal,
     untracked,
 } from "@angular/core";
-import type { AnyTypes, TreeModel, TreeState, TreeTypes } from "@fragiola/tree";
+import type {
+    AnyTypes,
+    TreeFeatures,
+    TreeModel,
+    TreeStateOf,
+    TreeTypes,
+} from "@fragiola/tree";
 import { TREE_CONTEXT, typedModel } from "../context";
 
 export interface InjectTreeStateOptions<
     T extends TreeTypes = AnyTypes,
     S = unknown,
+    F extends TreeFeatures = readonly [],
 > {
     /** the model to read (a model, or a signal of one); default: the enclosing `[treeRoot]`'s */
-    model?: TreeModel<T> | Signal<TreeModel<T> | undefined> | undefined;
+    model?: TreeModel<T, F> | Signal<TreeModel<T, F> | undefined> | undefined;
     /** whether two selections are the same, so readers are not notified (`Object.is`) */
     isEqual?: ((a: S, b: S) => boolean) | undefined;
 }
@@ -28,21 +35,25 @@ export interface InjectTreeStateOptions<
  * injection context.
  *
  * ```ts
- * readonly count = injectTreeState<Types, number>((state) => state.selectedItemIds.length);
+ * readonly count = injectTreeState((state) => state.selectedItemIds.length, { model });
  * ```
  */
-export function injectTreeState<T extends TreeTypes = AnyTypes, S = unknown>(
-    selector: (state: TreeState<T>, model: TreeModel<T>) => S,
-    options: InjectTreeStateOptions<T, S> = {},
+export function injectTreeState<
+    T extends TreeTypes = AnyTypes,
+    S = unknown,
+    F extends TreeFeatures = readonly [],
+>(
+    selector: (state: TreeStateOf<T, F>, model: TreeModel<T, F>) => S,
+    options: InjectTreeStateOptions<T, S, F> = {},
 ): Signal<S> {
     const injected = inject(TREE_CONTEXT, { optional: true });
     const given = options.model;
-    const resolve = (): TreeModel<T> => {
+    const resolve = (): TreeModel<T, F> => {
         const model =
             (typeof given === "function"
-                ? (given as Signal<TreeModel<T> | undefined>)()
+                ? (given as Signal<TreeModel<T, F> | undefined>)()
                 : given) ??
-            (injected ? typedModel<T>(injected.model()) : undefined);
+            (injected ? typedModel<T, F>(injected.model()) : undefined);
         if (!model) {
             throw new Error(
                 "injectTreeState must be used inside [treeRoot], or be given a model",

@@ -7,6 +7,7 @@ export default {
     category: "editing",
     order: 3,
     features: [
+        "selection()",
         "dragGroup",
         "transfer",
         "item.add",

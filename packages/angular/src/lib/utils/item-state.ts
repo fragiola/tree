@@ -1,5 +1,6 @@
 // The state of an item, as packages/vue's `treeItemState` (composables/internal.ts) computes it,
 // and the `data-*` every part of an item carries.
+
 import type {
     AnyTypes,
     CheckState,
@@ -22,7 +23,7 @@ export interface TreeItemState {
     setsize: number;
     /** its children are shown */
     expanded: boolean;
-    /** it is part of the selection */
+    /** it is part of the selection (`selection()`) */
     selected: boolean;
     /** it is the focused item (model data: the roving tab stop as stored) */
     focused: boolean;
@@ -50,7 +51,16 @@ export interface TreeItemState {
     dropTarget: boolean;
     /** while it is the drop target: where the drop goes (`before`, `after`, `inside`) */
     dropPosition: DropPosition | undefined;
+    /**
+     * the ARIA and `data-*` the installed features give it (`selection()`: `aria-selected`,
+     * `data-selected`), each a string, `undefined` when absent: its element gets them all, every
+     * other part of it the `data-*`
+     */
+    attributes: Readonly<Record<string, string | undefined>>;
 }
+
+const NO_ATTRIBUTES: Readonly<Record<string, string | undefined>> =
+    Object.freeze({});
 
 /** An item's state before its input is set (see `beforeInputs`). */
 export const UNSET_ITEM_STATE: TreeItemState = Object.freeze({
@@ -74,6 +84,7 @@ export const UNSET_ITEM_STATE: TreeItemState = Object.freeze({
     dragging: false,
     dropTarget: false,
     dropPosition: undefined,
+    attributes: NO_ATTRIBUTES,
 });
 
 /**
@@ -104,6 +115,8 @@ export function treeItemState(
           : "unchecked";
     const status = item.childrenStatus;
     const dropTarget = engine?.is("item-drop-target", { itemId }) ?? false;
+    // the features' ARIA and data-*: model state, so the first render (and a server's) has them
+    const attributes = model.get("item-attributes-by", { itemId });
     return {
         itemId,
         path,
@@ -111,7 +124,7 @@ export function treeItemState(
         posinset: Number(segments.at(-1) ?? 0) + 1,
         setsize: siblings,
         expanded: model.is("item-expanded", { itemId }),
-        selected: model.is("item-selected", { itemId }),
+        selected: attributes["aria-selected"] === "true",
         focused: model.is("item-focused", { itemId }),
         tabStop: context.tabStopItemId() === itemId,
         checkState,
@@ -127,13 +140,16 @@ export function treeItemState(
         dropPosition: dropTarget
             ? engine?.get("drop-target")?.position
             : undefined,
+        attributes,
     };
 }
 
-/** The `data-*` values every part of an item carries, for {@link ITEM_DATA_HOST}. */
+/**
+ * The `data-*` values every part of an item carries, for {@link ITEM_DATA_HOST} (the features'
+ * are bound by `bindFeatureAttributes`).
+ */
 export interface ItemData {
     expanded: string | null;
-    selected: string | null;
     focused: string | null;
     checked: string | null;
     indeterminate: string | null;
@@ -151,7 +167,6 @@ export interface ItemData {
 export function itemData(state: TreeItemState): ItemData {
     return {
         expanded: dataAttr(state.expanded),
-        selected: dataAttr(state.selected),
         focused: dataAttr(state.focused),
         checked: dataAttr(state.checked),
         indeterminate: dataAttr(state.indeterminate),
@@ -173,7 +188,6 @@ export function itemData(state: TreeItemState): ItemData {
  */
 export const ITEM_DATA_HOST = {
     "[attr.data-expanded]": "itemData().expanded",
-    "[attr.data-selected]": "itemData().selected",
     "[attr.data-focused]": "itemData().focused",
     "[attr.data-checked]": "itemData().checked",
     "[attr.data-indeterminate]": "itemData().indeterminate",

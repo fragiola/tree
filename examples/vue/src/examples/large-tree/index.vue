@@ -2,18 +2,18 @@
 import {
     type AnnounceEvent,
     createTreeModel,
-    createTreeVirtualizer,
     type DropTarget,
     type TreeJson,
     type TreeModel,
     useTreeRef,
     useTreeState,
 } from "@fragiola/tree-vue";
+import { typedVirtualItems } from "@fragiola/tree-vue/virtualization";
 import { ChevronRight, File, Folder } from "@lucide/vue";
 import { ref, watchEffect } from "vue";
 import { Clickable } from "#/components/atoms/clickable";
 import * as styles from "./styles";
-import { Tree, type Types } from "./tree";
+import { features, Tree, type Types } from "./tree";
 
 const FOLDERS = 1000;
 const FILES = 100;
@@ -39,11 +39,6 @@ function largeTree(): TreeJson<Types> {
     }
     return { version: 1, rootItemIds, items, expandedItemIds: rootItemIds };
 }
-
-// The virtualizer: the engine renders only the rows in view, plus 10 on each side. Each theme
-// sizes the rows, so they are measured (estimated at 28px until then). Create it once: it holds
-// options only, and another one would make another engine.
-const virtual = createTreeVirtualizer({ estimateRowSize: 28, overscan: 10 });
 
 /** The live region's text for each step of a drag (pointer or keyboard): the package writes none. */
 function announcer(model: TreeModel<Types>) {
@@ -76,9 +71,13 @@ function announcer(model: TreeModel<Types>) {
 }
 
 // The model is the source of truth: create it once (never in a ref).
-const model = createTreeModel<Types>(largeTree());
+const model = createTreeModel<Types, typeof features>(largeTree(), {
+    features,
+});
 const announce = announcer(model);
-const tree = useTreeRef<Types>();
+const tree = useTreeRef<Types, typeof features>();
+/** the rows of a virtualized tree, typed by the registry */
+const VirtualItems = typedVirtualItems<Types>();
 const visible = useTreeState<Types, number>(
     (_state, current) => current.get("visible-items").length,
     { model },
@@ -126,7 +125,6 @@ watchEffect((onCleanup) => {
         </div>
         <Tree.Root
             :model="model"
-            :virtual="virtual"
             :tree-ref="tree"
             :indicator-inset="styles.indicatorInset"
             :announce="announce"
@@ -134,7 +132,7 @@ watchEffect((onCleanup) => {
             :class="styles.root"
         >
             <!-- flat rows: each item carries its level, position and set size; no Tree.Group -->
-            <Tree.VirtualItems v-slot="{ item }">
+            <VirtualItems v-slot="{ item }">
                 <Tree.Item :item="item" :class="styles.item">
                     <Tree.ItemContent :class="styles.row">
                         <Tree.Toggle :class="styles.toggle">
@@ -149,7 +147,7 @@ watchEffect((onCleanup) => {
                         <span :class="styles.label">{{ item.label }}</span>
                     </Tree.ItemContent>
                 </Tree.Item>
-            </Tree.VirtualItems>
+            </VirtualItems>
             <Tree.DropIndicator :class="styles.dropIndicator" />
             <Tree.LiveRegion :class="styles.liveRegion" />
         </Tree.Root>

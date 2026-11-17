@@ -7,7 +7,7 @@ import { type FileTypes, fileSystem } from "../_kit/data";
 import { UndoManager } from "../_kit/undo";
 import FileItem from "./file-item.vue";
 import * as styles from "./styles";
-import { Tree } from "./tree";
+import { features, Tree } from "./tree";
 
 // Undo/redo is app code (`_kit/undo.ts`): it listens to the model's commits, keeps the document
 // before each step, and puts it back with `tree.load`. The package ships no history.
@@ -24,7 +24,9 @@ const STEP_NAMES: Partial<Record<string, string>> = {
 const stepName = (command: string) => STEP_NAMES[command] ?? command;
 
 // the model and its history are created once, outside Vue's reactivity
-const model = createTreeModel<FileTypes>(fileSystem());
+const model = createTreeModel<FileTypes, typeof features>(fileSystem(), {
+    features,
+});
 const history = new UndoManager(model);
 // the history's snapshot, as a ref that changes with it
 const snapshot = shallowRef(history.getSnapshot());
@@ -34,7 +36,7 @@ onUnmounted(
     }),
 );
 
-const selected = useTreeState<FileTypes, number>(
+const selected = useTreeState<FileTypes, number, typeof features>(
     (state) => state.selectedItemIds.length,
     { model },
 );

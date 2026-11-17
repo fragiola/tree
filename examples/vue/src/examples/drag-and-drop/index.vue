@@ -10,7 +10,7 @@ import { Lock } from "@lucide/vue";
 import { useId } from "vue";
 import FileItem from "./file-item.vue";
 import * as styles from "./styles";
-import { Tree, type Types } from "./tree";
+import { features, Tree, type Types } from "./tree";
 
 // The permission flags are part of the document, and the commands enforce them: `movable: false`
 // keeps an item in place, `droppable: false` keeps a folder closed to drops. A drag asks
@@ -78,7 +78,7 @@ function announcer(model: TreeModel<Types>) {
 }
 
 // The model is the source of truth: create it once (never in a ref).
-const model = createTreeModel<Types>(json);
+const model = createTreeModel<Types, typeof features>(json, { features });
 const announce = announcer(model);
 // one description for every locked item, referenced by id (hidden, still read)
 const lockedId = useId();

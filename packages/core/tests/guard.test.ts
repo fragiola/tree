@@ -145,21 +145,30 @@ describe("core package guard", () => {
         expect(missing).toEqual([]);
     });
 
-    it("reaches the opt-in parts only through their options: an app that never imports their factories leaves them out", () => {
-        // createTreeVirtualizer, createTreeForeignDrop, createTreeDropOutside: only the entry
-        // imports their code; every other file imports their types
+    it("reaches the features and the opt-in parts only through their entries or options: the main entry imports none of their code", () => {
+        // a feature's folder (selection/, virtual/) is imported, as code, only from inside it;
+        // createTreeForeignDrop and createTreeDropOutside only by the main entry, every other file
+        // imports their types (the built entries are checked by scripts/check-features.ts)
+        const FEATURE_CODE =
+            /^import\s+(?!type\b)[^;]*?from\s+"[^"]*\/(?:selection|virtual)\/[^"]*"/m;
         const OPT_IN =
-            /^import\s+(?!type\b)[^;]*?from\s+"[^"]*\/(?:virtual\/virtualizer|dnd\/foreign-drop|dnd\/drop-outside)"/m;
+            /^import\s+(?!type\b)[^;]*?from\s+"[^"]*\/(?:dnd\/foreign-drop|dnd\/drop-outside)"/m;
         const offenders = listFiles(src).filter((file) => {
             const relative = file.slice(src.length + 1);
             if (
+                relative.startsWith("selection/") ||
+                relative.startsWith("virtual/")
+            )
+                return false;
+            const source = readFileSync(file, "utf8");
+            if (FEATURE_CODE.test(source)) return true;
+            if (
                 relative === "index.ts" ||
-                relative.startsWith("virtual/") ||
                 relative === "dnd/foreign-drop.ts" ||
                 relative === "dnd/drop-outside.ts"
             )
                 return false;
-            return OPT_IN.test(readFileSync(file, "utf8"));
+            return OPT_IN.test(source);
         });
         expect(offenders).toEqual([]);
     });

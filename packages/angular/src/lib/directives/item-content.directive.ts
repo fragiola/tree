@@ -1,7 +1,11 @@
 import { computed, Directive, type Signal } from "@angular/core";
 import { DRAG_EXEMPT } from "@fragiola/tree";
 import { injectItemContext, injectTreeContext } from "../context";
-import { bindStructuralStyle, injectHost } from "../utils/helpers";
+import {
+    bindFeatureAttributes,
+    bindStructuralStyle,
+    injectHost,
+} from "../utils/helpers";
 import {
     depthStyle,
     ITEM_DATA_HOST,
@@ -37,6 +41,12 @@ export class TreeItemContentDirective {
     protected readonly itemData = computed(() => itemData(this.state()));
 
     constructor() {
+        // the installed features' data-* (`data-selected` with `selection()`)
+        bindFeatureAttributes(
+            this.host,
+            () => this.state().attributes,
+            "data-",
+        );
         bindStructuralStyle(this.host, () => depthStyle(this.state()));
         bindRegistration(
             this.context.engine,

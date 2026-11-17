@@ -9,10 +9,14 @@ import {
     type TreeJson,
     type TreeModel,
 } from "@fragiola/tree-react";
+import { selection } from "@fragiola/tree-react/selection";
 import { ChevronRight, Folder, GripVertical, Leaf } from "lucide-react";
 import { useId, useState } from "react";
 import { Switch } from "#/components/ui/switch";
 import * as styles from "./styles";
+
+/** The opt-in features of the model: the selection. */
+const features = [selection()] as const;
 
 type Types = { items: { group: undefined; produce: undefined } };
 
@@ -101,9 +105,15 @@ function announcer(model: TreeModel<Types>, list: string) {
 export default function TwoTrees() {
     // separate models (a transfer between them), or one model both trees show (a move)
     const [models] = useState(() => ({
-        available: createTreeModel<Types>(available),
-        selected: createTreeModel<Types>(selected),
-        shared: createTreeModel<Types>(available),
+        available: createTreeModel<Types, typeof features>(available, {
+            features,
+        }),
+        selected: createTreeModel<Types, typeof features>(selected, {
+            features,
+        }),
+        shared: createTreeModel<Types, typeof features>(available, {
+            features,
+        }),
     }));
     const [shared, setShared] = useState(false);
     const switchId = useId();
