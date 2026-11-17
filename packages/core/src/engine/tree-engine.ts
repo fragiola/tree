@@ -209,6 +209,7 @@ class Engine<T extends TreeTypes> implements TreeEngine<T>, EngineHost {
             root: () => this.rootElement,
             visible: () => this.model.get("visible-items"),
             visibleIndex: () => visibleIndex(this.model.state),
+            contentOf: (itemId) => this.contents.get(itemId),
             pinnedItemIds: () => [
                 this.current(),
                 this.model.state.renamingItemId,
@@ -495,8 +496,10 @@ class Engine<T extends TreeTypes> implements TreeEngine<T>, EngineHost {
         return this.virtual?.rendered();
     }
 
-    rowBox(index: number): { offset: number; size: number } | undefined {
-        return this.virtual?.rowBox(index);
+    unrenderedRowBox(
+        itemId: string,
+    ): { top: number; height: number } | undefined {
+        return this.virtual?.unrenderedRowBox(itemId);
     }
 
     scrollContainer(): HTMLElement | undefined {

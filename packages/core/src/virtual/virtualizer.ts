@@ -90,6 +90,8 @@ export interface VirtualHost {
     visible(): readonly VisibleItem[];
     /** each visible item's index */
     visibleIndex(): ReadonlyMap<string, number>;
+    /** an item's registered content element (its row) */
+    contentOf(itemId: string): HTMLElement | undefined;
     /** the items whose rows stay rendered wherever the scroll is */
     pinnedItemIds(): readonly (string | null | undefined)[];
     /** the window changed: the adapters render it again */
@@ -110,8 +112,13 @@ export interface VirtualController {
     reveal(itemId: string, align?: ScrollAlign): boolean;
     /** the rows rendered around the view (the pinned rows aside) */
     rendered(): Range;
-    /** a visible row's offset from the top of the rows, and its size */
-    rowBox(index: number): { offset: number; size: number };
+    /**
+     * a row that is not rendered: its box relative to the root (its scroll included), placed from
+     * a rendered row's by their offsets (a keyboard drag's line below a long subtree)
+     */
+    unrenderedRowBox(
+        itemId: string,
+    ): { top: number; height: number } | undefined;
     /** the element that scrolls the rows (undefined when it is the document) */
     scrollElement(): HTMLElement | undefined;
     /** how many rows a page key moves: the rows in view less one, at least one */
@@ -270,12 +277,29 @@ class Virtualizer implements VirtualController {
         return this.axis.rendered;
     }
 
-    rowBox(index: number): { offset: number; size: number } {
+    unrenderedRowBox(
+        itemId: string,
+    ): { top: number; height: number } | undefined {
         this.sync();
-        return {
-            offset: this.sizes.offsetOf(index),
-            size: this.sizes.sizeOf(index),
-        };
+        const root = this.host.root();
+        const at = this.host.visibleIndex().get(itemId);
+        if (!root || at === undefined) return undefined;
+        const { start, end } = this.axis.rendered;
+        const visible = this.list ?? [];
+        for (let i = start; i < end; i++) {
+            const entry = visible[i];
+            const content = entry && this.host.contentOf(entry.itemId);
+            if (!content) continue;
+            const top =
+                content.getBoundingClientRect().top -
+                root.getBoundingClientRect().top +
+                root.scrollTop;
+            return {
+                top: top + this.sizes.offsetOf(at) - this.sizes.offsetOf(i),
+                height: this.sizes.sizeOf(at),
+            };
+        }
+        return undefined;
     }
 
     pageRows(): number {

@@ -176,7 +176,7 @@ export function indicatorOf(
     const content = host.contentOf(rowId);
     const box = content
         ? boxOf(root, rootRect, rectOf(content))
-        : virtualBoxOf(host, root, rootRect, rowId);
+        : host.unrenderedRowBox(rowId);
     if (!box) return null;
     const { top, height } = box;
     return {
@@ -199,32 +199,4 @@ function boxOf(
         top: rect.top - rootRect.top + root.scrollTop,
         height: rect.height,
     };
-}
-
-/**
- * A virtualized tree's row that is not rendered: its box from the virtualizer's offsets, relative
- * to a rendered row's (a keyboard drag's line below a long subtree, before the scroll reaches it).
- */
-function virtualBoxOf(
-    host: EngineHost,
-    root: HTMLElement,
-    rootRect: Rect,
-    rowId: string,
-): { top: number; height: number } | undefined {
-    const rows = host.renderedRows();
-    if (!rows) return undefined;
-    const index = visibleIndex(host.model.state);
-    const at = index.get(rowId);
-    const row = at === undefined ? undefined : host.rowBox(at);
-    if (at === undefined || !row) return undefined;
-    const visible = host.model.get("visible-items");
-    for (let i = rows.start; i < rows.end; i++) {
-        const entry = visible[i];
-        const content = entry && host.contentOf(entry.itemId);
-        const reference = content && host.rowBox(i);
-        if (!content || !reference) continue;
-        const { top } = boxOf(root, rootRect, rectOf(content));
-        return { top: top + row.offset - reference.offset, height: row.size };
-    }
-    return undefined;
 }

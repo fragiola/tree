@@ -82,8 +82,13 @@ export interface EngineHost {
     renderedRows():
         | { readonly start: number; readonly end: number }
         | undefined;
-    /** a visible row's offset from the top of the rows and its size, in a virtualized tree */
-    rowBox(index: number): { offset: number; size: number } | undefined;
+    /**
+     * a virtualized tree's row that is not rendered: its box relative to the root (its scroll
+     * included), from the rows' offsets; undefined when the tree is not virtualized
+     */
+    unrenderedRowBox(
+        itemId: string,
+    ): { top: number; height: number } | undefined;
     /** the element a drag scrolls near its edges: the virtualizer's, else the nearest scrolling one */
     scrollContainer(): HTMLElement | undefined;
     /** a virtualized tree scrolls an item's row into view (a keyboard drag's target); else nothing */
