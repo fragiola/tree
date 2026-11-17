@@ -277,21 +277,18 @@ import FileItem from "./file-item.vue";
 import { json, Tree, type Types } from "./tree";
 
 const tree = useTreeRef<Types>();
-// a template unwraps a top-level ref: give the root the ref itself, inside an object
-const root = { treeRef: tree };
 </script>
 
 <template>
-    <button type="button" @click="tree?.model.run('tree.expand-all', {})">Expand all</button>
-    <Tree.Root v-bind="root" :default-tree="json" aria-label="Files">
+    <button type="button" @click="tree.value?.model.run('tree.expand-all', {})">Expand all</button>
+    <Tree.Root :tree-ref="tree" :default-tree="json" aria-label="Files">
         <Tree.Items v-slot="{ item }"><FileItem :item="item" /></Tree.Items>
     </Tree.Root>
 </template>
 ```
 
-In Vue, the ref's handle is `tree.value`. A template unwraps a top-level ref, so it reads the
-handle as `tree`, and a `:tree-ref="tree"` would pass the handle, not the ref: bind the ref
-through an object, as above.
+In Vue, the handle is `tree.value`, in the template as in the script: a tree ref is not a Vue
+ref, so a template does not unwrap it, and `:tree-ref="tree"` gives the root the tree ref itself.
 
 </Framework>
 

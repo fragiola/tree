@@ -54,7 +54,7 @@ export const Tree = typedTree<Types>();
 | `selectedItemIds` + `onSelectedItemIdsChange` | `v-model:selected-item-ids` |
 | `checkedItemIds` + `onCheckedItemIdsChange` | `v-model:checked-item-ids` |
 | `onRenameError` (`Tree.RenameInput`) | `@rename-error` |
-| `treeRef={tree}` | `:tree-ref="tree"`; the ref's handle is `tree.value` (React: `tree.current`) |
+| `treeRef={tree}` | `:tree-ref="tree"`; the handle is `tree.value`, in the template too (React: `tree.current`) |
 | `defaultTree`, `expandOnClick`, `keyMap`, … | the same props in kebab-case (`default-tree`, `expand-on-click`, `key-map`); a boolean prop takes a bare attribute (`checkboxes`) |
 | `<Tree.Items<Types>>` and the other type arguments | `typedTree<Types>().Items` |
 
@@ -89,8 +89,8 @@ The hooks of [the React reference](/docs/api/hooks), as composables. Call them i
 | `useTree<T>()` | `{ model, engine }`, a `UseTreeResult<T>` (plain values: another model remounts the root) |
 | `useTreeState(selector, options?)` | a read-only ref of the selection, changed only when `isEqual` says it changed (`UseTreeStateOptions`: `model`, `isEqual`); it selects again when a reactive value the selector reads changes |
 | `useTreeItem(item)` | `UseTreeItemResult`: `state` (`TreeItemState`) and `props` (`TreeItemElementProps`: the ARIA, `tabindex`, `data-*`, `onFocus`, the structural style and the template `ref`), as computed refs; bind `v-bind="props"` on your element. `item` is a value, a ref or a getter |
-| `useTreeRef<T>()` | a `TreeRef<T>`: a read-only shallow ref whose `value` is the root's `TreeHandle` (`model`, `engine`) while it is mounted, `null` otherwise |
-| `createTreeRef<T>()` | the same ref, anywhere (a module, a test) |
+| `useTreeRef<T>()` | a `TreeRef<T>`, whose read-only, reactive `value` is the root's `TreeHandle` (`model`, `engine`) while it is mounted, `null` otherwise. It is not a Vue ref, so a template does not unwrap it: `:tree-ref="tree"` passes it, and the template reads `tree.value` |
+| `createTreeRef<T>()` | the same tree ref, anywhere (a module, a test) |
 
 A server render (Nuxt, `renderToString`) outputs the tree's markup, never subscribes to the model
 and never runs a command on it: the engine, the controlled lists and the composables' subscriptions

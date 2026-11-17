@@ -315,7 +315,22 @@ const count = useTreeState<Types, number>((state) => state.selectedItemIds.lengt
 ```
 
 From outside the root (a toolbar beside it), use a tree ref: `useTreeRef<Types>()`, passed as
-the root's `tree-ref`, read as `tree.value`.
+`:tree-ref="tree"` and read as `tree.value`, in the template as in the script:
+
+```vue
+<script setup lang="ts">
+import { useTreeRef } from "@fragiola/tree-vue";
+
+const tree = useTreeRef<Types>();
+</script>
+
+<template>
+    <button type="button" :disabled="!tree.value" @click="tree.value?.model.run('tree.collapse-all', {})">
+        Collapse all
+    </button>
+    <Tree.Root :tree-ref="tree" :default-tree="json" aria-label="Files">…</Tree.Root>
+</template>
+```
 
 </Framework>
 

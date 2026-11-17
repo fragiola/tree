@@ -91,8 +91,9 @@ it("expands a folder with ArrowRight", async () => {
 });
 ```
 
-Render an SFC of your own (`render(FileTree)`) the same way; `fireEvent` returns a promise that
-resolves once Vue has updated the DOM.
+Render an SFC of your own (`render(FileTree)`) the same way, its root given the tree ref as
+`:tree-ref="tree"` (a prop of your component, or a module's `createTreeRef`); `fireEvent` returns a
+promise that resolves once Vue has updated the DOM.
 
 </Framework>
 
