@@ -5,9 +5,9 @@
 import type { CommandDefinition } from "../commands/define";
 import type { CommandName, CommandResult, RunOptions } from "../commands/types";
 import type { Scheduler } from "../dom/owner";
-import type { LoadChildren } from "../engine/load-children";
 import type { KeyEventInput, PressInput } from "../engine/adapter";
 import type { AnnounceEvent } from "../engine/host";
+import type { LoadChildren } from "../engine/load-children";
 import type {
     EngineActionKey,
     EngineGetKey,
@@ -317,12 +317,13 @@ type MergedRootProps<F extends TreeFeatures> = UnionToIntersection<
 export type FeatureRootPropsOf<
     F extends TreeFeatures,
     T extends TreeTypes = AnyTypes,
-> = "async-children" extends FeatureNamesOf<F>
-    ? Omit<MergedRootProps<F>, "loadChildren"> & {
-          /** the app's loader of the children of an item with a `childrenStatus` */
-          loadChildren?: LoadChildren<T> | undefined;
-      }
-    : MergedRootProps<F>;
+> =
+    "async-children" extends FeatureNamesOf<F>
+        ? Omit<MergedRootProps<F>, "loadChildren"> & {
+              /** the app's loader of the children of an item with a `childrenStatus` */
+              loadChildren?: LoadChildren<T> | undefined;
+          }
+        : MergedRootProps<F>;
 
 type UnionToIntersection<U> = (
     U extends unknown
