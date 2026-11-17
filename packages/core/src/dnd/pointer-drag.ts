@@ -149,7 +149,12 @@ export class PointerDrag {
             scrollSpeed: 0,
         };
         this.host.setDrag({ mode: "pointer", itemIds, target: null });
-        this.host.announce({ type: "drag-start", itemIds, keyboard: false });
+        this.host.announce({
+            type: "drag-start",
+            itemIds,
+            keyboard: false,
+            target: null,
+        });
         return true;
     }
 

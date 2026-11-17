@@ -208,4 +208,22 @@ describe("a pointer drag", () => {
         expect(seen).toEqual(["drag-start", "drag-over", "drop"]);
         expect(m.engine.get("announcement")).toBe("Moved readme");
     });
+
+    it("starts a drop line past its level by the indicatorInset option, not the inside box", () => {
+        const { m } = setup({}, { indicatorInset: 28 });
+        startDrag(m, "readme");
+        // the top of src: a line before it, at level 1
+        pointer(m.content("readme"), "pointermove", 40, m.rowY("src", 0.1));
+        expect(m.engine.get("drop-indicator")).toMatchObject({
+            position: "before",
+            level: 1,
+            inlineOffset: 28,
+        });
+        // the middle of utils: inside it, with no inset (its child level)
+        pointer(m.content("readme"), "pointermove", 40, m.rowY("utils", 0.5));
+        expect(m.engine.get("drop-indicator")).toMatchObject({
+            position: "inside",
+            inlineOffset: 2 * 16,
+        });
+    });
 });

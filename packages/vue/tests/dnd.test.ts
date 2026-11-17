@@ -134,4 +134,17 @@ describe("drag and drop", () => {
         expect(model.state.rootItemIds).not.toEqual(["src", "readme"]);
         expect(tree()).not.toHaveAttribute("data-keyboard-dragging");
     });
+
+    it("starts a drop line past its level by indicatorInset", async () => {
+        await render(() =>
+            fileTree({ model: filesModel(), indicatorInset: 28 }),
+        );
+        await pressRow("readme.md");
+        // the top of app.ts (level 2): a line before it
+        await move(rowY("app.ts", 0.1));
+        expect(indicator()).toHaveAttribute("data-drop-position", "before");
+        expect((indicator() as HTMLElement).style.insetInlineStart).toBe(
+            `${16 + 28}px`,
+        );
+    });
 });

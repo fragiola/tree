@@ -13,6 +13,12 @@ export type AnnounceEvent =
           readonly type: "drag-start";
           readonly itemIds: readonly string[];
           readonly keyboard: boolean;
+          /**
+           * where the drag starts: a keyboard drag's first target, announced with its start in
+           * one message (no `drag-over` follows in the same tick); null for a pointer drag, whose
+           * targets come with the pointer's moves
+           */
+          readonly target: DropTarget | null;
       }
     | {
           readonly type: "drag-over";
@@ -40,6 +46,8 @@ export interface ResolvedEngineOptions {
     readonly autoExpandDelay: number;
     /** the indentation of one level (px), which turns the pointer's inline offset into a level */
     readonly indentation: number;
+    /** how far (px) a drop line starts past its level's inline start */
+    readonly indicatorInset: number;
     /** how close (px) to a scroll container's edge a drag scrolls it, and how fast (px per frame) */
     readonly autoScroll: { readonly threshold: number; readonly speed: number };
     /** how long (ms) between two typed characters keeps one type-ahead search */

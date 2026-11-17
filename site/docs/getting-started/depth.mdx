@@ -76,13 +76,21 @@ Or select a depth with `data-depth`, for a style a level gets (a bold root level
 ## Keeping drops in line
 
 During a drag, the pointer's inline position at the end of a sublist picks the level the drop
-lands on, and the drop indicator starts at `(level - 1) * indentation` pixels from the root's
-inline start. Tell the root your indentation in pixels with `indentation` (default `16`):
+lands on, and the drop indicator starts at `(level - 1) * indentation + indicatorInset` pixels
+from the root's inline start. Tell the root your indentation in pixels with `indentation`
+(default `16`), and where a row's label starts past its level with `indicatorInset` (default
+`0`): the `+ 0.5rem` above, a toggle, a grip. A line then starts at the label; the `inside` box
+gets no inset.
 
 <Framework name="react">
 
 ```tsx
-<Tree.Root<Types> defaultTree={json} indentation={20} aria-label="Files">
+<Tree.Root<Types>
+    defaultTree={json}
+    indentation={20}
+    indicatorInset={28}
+    aria-label="Files"
+>
     <Tree.Items<Types>>{(item) => <FileItem item={item} />}</Tree.Items>
     <Tree.DropIndicator className="drop-indicator" />
 </Tree.Root>
@@ -93,7 +101,12 @@ inline start. Tell the root your indentation in pixels with `indentation` (defau
 <Framework name="vue">
 
 ```vue
-<Tree.Root :default-tree="json" :indentation="20" aria-label="Files">
+<Tree.Root
+    :default-tree="json"
+    :indentation="20"
+    :indicator-inset="28"
+    aria-label="Files"
+>
     <Tree.Items v-slot="{ item }"><FileItem :item="item" /></Tree.Items>
     <Tree.DropIndicator class="drop-indicator" />
 </Tree.Root>
@@ -104,7 +117,13 @@ inline start. Tell the root your indentation in pixels with `indentation` (defau
 <Framework name="angular">
 
 ```html
-<div treeRoot [defaultTree]="json" [indentation]="20" aria-label="Files">
+<div
+    treeRoot
+    [defaultTree]="json"
+    [indentation]="20"
+    [indicatorInset]="28"
+    aria-label="Files"
+>
     <ng-template [treeItems]="json" let-item>
         <div [treeItem]="item">
             <div treeItemContent>{{ item.label }}</div>
@@ -117,14 +136,8 @@ inline start. Tell the root your indentation in pixels with `indentation` (defau
 
 </Framework>
 
-The indicator does not know about padding before the first level (the `+ 0.5rem` above, a grip,
-a toggle). Shift it with a margin in its own styles, as the examples do
-([Known limitations](/docs/limitations)).
-
-```css
-.drop-indicator {
-    margin-inline-start: 0.5rem;
-}
-```
+The examples' roots and rows start with `0.25rem` of padding each, then a `1rem` toggle and a
+`0.375rem` gap (and a grip in [drag and drop](/examples/drag-and-drop)), so they pass where the
+icon starts, in pixels, as `indicatorInset`: `30` (`48` with the grip).
 
 <Example id="drag-and-drop" />

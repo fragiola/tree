@@ -74,6 +74,8 @@ export interface RootProps<T extends TreeTypes = AnyTypes>
     autoExpandDelay?: number | undefined;
     /** the indentation of one level (px), for the drop level at the end of a sublist (default 16) */
     indentation?: number | undefined;
+    /** how far (px) a drop line starts past its level's inline start: the toggle, a grip or padding before the label (default 0) */
+    indicatorInset?: number | undefined;
     /** how long (ms) between two typed characters keeps one type-ahead search (default 500) */
     typeAheadTimeout?: number | undefined;
     /** access to the model and the engine from outside the root (`useTreeRef`, `createTreeRef`) */
@@ -107,6 +109,7 @@ export function Root<T extends TreeTypes = AnyTypes>(props: RootProps<T>) {
         dragThreshold,
         autoExpandDelay,
         indentation,
+        indicatorInset,
         typeAheadTimeout,
         treeRef,
         children,
@@ -148,6 +151,7 @@ export function Root<T extends TreeTypes = AnyTypes>(props: RootProps<T>) {
             dragThreshold,
             autoExpandDelay,
             indentation,
+            indicatorInset,
             typeAheadTimeout,
             // a remount (StrictMode, a route change) loads what this engine was loading
             resetLoadsOnDestroy: true,
@@ -168,6 +172,7 @@ export function Root<T extends TreeTypes = AnyTypes>(props: RootProps<T>) {
         dragThreshold,
         autoExpandDelay,
         indentation,
+        indicatorInset,
         typeAheadTimeout,
     ]);
     // a destroyed engine (StrictMode's first mount, a replaced model) is never used again

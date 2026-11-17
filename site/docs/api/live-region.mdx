@@ -50,7 +50,7 @@ Hide it visually with your own class.
 
 | event | fields | when |
 | --- | --- | --- |
-| `drag-start` | `itemIds`, `keyboard` | a drag starts (pointer, or keyboard when `keyboard` is true) |
+| `drag-start` | `itemIds`, `keyboard`, `target` (`DropTarget \| null`) | a drag starts (pointer, or keyboard when `keyboard` is true); a keyboard drag's `target` is where it starts, announced with the start in one message (no `drag-over` follows it in the same tick); `null` for a pointer drag |
 | `drag-over` | `itemIds`, `target` (`DropTarget \| null`) | the drop target changes; `null` when there is no valid one |
 | `drop` | `itemIds`, `target` | the items were dropped (one `item.move`) |
 | `drag-cancel` | `itemIds` | the drag was cancelled |

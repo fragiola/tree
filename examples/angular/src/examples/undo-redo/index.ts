@@ -64,7 +64,13 @@ const stepName = (command: string) => STEP_NAMES[command] ?? command;
                 </button>
             </div>
             <div [class]="styles.body">
-                <div [treeRoot]="model" aria-label="Project files" [class]="styles.root" (keydown)="onKeyDown($event)">
+                <div
+                    [treeRoot]="model"
+                    [indicatorInset]="styles.indicatorInset"
+                    aria-label="Project files"
+                    [class]="styles.root"
+                    (keydown)="onKeyDown($event)"
+                >
                     <ng-template [treeItems]="model" let-item>
                         <div [treeItem]="item" [class]="styles.item">
                             <div treeItemContent [class]="styles.row">

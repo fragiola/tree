@@ -20,7 +20,8 @@ examples/shared/
   src/meta/<slug>.ts   each example's metadata: title, description, category, order, features,
                        docs link, layout, height (one file per example, for every framework)
   src/meta-types.ts    its shape, the categories and the default heights
-  src/themes/          the two themes, light and dark (one CSS file each, values only) and their list
+  src/themes/          the five themes, light, dark, ide, paper and terminal (one CSS file each,
+                       values only) and their list
   src/embed/messages.ts  the embed's messages to the site (`fragiola:example:*`)
   scripts/             the examples finder, the manifest builder, the loader generator
   e2e/                 every Playwright spec (smoke, themes, iframe, examples/<slug>.spec.ts),
@@ -49,7 +50,7 @@ The ids are final: Vue and Angular port every one, with the same id.
    themes and its source: `http://localhost:5173/?example=<slug>`. The embed alone is
    `pnpm --filter examples-react dev` (`http://localhost:5190/?id=<slug>`);
    `pnpm site:dev --base /tree --port 5190` serves it the way the site proxies it.
-3. The smoke e2e visits it in both themes, and inside an iframe. Add a spec for its main behaviour
+3. The smoke e2e visits it in all five themes, and inside an iframe. Add a spec for its main behaviour
    in `examples/shared/e2e/examples/<slug>.spec.ts`: it reaches the example only through
    `data-tree-part`, `data-tree-path`, roles, accessible names and test ids, so every framework's
    embed runs it unchanged.
@@ -80,7 +81,10 @@ same file, below the default export.
   `#/lib/cn`, `#/hooks/*`), and relative files inside `src/examples/`. `tests/examples.test.ts`
   enforces it.
 - **Theme-agnostic**: palette roles (`bg-palette-base`, …) and the theme tokens (`--tr-*`), never
-  fixed colours, so the example works in both themes.
+  fixed colours, so the example works in all five themes. A theme changes shapes too (the
+  indentation guides `--tr-guide`, the selected row's marker `--tr-marker`, the toggle's look
+  `--tr-toggle-*`, the drop line `--tr-indicator-*`, the focus ring `--tr-focus-width`): an
+  example's `row`, `toggle` and `dropIndicator` read them, as `hello-tree`'s do.
 - **Through the model**: every change is a command (`model.run("item.rename", …)`), which
   middleware (`model.use`) can veto or rewrite; screen actions are the engine's
   (`engine.run("focus", { itemId })`). An example never reaches `engine.adapter`.

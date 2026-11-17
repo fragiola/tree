@@ -80,6 +80,7 @@ export default function SaveRestore() {
                 </Clickable.Button>
             </div>
             <Tree.Root<FileTypes>
+                indicatorInset={styles.indicatorInset}
                 model={model}
                 aria-label="Project files"
                 className={styles.root}

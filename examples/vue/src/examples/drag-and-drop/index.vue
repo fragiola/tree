@@ -56,25 +56,17 @@ function announcer(model: TreeModel<Types>) {
         target.position === "inside"
             ? `into ${label(target.itemId)}`
             : `${target.position} ${label(target.itemId)}`;
-    // Workaround: a keyboard drag announces its start and its first target at once, so the
-    // second message would replace the first before it is read; the start is kept as the
-    // first target's prefix (docs/docs-examples-gaps.md).
-    let started = "";
     return (event: AnnounceEvent): string | undefined => {
-        const prefix = started;
-        started = "";
         switch (event.type) {
             case "drag-start":
-                started = event.keyboard
-                    ? `Picked up ${names(event.itemIds)}. Up and Down choose a place, Enter drops, Escape cancels.`
+                // a keyboard drag's start comes with its first place, said in one message
+                return event.target
+                    ? `Picked up ${names(event.itemIds)}. Up and Down choose a place, Enter drops, Escape cancels. Drop ${where(event.target)}.`
                     : `Picked up ${names(event.itemIds)}.`;
-                return started;
             case "drag-over":
-                return `${prefix} ${
-                    event.target
-                        ? `Drop ${where(event.target)}.`
-                        : "No place to drop here."
-                }`.trim();
+                return event.target
+                    ? `Drop ${where(event.target)}.`
+                    : "No place to drop here.";
             case "drop":
                 return `Moved ${names(event.itemIds)} ${where(event.target)}.`;
             case "drag-cancel":
@@ -95,6 +87,7 @@ const lockedId = useId();
 <template>
     <div :class="styles.frame">
         <Tree.Root
+            :indicator-inset="styles.indicatorInset"
             :model="model"
             :announce="announce"
             aria-label="Project files"

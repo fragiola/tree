@@ -4,14 +4,23 @@
    on <body>, as an app would). A theme only sets values; it styles no markup. It declares:
      1. shape tokens (--tr-*) that the examples' class names read: the font and its size
         (--tr-font, --tr-size), the radius of a row and of a frame (--tr-radius), a row's height
-        and one level's indentation (--tr-row-height, --tr-indent), the gap between parts
-        (--tr-gap), the frame's shadow (--tr-shadow) and motion (--tr-motion);
+        and one level's indentation (--tr-row-height, --tr-indent: 1rem in every theme, the
+        root's `indentation` of 16px, a number the engine reads for drops), the gap between parts
+        (--tr-gap: 0.375rem in every theme, so the root's `indicatorInset` lands on the icon), the
+        frame's shadow (--tr-shadow), motion (--tr-motion), the indentation
+        guides' width (--tr-guide-width), the selected row's marker at the inline start
+        (--tr-marker, a width: 0px for none), the toggle's look (--tr-toggle-icon, the chevron's
+        display; --tr-toggle-closed and --tr-toggle-open, a text drawn instead; --tr-toggle-turn,
+        the chevron's turn when expanded), the drop indicator's line (--tr-indicator-width,
+        --tr-indicator-style) and the focus ring's width (--tr-focus-width);
      2. the Fragiola palettes the examples use, each with all SIX roles (base, soft, line,
         contrast, accent, ring). A palette that omitted one would inherit it from the page and
         leak across the theme boundary;
-     3. on every palette, the row colours that depend on it: a selected row (--tr-selected-bg,
-        --tr-selected-fg), a hovered one (--tr-hover-bg) and the drop indicator's line
-        (--tr-indicator). They are declared per palette so that var(--palette-…) resolves
+     3. on every palette, the row colours and images that depend on it: a selected row
+        (--tr-selected-bg, --tr-selected-fg) and its marker (--tr-marker-color), a hovered one
+        (--tr-hover-bg), the drop indicator's line (--tr-indicator) and the indentation guides
+        (--tr-guide-color, and --tr-guide: the image a row draws in its indentation, one line
+        per level, or none). They are declared per palette so that var(--palette-…) resolves
         against the palette the element sits in.
 
    Specificity: the palette rules are ":root [data-example-theme="light"] .palette-x", which ties
@@ -29,6 +38,15 @@
     --tr-gap: 0.375rem;
     --tr-shadow: 0 1px 2px oklch(0 0 0 / 0.06);
     --tr-motion: 150ms;
+    --tr-guide-width: 0px;
+    --tr-marker: 0px;
+    --tr-toggle-icon: block;
+    --tr-toggle-closed: none;
+    --tr-toggle-open: none;
+    --tr-toggle-turn: 90deg;
+    --tr-indicator-width: 2px;
+    --tr-indicator-style: solid;
+    --tr-focus-width: 2px;
 }
 
 :root [data-example-theme="light"] .palette-surface,
@@ -107,4 +125,7 @@
     --tr-selected-fg: var(--palette-contrast);
     --tr-hover-bg: var(--palette-soft);
     --tr-indicator: oklch(from var(--palette-contrast) l c h / 0.7);
+    --tr-marker-color: transparent;
+    --tr-guide-color: transparent;
+    --tr-guide: none;
 }

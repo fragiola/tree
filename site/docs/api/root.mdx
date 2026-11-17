@@ -114,6 +114,7 @@ or vetoes every command the tree runs, and a listener (`model.subscribe`) every 
 | `dragThreshold` | `number` | `4` | how far (px) a press moves before it is a drag |
 | `autoExpandDelay` | `number` | `800` | how long (ms) a drag hovers a collapsed parent before it expands |
 | `indentation` | `number` | `16` | the indentation of one level (px): the drop level at the end of a sublist, and the drop indicator's inline offset |
+| `indicatorInset` | `number` | `0` | how far (px) a drop line (`before`, `after`) starts past its level's inline start: the toggle, a grip or padding before the label ([Keeping drops in line](/docs/getting-started/depth#keeping-drops-in-line)) |
 | `typeAheadTimeout` | `number` | `500` | how long (ms) between two typed characters keeps one type-ahead search |
 | `treeRef` | `TreeRef<T>` | none | access to the model and the engine from outside the root (`useTreeRef`, `createTreeRef`) |
 | `children` | `ReactNode` | none | the tree: `Tree.Items`, `Tree.DropIndicator`, `Tree.LiveRegion`, and anything else |

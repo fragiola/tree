@@ -20,11 +20,23 @@ const TOKENS = [
     "gap",
     "shadow",
     "motion",
+    "guide-width",
+    "marker",
+    "toggle-icon",
+    "toggle-closed",
+    "toggle-open",
+    "toggle-turn",
+    "indicator-width",
+    "indicator-style",
+    "focus-width",
     // per palette: they read the palette the element sits in
     "selected-bg",
     "selected-fg",
     "hover-bg",
     "indicator",
+    "marker-color",
+    "guide-color",
+    "guide",
 ];
 const NEUTRAL = ["surface", "raised"];
 
@@ -152,4 +164,60 @@ describe.each(parsed)("theme $theme.name", ({ theme, palettes, tokens }) => {
             }
         }
     });
+});
+
+/** The values a theme sets on its own selector (not on its palettes). */
+function values(name: string): Map<string, string> {
+    const css = readFileSync(join(DIR, `${name}.css`), "utf-8");
+    const body =
+        css.match(
+            new RegExp(
+                String.raw`\n\[data-example-theme="${name}"\] \{([^}]*)\}`,
+            ),
+        )?.[1] ?? "";
+    return new Map(
+        [...body.matchAll(/--tr-([a-z-]+):\s*([^;]+);/g)].map(
+            ([, token, value]) => [token ?? "", (value ?? "").trim()],
+        ),
+    );
+}
+
+describe("the five themes", () => {
+    // the engine reads the indentation and the drop line's inset as numbers (the root's
+    // `indentation`, 16px, and `indicatorInset`): a theme that changed the indentation or the gap
+    // before the icon would put the drops off the rows
+    it("share one indentation and one gap: the root's numbers (indentation, indicatorInset) follow them", () => {
+        for (const theme of THEMES) {
+            expect(values(theme.name).get("indent"), theme.name).toBe("1rem");
+            expect(values(theme.name).get("gap"), theme.name).toBe("0.375rem");
+        }
+    });
+
+    it("are light, dark, ide, paper and terminal, in Dockable's order", () => {
+        expect(THEMES.map((theme) => theme.name)).toEqual([
+            "light",
+            "dark",
+            "ide",
+            "paper",
+            "terminal",
+        ]);
+    });
+
+    // The examples show that the package is headless: a theme changes the tree's shape, not
+    // only its colours.
+    it.each(["ide", "paper", "terminal"])(
+        "%s differs from light in shape, and in one of the tree's own shapes",
+        (name) => {
+            const light = values("light");
+            const theme = values(name);
+            for (const token of ["row-height", "radius", "font"]) {
+                expect(theme.get(token), token).not.toBe(light.get(token));
+            }
+            expect(
+                ["guide-width", "marker", "toggle-icon"].some(
+                    (token) => theme.get(token) !== light.get(token),
+                ),
+            ).toBe(true);
+        },
+    );
 });

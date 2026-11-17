@@ -17,7 +17,10 @@ export interface DropIndicator {
     readonly blockOffset: number;
     /** the row's height (`inside`), 0 for a line */
     readonly blockSize: number;
-    /** from the root's inline-start edge: `(level - 1) * indentation` */
+    /**
+     * from the root's inline-start edge: `(level - 1) * indentation`, plus the `indicatorInset`
+     * option for a line (`before`, `after`)
+     */
     readonly inlineOffset: number;
 }
 

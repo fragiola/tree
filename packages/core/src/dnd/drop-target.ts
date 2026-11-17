@@ -153,7 +153,9 @@ export function indicatorOf(
     const root = host.root();
     if (!root) return null;
     const rootRect = rectOf(root);
-    const inline = (target.level - 1) * host.options.indentation;
+    const inline =
+        (target.level - 1) * host.options.indentation +
+        (target.position === "inside" ? 0 : host.options.indicatorInset);
     if (target.itemId === null) {
         return {
             position: target.position,

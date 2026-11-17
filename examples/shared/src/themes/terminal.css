@@ -1,0 +1,141 @@
+/* Theme "terminal" — Phosphor green on black: monospace, inverted rows, [+] and [-] toggles.
+
+   One file per theme, selected by data-example-theme="terminal" on any element (the embed puts it
+   on <body>, as an app would). A theme only sets values; it styles no markup. It declares:
+     1. shape tokens (--tr-*) that the examples' class names read: the font and its size
+        (--tr-font, --tr-size), the radius of a row and of a frame (--tr-radius), a row's height
+        and one level's indentation (--tr-row-height, --tr-indent: 1rem in every theme, the
+        root's `indentation` of 16px, a number the engine reads for drops), the gap between parts
+        (--tr-gap: 0.375rem in every theme, so the root's `indicatorInset` lands on the icon), the
+        frame's shadow (--tr-shadow), motion (--tr-motion), the indentation
+        guides' width (--tr-guide-width), the selected row's marker at the inline start
+        (--tr-marker, a width: 0px for none), the toggle's look (--tr-toggle-icon, the chevron's
+        display; --tr-toggle-closed and --tr-toggle-open, a text drawn instead; --tr-toggle-turn,
+        the chevron's turn when expanded), the drop indicator's line (--tr-indicator-width,
+        --tr-indicator-style) and the focus ring's width (--tr-focus-width);
+     2. the Fragiola palettes the examples use, each with all SIX roles (base, soft, line,
+        contrast, accent, ring). A palette that omitted one would inherit it from the page and
+        leak across the theme boundary;
+     3. on every palette, the row colours and images that depend on it: a selected row
+        (--tr-selected-bg, --tr-selected-fg) and its marker (--tr-marker-color), a hovered one
+        (--tr-hover-bg), the drop indicator's line (--tr-indicator) and the indentation guides
+        (--tr-guide-color, and --tr-guide: the image a row draws in its indentation, one line
+        per level, or none). They are declared per palette so that var(--palette-…) resolves
+        against the palette the element sits in.
+
+   Monospace, no radius and no motion, the selected row inverted, "+" and "-" drawn instead of a
+   chevron, a guide per level, a dashed drop line.
+
+   Specificity: the palette rules are ":root [data-example-theme="terminal"] .palette-x", which ties
+   with Fragiola's own ":root[data-theme] .palette-x" and wins by coming later in the cascade, so
+   a theme overrides the page's light/dark. */
+
+[data-example-theme="terminal"] {
+    color-scheme: dark;
+    --palette-state-shift: 0.1;
+    --tr-font:
+        ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+    --tr-size: 0.8125rem;
+    --tr-radius: 0px;
+    --tr-row-height: 1.5rem;
+    --tr-indent: 1rem;
+    --tr-gap: 0.375rem;
+    --tr-shadow: none;
+    --tr-motion: 0ms;
+    --tr-guide-width: 1px;
+    --tr-marker: 0px;
+    --tr-toggle-icon: none;
+    --tr-toggle-closed: "+";
+    --tr-toggle-open: "-";
+    --tr-toggle-turn: 0deg;
+    --tr-indicator-width: 1px;
+    --tr-indicator-style: dashed;
+    --tr-focus-width: 1px;
+}
+
+:root [data-example-theme="terminal"] .palette-surface,
+:root [data-example-theme="terminal"].palette-surface {
+    --palette-base: oklch(0.13 0.012 150);
+    --palette-soft: oklch(0.2 0.03 150);
+    --palette-line: oklch(0.38 0.08 150);
+    --palette-contrast: oklch(0.87 0.19 145);
+    --palette-accent: oklch(0.8 0.17 145);
+    --palette-ring: var(--palette-accent);
+}
+
+:root [data-example-theme="terminal"] .palette-raised,
+:root [data-example-theme="terminal"].palette-raised {
+    --palette-base: oklch(0.16 0.016 150);
+    --palette-soft: oklch(0.23 0.035 150);
+    --palette-line: oklch(0.42 0.09 150);
+    --palette-contrast: oklch(0.88 0.2 145);
+    --palette-accent: oklch(0.8 0.17 145);
+    --palette-ring: var(--palette-accent);
+}
+
+:root [data-example-theme="terminal"] .palette-blue,
+:root [data-example-theme="terminal"].palette-blue {
+    --palette-base: oklch(0.85 0.2 145);
+    --palette-soft: oklch(0.25 0.06 145);
+    --palette-line: oklch(0.5 0.12 145);
+    --palette-contrast: oklch(0.14 0.02 150);
+    --palette-accent: oklch(0.88 0.2 145);
+    --palette-ring: var(--palette-accent);
+}
+
+:root [data-example-theme="terminal"] .palette-orange,
+:root [data-example-theme="terminal"].palette-orange {
+    --palette-base: oklch(0.8 0.16 75);
+    --palette-soft: oklch(0.26 0.05 75);
+    --palette-line: oklch(0.5 0.1 75);
+    --palette-contrast: oklch(0.14 0.02 75);
+    --palette-accent: oklch(0.85 0.15 75);
+    --palette-ring: var(--palette-accent);
+}
+
+:root [data-example-theme="terminal"] .palette-green,
+:root [data-example-theme="terminal"].palette-green {
+    --palette-base: oklch(0.75 0.18 145);
+    --palette-soft: oklch(0.25 0.06 145);
+    --palette-line: oklch(0.48 0.11 145);
+    --palette-contrast: oklch(0.13 0.02 150);
+    --palette-accent: oklch(0.84 0.19 145);
+    --palette-ring: var(--palette-accent);
+}
+
+:root [data-example-theme="terminal"] .palette-danger,
+:root [data-example-theme="terminal"].palette-danger {
+    --palette-base: oklch(0.68 0.2 25);
+    --palette-soft: oklch(0.26 0.07 25);
+    --palette-line: oklch(0.48 0.13 25);
+    --palette-contrast: oklch(0.12 0.02 25);
+    --palette-accent: oklch(0.76 0.17 25);
+    --palette-ring: var(--palette-accent);
+}
+
+:root [data-example-theme="terminal"] .palette-purple,
+:root [data-example-theme="terminal"].palette-purple {
+    --palette-base: oklch(0.72 0.2 330);
+    --palette-soft: oklch(0.26 0.07 330);
+    --palette-line: oklch(0.48 0.13 330);
+    --palette-contrast: oklch(0.12 0.02 330);
+    --palette-accent: oklch(0.8 0.17 330);
+    --palette-ring: var(--palette-accent);
+}
+
+:root [data-example-theme="terminal"] [class*="palette-"],
+:root [data-example-theme="terminal"][class*="palette-"] {
+    --tr-selected-bg: var(--palette-contrast);
+    --tr-selected-fg: var(--palette-base);
+    --tr-marker-color: transparent;
+    --tr-hover-bg: var(--palette-soft);
+    --tr-indicator: var(--palette-contrast);
+    --tr-guide-color: var(--palette-line);
+    --tr-guide: repeating-linear-gradient(
+        to right,
+        transparent 0 calc(var(--tr-indent) / 2 - var(--tr-guide-width) / 2),
+        var(--tr-guide-color) 0
+            calc(var(--tr-indent) / 2 + var(--tr-guide-width) / 2),
+        transparent 0 var(--tr-indent)
+    );
+}

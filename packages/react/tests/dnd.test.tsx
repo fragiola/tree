@@ -144,4 +144,16 @@ describe("drag and drop", () => {
             "data-keyboard-dragging",
         );
     });
+
+    it("starts a drop line past its level by indicatorInset", () => {
+        render(<FileTree model={filesModel()} indicatorInset={28} />);
+        press("readme.md");
+        // the top of app.ts (level 2): a line before it
+        move(rowY("app.ts", 0.1));
+        const indicator = document.querySelector<HTMLElement>(
+            '[data-tree-part="drop-indicator"]',
+        );
+        expect(indicator).toHaveAttribute("data-drop-position", "before");
+        expect(indicator?.style.insetInlineStart).toBe(`${16 + 28}px`);
+    });
 });

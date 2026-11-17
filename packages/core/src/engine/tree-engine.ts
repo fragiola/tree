@@ -65,6 +65,13 @@ export interface TreeEngineOptions<T extends TreeTypes = AnyTypes> {
     autoExpandDelay?: number | undefined;
     /** the indentation of one level (px): the pointer's inline offset at the end of a sublist picks the level (default 16) */
     indentation?: number | undefined;
+    /**
+     * how far (px) a drop line (`before`, `after`) starts past its level's inline start, for rows
+     * whose label starts after a toggle, a grip or padding (default 0); the `inside` box gets no
+     * inset (it starts at its child level, `(level - 1) * indentation`).
+     * `engine.get("drop-indicator").inlineOffset` includes it
+     */
+    indicatorInset?: number | undefined;
     /** how close (px) to a scroll container's edge a drag scrolls it, and how fast (px per frame) */
     autoScroll?: { threshold?: number; speed?: number } | undefined;
     /** how long (ms) between two typed characters keeps one type-ahead search (default 500) */
@@ -149,6 +156,7 @@ class Engine<T extends TreeTypes> implements TreeEngine<T>, EngineHost {
             dragThreshold: options.dragThreshold ?? 4,
             autoExpandDelay: options.autoExpandDelay ?? 800,
             indentation: options.indentation ?? 16,
+            indicatorInset: options.indicatorInset ?? 0,
             autoScroll: {
                 threshold: options.autoScroll?.threshold ?? 40,
                 speed: options.autoScroll?.speed ?? 12,

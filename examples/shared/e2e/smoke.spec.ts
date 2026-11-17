@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { collectErrors, EXAMPLES, openExample, reset, THEMES } from "./helpers";
 
-// Every example mounts and logs no error, in every theme (there are two), and comes back after
+// Every example mounts and logs no error, in every theme (there are five), and comes back after
 // the site's Reset; a new example folder is covered without touching this file.
 
 for (const example of EXAMPLES) {
