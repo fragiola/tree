@@ -1,6 +1,6 @@
 // From Dockable (fragiola/dockable, packages/angular/src/lib/utils/signals.ts), same author and
 // licence: the element registration. Tree adds the registration of a host element.
-import { effect, untracked } from "@angular/core";
+import { afterRenderEffect, computed, untracked } from "@angular/core";
 import type { TreeEngine } from "@fragiola/tree";
 
 /** The element each key of an engine was last registered with. */
@@ -36,7 +36,10 @@ export function registerElement(
 
 /**
  * Registers the host element with the engine for as long as the directive lives: again when the
- * engine (a new model, new options) or the item changes, never while there is no engine.
+ * engine (a new model, new options) or the item changes, never while there is no engine. It runs
+ * after the render, once the element has its host bindings: the engine may focus an item's element
+ * as it is registered (an item moved to another parent is a new element that takes the focus the
+ * old one had), and an element without its `tabindex` yet cannot take it.
  */
 export function bindRegistration(
     engine: () => TreeEngine | null,
@@ -44,9 +47,11 @@ export function bindRegistration(
     kind: "item" | "content",
     element: HTMLElement,
 ): void {
-    effect((onCleanup) => {
+    // the id, not the item: a new item object of the same id (its children changed) keeps it
+    const currentId = computed(itemId);
+    afterRenderEffect((onCleanup) => {
         const current = engine();
-        const id = itemId();
+        const id = currentId();
         if (!current || id === undefined) return;
         untracked(() => {
             onCleanup(

@@ -2,6 +2,7 @@
 // and packages/vue's (composables/internal.ts).
 import {
     afterNextRender,
+    DestroyRef,
     effect,
     Injector,
     inject,
@@ -9,7 +10,6 @@ import {
     untracked,
 } from "@angular/core";
 import type { TreeModel } from "@fragiola/tree";
-import { onDestroy } from "./helpers";
 
 /** The `meta` of the commands that bring the model to the controlled inputs. */
 export const CONTROLLED_META = Object.freeze({ source: "controlled" });
@@ -124,10 +124,7 @@ export function bindControlledState(
     emit: (list: ControlledList, itemIds: string[]) => void,
 ): void {
     const injector = inject(Injector);
-    let stopped = false;
-    onDestroy(() => {
-        stopped = true;
-    });
+    const destroyRef = inject(DestroyRef);
     effect(() => {
         const current = model();
         const wanted = values();
@@ -138,6 +135,10 @@ export function bindControlledState(
         let pending = false;
         onCleanup(
             current.subscribe((event) => {
+                // the root is being destroyed: its engine's teardown commits (a load it drops goes
+                // back to `unloaded`) while this listener is still attached, and the view can no
+                // longer emit nor schedule a render
+                if (destroyRef.destroyed) return;
                 if (event.meta?.source === CONTROLLED_META.source) return;
                 const { before, after } = event;
                 if (!sameSet(before.expandedItemIds, after.expandedItemIds)) {
@@ -155,7 +156,10 @@ export function bindControlledState(
                 afterNextRender(
                     () => {
                         pending = false;
-                        if (!stopped && untracked(model) === current) {
+                        if (
+                            !destroyRef.destroyed &&
+                            untracked(model) === current
+                        ) {
                             syncControlled(current, untracked(values));
                         }
                     },

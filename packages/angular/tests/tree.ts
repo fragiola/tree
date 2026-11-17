@@ -1,8 +1,14 @@
 // The tree the tests render: every directive, assembled the way an app does, with no text but the
 // labels (the app's data) and the names the app gives. The same tree as packages/react's and
 // packages/vue's tests.
-import { ApplicationRef, Component, input, type Type } from "@angular/core";
-import { TestBed } from "@angular/core/testing";
+import {
+    ApplicationRef,
+    Component,
+    input,
+    type Type,
+    viewChild,
+} from "@angular/core";
+import { type ComponentFixture, TestBed } from "@angular/core/testing";
 import {
     type AnnounceEvent,
     createTreeModel,
@@ -11,6 +17,7 @@ import {
     TREE,
     type TreeJson,
     type TreeModel,
+    type TreeRootDirective,
 } from "../src/public-api";
 
 export type FileTypes = {
@@ -137,11 +144,16 @@ export class FileTree {
     readonly emitted: Emitted[] = [];
     /** the codes `(renameError)` reported */
     readonly renameErrors: string[] = [];
+    /** the root's handle (`#tree="treeRoot"`): its `model()` and its `engine` */
+    readonly root = viewChild.required<TreeRootDirective<FileTypes>>("tree");
 }
 
 /** A rendered component: its fixture, and how to change its inputs. */
 export interface Rendered<C> {
     component: C;
+    fixture: ComponentFixture<C>;
+    /** the component's host element, in the document */
+    element: HTMLElement;
     set(name: string, value: unknown): Promise<void>;
     destroy(): void;
 }
@@ -159,6 +171,8 @@ export async function render<C>(
     await settle();
     return {
         component: fixture.componentInstance,
+        fixture,
+        element: fixture.nativeElement as HTMLElement,
         async set(name, value) {
             fixture.componentRef.setInput(name, value);
             await settle();
@@ -216,6 +230,15 @@ export const items = () => [
 export const shownGroups = () =>
     [...document.querySelectorAll<HTMLElement>('[role="group"]')].filter(
         (group) => group.style.display !== "none",
+    );
+
+/**
+ * The rename input shown: the one of the item renaming (every item's input is there, hidden with
+ * `display: none` while its item is not renaming), or null.
+ */
+export const renameInput = () =>
+    document.querySelector<HTMLInputElement>(
+        'input[data-tree-part="rename-input"][data-renaming]',
     );
 
 /** Dispatches a DOM event on `target` (the fields of `init` an event lacks are set on it), then settles. */
