@@ -1,0 +1,114 @@
+---
+title: Composition
+description: You own the recursion. The primitives hand you items through children functions, and your item component decides what each row and group renders.
+---
+
+Most tree components take a data structure and render it for you, with a slot or two to
+customize. Here **you write the recursion**: `Tree.Items` calls your function with each root
+item, and `Tree.Group`, inside your item, calls it with each child. Whatever your item component
+renders, the primitives give it the roles, the state and the behaviour.
+
+## The shape of an item
+
+```tsx
+import { type ItemOf, Tree } from "@fragiola/tree-react";
+
+function Node({ item }: { item: ItemOf<Types> }) {
+    return (
+        <Tree.Item item={item}>
+            {/* the row: what is pressed, selected and dragged */}
+            <Tree.ItemContent>
+                <Tree.Toggle>▸</Tree.Toggle>
+                {item.label}
+            </Tree.ItemContent>
+            {/* the children, rendered by this same component */}
+            <Tree.Group<Types>>{(child) => <Node item={child} />}</Tree.Group>
+        </Tree.Item>
+    );
+}
+```
+
+- `Tree.Item` is the `role="treeitem"` element, the one DOM focus goes to. It provides the item
+  to the parts inside it.
+- `Tree.ItemContent` is the row: a press selects it, a drag starts from it, and the drag
+  hit-tests its rectangle. Put everything the row shows inside it.
+- `Tree.Group` is the `role="group"` element of the children, rendered only while the item is
+  expanded.
+- `Tree.Toggle`, `Tree.Checkbox` and `Tree.RenameInput` are optional, anywhere inside the item.
+
+## Different items, different rows
+
+Since the recursion is yours, each kind of item can render its own row, and `item.data` narrows
+on `item.kind`:
+
+```tsx
+function Node({ item }: { item: ItemOf<Types> }) {
+    return (
+        <Tree.Item item={item}>
+            <Tree.ItemContent className="row">
+                {item.kind === "folder" ? (
+                    <>
+                        <Tree.Toggle>▸</Tree.Toggle>
+                        <FolderIcon aria-hidden />
+                    </>
+                ) : (
+                    <FileIcon aria-hidden />
+                )}
+                <span>{item.label}</span>
+                {item.kind === "file" && <small>{formatSize(item.data.size)}</small>}
+            </Tree.ItemContent>
+            <Tree.Group<Types>>{(child) => <Node item={child} />}</Tree.Group>
+        </Tree.Item>
+    );
+}
+```
+
+## Controls in a row
+
+A button, a link or an input inside `Tree.ItemContent` keeps its own presses and keys: a press on
+it neither selects the row nor starts a drag, and Enter or Space on it is the control's, not the
+tree's. To exempt another element (a slider, a custom menu
+trigger), give it the `data-tree-no-drag` attribute (`NO_DRAG_ATTRIBUTE`); the full list is
+`DRAG_EXEMPT`.
+
+```tsx
+<Tree.ItemContent>
+    <span>{item.label}</span>
+    <button type="button" aria-label={`Delete ${item.label}`} onClick={() => remove(item.id)}>
+        ×
+    </button>
+</Tree.ItemContent>
+```
+
+## Your own elements
+
+Every primitive renders a `div` (a `span` for the toggle and the checkbox, an `input` for the
+rename input) and takes `render` to replace it, never `asChild`. For a list markup:
+
+```tsx
+<Tree.Root<Types> defaultTree={json} aria-label="Files" render={<ul />}>
+    <Tree.Items<Types>>{(item) => <Node item={item} />}</Tree.Items>
+</Tree.Root>
+
+// in Node
+<Tree.Item item={item} render={<li />}>…</Tree.Item>
+<Tree.Group<Types> render={<ul />}>{(child) => <Node item={child} />}</Tree.Group>
+```
+
+When a primitive is not enough, `useTreeItem(item)` gives an item's state and the props of its
+element, to build one on anything ([Hooks](/docs/api/hooks)).
+
+## Reaching the tree from inside
+
+Any component inside `Tree.Root` reads the model and the engine with `useTree<Types>()`, and a
+value of the state with `useTreeState`:
+
+```tsx
+function SelectionCount() {
+    const count = useTreeState<Types, number>((state) => state.selectedItemIds.length);
+    return <p>{count} selected</p>;
+}
+```
+
+From outside the root (a toolbar beside it), use a tree ref: `useTreeRef<Types>()`, passed as
+the root's `treeRef`.

@@ -1,0 +1,58 @@
+---
+title: Tree.DropIndicator
+description: Where the drag under way would drop - a line before or after a row, or the row's box - positioned by the package and drawn by you.
+---
+
+`Tree.DropIndicator` renders only while a drag has a drop target, absolutely positioned in the
+root: for `before` and `after`, a zero-height line at the target's level (starting
+`(level - 1) * indentation` pixels from the root's inline start); for `inside`, the row's box. It
+sets only its geometry, from `engine.get("drop-indicator")`; draw the line or the box yourself. It
+is hidden from assistive technology: the live region announces the drag.
+
+```tsx
+<Tree.Root<Types> defaultTree={json} aria-label="Files">
+    <Tree.Items<Types>>{(item) => <FileItem item={item} />}</Tree.Items>
+    <Tree.DropIndicator className="drop-indicator" />
+</Tree.Root>
+```
+
+```css
+.drop-indicator[data-drop-position="before"],
+.drop-indicator[data-drop-position="after"] {
+    border-top: 2px solid #2563eb;
+    margin-top: -1px;
+}
+.drop-indicator[data-drop-position="inside"] {
+    border: 2px solid #2563eb;
+}
+```
+
+Rows with leading padding before the first level shift the line with a margin in its own styles
+([Known limitations](/docs/limitations)).
+
+## Props
+
+`DropIndicatorProps` has no props of its own: it takes the
+[common primitive props](/docs/api/root#common-props) (on a `div`), with `DropIndicatorState`.
+
+## State
+
+`DropIndicatorState`:
+
+| field | type | description |
+| --- | --- | --- |
+| `position` | `DropPosition`: `"before" \| "after" \| "inside"` | where the drop goes, relative to `itemId` |
+| `itemId` | `string \| null` | the item the position is relative to (`null`: an empty tree) |
+| `level` | `number` | the level the dropped items take (1 for the root) |
+
+## Attributes
+
+| attribute | when |
+| --- | --- |
+| `aria-hidden` | always |
+| `data-tree-part="drop-indicator"` | always |
+| `data-drop-position` | `before`, `after` or `inside` |
+| `data-depth` | the level the dropped items take, minus one |
+
+Structural style: `position: absolute`, `inset-inline-start`, `inset-inline-end: 0`,
+`inset-block-start`, `block-size` and `pointer-events: none`.

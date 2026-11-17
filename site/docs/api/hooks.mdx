@@ -1,0 +1,166 @@
+---
+title: Hooks
+description: The hooks under the primitives - the root's model and engine, an item's state and props for your own markup, a selected value of the state, and tree refs.
+---
+
+The primitives are built on these hooks, and your components use them to read the tree, change
+it, or build an item on an element of their own. Inside a `Tree.Root`, they read its model and
+engine; a tree ref reaches them from outside.
+
+## `useTree`
+
+```ts
+function useTree<T extends TreeTypes = AnyTypes>(): UseTreeResult<T>;
+```
+
+The model and the engine of the enclosing `Tree.Root`. Pass the registry as the type argument
+(`useTree<Types>()`): a child cannot infer it through context. Outside a root, it throws.
+
+```tsx
+function CollapseAll() {
+    const { model } = useTree<Types>();
+    return (
+        <button type="button" onClick={() => model.run("tree.collapse-all", {})}>
+            Collapse all
+        </button>
+    );
+}
+```
+
+`UseTreeResult<T>`:
+
+| field | type | description |
+| --- | --- | --- |
+| `model` | `TreeModel<T>` | the tree's data and its rules: `model.run` changes it, `model.get` / `model.is` read it ([Model](/docs/api/model)) |
+| `engine` | `TreeEngine<T>` | the tree on screen: screen actions (`engine.run("focus", { itemId })`) and screen facts (`engine.get("drop-target")`). It is there from the first render; before the root is mounted (and on the server) an action is refused and a read is empty ([Engine](/docs/api/engine)) |
+
+## `useTreeState`
+
+```ts
+function useTreeState<T extends TreeTypes = AnyTypes, S = unknown>(
+    selector: (state: TreeState<T>, model: TreeModel<T>) => S,
+    options?: UseTreeStateOptions<T, S>,
+): S;
+```
+
+A value selected from the model's state, re-rendering the component only when the selection
+changes (`Object.is` by default). The selector runs once per state; keep it pure. Inside a
+`Tree.Root` it reads the root's model; pass `model` to read one anywhere.
+
+```tsx
+const count = useTreeState<Types, number>((state) => state.selectedItemIds.length);
+const status = useTreeState<Types, string | undefined>((_state, model) =>
+    model.get("children-status-by", { itemId: item.id }),
+);
+const visible = useTreeState((_state, model) => model.get("visible-items").length, { model });
+```
+
+`UseTreeStateOptions<T, S>`:
+
+| field | type | description |
+| --- | --- | --- |
+| `model` | `TreeModel<T>` | the model to read; default: the enclosing `Tree.Root`'s (then the hook needs one) |
+| `isEqual` | `(a: S, b: S) => boolean` | whether two selections are the same, so the component does not re-render (default `Object.is`) |
+
+## `useTreeItem`
+
+```ts
+function useTreeItem<T extends TreeTypes = AnyTypes>(item: ItemOf<T>): UseTreeItemResult;
+```
+
+An item of the enclosing `Tree.Root`: its state, and the props of its element (`role="treeitem"`
+with its ARIA, the roving `tabindex`, the `data-*` state, `data-tree-part="item"`,
+`data-tree-path`, its focus handler, `--tree-depth` and the ref that registers it with the
+engine). `Tree.Item` is this hook on a `div`. The parts inside need an item context, so use it for
+an item whose row is your own markup:
+
+```tsx
+function OutlineItem({ item }: { item: ItemOf<Types> }) {
+    const { state, props } = useTreeItem(item);
+    return (
+        <li {...props}>
+            {state.expanded ? "▾" : "▸"} {item.label}
+        </li>
+    );
+}
+```
+
+`UseTreeItemResult`:
+
+| field | type | description |
+| --- | --- | --- |
+| `state` | `TreeItemState` | the item's place and state (below) |
+| `props` | `RenderedProps` | spread onto the item's element: ARIA, `data-*`, the roving `tabindex`, focus and its ref |
+
+`TreeItemState`, what every part of an item renders with (`render`, `className` and `style`
+functions):
+
+| field | type | description |
+| --- | --- | --- |
+| `itemId` | `string` | the item's id |
+| `path` | `string` | its position from the root, `/0/2` (its `data-tree-path`) |
+| `level` | `number` | 1 for a root item (`aria-level`) |
+| `posinset` | `number` | its 1-based position among its siblings (`aria-posinset`) |
+| `setsize` | `number` | how many siblings it has, itself included (`aria-setsize`) |
+| `expanded` | `boolean` | its children are shown |
+| `selected` | `boolean` | it is part of the selection |
+| `focused` | `boolean` | it is the focused item (model data: the roving tab stop as stored) |
+| `tabStop` | `boolean` | it is the roving tab stop: the one item with `tabindex` 0 |
+| `checkState` | `CheckState`: `"checked" \| "unchecked" \| "mixed"` | its checkbox |
+| `checked` | `boolean` | its checkbox is checked (not mixed) |
+| `indeterminate` | `boolean` | its checkbox is mixed: only some of its descendants are checked |
+| `renaming` | `boolean` | its label is being edited |
+| `loading` | `boolean` | its children are being loaded |
+| `loadError` | `boolean` | the last load of its children failed |
+| `disabled` | `boolean` | focusable, not actionable |
+| `leaf` | `boolean` | no children and no children status |
+| `dragging` | `boolean` | it is being dragged |
+| `dropTarget` | `boolean` | the drop target of the drag under way is relative to it |
+| `dropPosition` | `DropPosition \| undefined` | while it is the drop target: `before`, `after` or `inside` |
+
+## `useTreeRef`
+
+```ts
+function useTreeRef<T extends TreeTypes = AnyTypes>(): TreeRef<T>;
+```
+
+A tree ref kept by the component, which re-renders when the `Tree.Root` it is given to mounts or
+unmounts: read `tree.current` in render (a toolbar next to the tree) or in handlers.
+
+```tsx
+function Explorer() {
+    const tree = useTreeRef<Types>();
+    return (
+        <>
+            <button type="button" onClick={() => tree.current?.model.run("tree.expand-all", {})}>
+                Expand all
+            </button>
+            <Tree.Root<Types> treeRef={tree} defaultTree={json} aria-label="Files">
+                <Tree.Items<Types>>{(item) => <FileItem item={item} />}</Tree.Items>
+            </Tree.Root>
+        </>
+    );
+}
+```
+
+## `createTreeRef`
+
+```ts
+function createTreeRef<T extends TreeTypes = AnyTypes>(): TreeRef<T>;
+```
+
+Creates a tree ref outside React: in a module, or in a test. It does not re-render anything when
+it attaches; in a component, `useTreeRef` does.
+
+`TreeRef<T>`:
+
+| field | type | description |
+| --- | --- | --- |
+| `current` | `TreeHandle<T> \| null` | the root's model and engine while it is mounted, `null` otherwise |
+
+`TreeHandle<T>`:
+
+| field | type | description |
+| --- | --- | --- |
+| `model` | `TreeModel<T>` | the root's model |
+| `engine` | `TreeEngine<T>` | the root's engine |

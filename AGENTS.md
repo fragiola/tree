@@ -13,14 +13,18 @@ framework has an adapter, so **every piece of logic that isn't rendering lives i
 | package | name | contains | depends on |
 |---|---|---|---|
 | `packages/core` | `@fragiola/tree` | the tree model (JSON document v1 and its JSON Schema, the command bus, commands with JSON Schemas, `get`/`is` queries, middleware, events), and the engine (DOM focus, the WAI-ARIA keyboard model with type-ahead, Pointer Events drag and drop with keyboard drag, the async children loader, announcements) | DOM only, zero runtime deps |
-| `packages/react` | `@fragiola/tree-react` | the `Tree.*` primitives and hooks over the core, and the core re-exported (Epic #8) | the core (`workspace:*`, published as the exact version); peer `react`, `react-dom` (^19) |
+| `packages/react` | `@fragiola/tree-react` | the `Tree.*` primitives (`Root`, `Items`, `Item`, `ItemContent`, `Group`, `Toggle`, `Checkbox`, `RenameInput`, `DropIndicator`, `LiveRegion`) and hooks (`useTree`, `useTreeItem`, `useTreeState`, `useTreeRef`, `createTreeRef`) over the core, and the core re-exported | the core (`workspace:*`, published as the exact version); peer `react`, `react-dom` (^19) |
 | `packages/vue` | `@fragiola/tree-vue` | the same primitives in Vue 3 (Epic #11) | the core; peer `vue` (^3.5) |
 | `packages/angular` | `@fragiola/tree-angular` | the same primitives as Angular directives (Epic #14) | the core; peer `@angular/core` |
-| `site` | private | the pages fragiola.com/tree serves (`site/docs`), the repository's script tests | |
+| `examples/shared` | `examples-shared`, private | what every framework's examples share: the metadata (`src/meta/<id>.ts`), the two themes, the embed protocol, the manifest builder and loader generator, every Playwright spec | no framework |
+| `examples/react` | `examples-react`, private | the 13 React examples (`src/examples/<id>/`), the vendored Fragiola UI (`src/components`, `scripts/vendor-fragiola.ts`), the embed app | `@fragiola/tree-react`, Fragiola UI's stack |
+| `apps/playground` | `playground`, private | every example live, dev-only scenarios (`src/scenarios/<area>/<id>.tsx`), unstyled fixtures for Playwright (`fixtures/<name>/`), the Inspector | `@fragiola/tree-react` |
+| `site` | `site`, private | the site export (`export.ts`, `contract.ts`, `dev.ts`, `dev-proxy.ts`, `sources.ts`), the pages fragiola.com/tree serves (`site/docs`), the repository's script tests | |
 
-Only the core exists today; the adapters, the examples apps, the playground and the site export
-come with their Epics, each adding its scripts, its CI job and its entry in `ADAPTERS`
-(`scripts/check-package.ts`).
+The Vue and Angular adapters come with their Epics (#11, #14), each adding its package, its
+examples app (porting the 13 examples with the same ids, passing the shared specs unchanged), its
+CI job, its entry in `ADAPTERS` (`scripts/check-package.ts`), its framework in
+`site/project.json` and in `COMPLETE_FRAMEWORKS` (`examples/shared/e2e/available.ts`).
 
 ## Non-negotiable rules
 
@@ -107,7 +111,11 @@ Do not "fix" these. A change that breaks one is a decision for the maintainer.
   keyboard drag steps through the same positions.
 - **Async children** (`src/engine/children-loader.ts`): the app's `loadChildren(item, { signal })`
   runs when an `unloaded` item is expanded and visible; `destroy()` aborts it, and an aborted or
-  stale load runs no command.
+  stale load runs no command. With `resetLoadsOnDestroy` (every adapter sets it), `destroy()` puts
+  the items it was loading back to `unloaded`, so the next engine on the model (a remount,
+  React's StrictMode) loads them again.
+- **Controls inside a row** (a button, a link, an input: `DRAG_EXEMPT`) keep their presses and
+  their keys: the engine neither selects nor drags from them, nor handles their keys.
 - **Announcements**: the app's `announce(event)` returns the live region's text; the engine keeps
   the latest one (`get("announcement")`). No text is built in.
 
@@ -137,14 +145,20 @@ The words never swap meaning, in code, docs and examples.
 | `pnpm check` | Biome lint + format + assist (non-mutating), then the source layout over `git ls-files` (`check:layout`, `scripts/check-layout.ts`), then builds the core and checks that `site/docs/api/commands.mdx` matches the registry (`check:commands`) |
 | `pnpm check:fix` | Biome check with auto-fix |
 | `pnpm typecheck` | `pnpm -r typecheck` (TypeScript 7, no emit) |
-| `pnpm test` | Vitest: `core` (node; the engine's files opt into jsdom), `site` (the scripts' tests) |
+| `pnpm test` | Vitest: `core` (node; the engine's files opt into jsdom), `react` (jsdom, Testing Library), `playground`, `examples-shared`, `examples-react`, `site` (the export, the contract, `docs-reference.test.ts`, the scripts' tests) |
 | `pnpm build` | `pnpm -r build` (tsdown), then `scripts/check-dts.ts` (no `any` in the built declarations) |
-| `pnpm check:package` | builds the packages, packs them with pnpm, checks the packed `exports` are the repo's without the source condition, runs `publint` and `attw --profile esm-only` on the tarballs, then the smoke app of each adapter in `ADAPTERS` (none yet) |
+| `pnpm check:package` | builds the packages, packs them with pnpm, checks the packed `exports` are the repo's without the source condition, runs `publint` and `attw --profile esm-only` on the tarballs, then the smoke app of each adapter in `ADAPTERS` (React: a Vite + React app that installs only the tarball, typechecks, builds and loads its dev server) |
 | `pnpm changeset` | adds a changeset (`.changeset/*.md`): every PR that changes what a package ships (`changedFilePatterns` in `.changeset/config.json`) carries one, and CI's Changesets job fails one that does not; every package is in one `fixed` group (`@fragiola/*`) |
 | `pnpm release:version` | `changeset version`: only the release workflow runs it (the Version Packages PR); never commit a version bump by hand |
+| `pnpm dev` | the playground (`apps/playground`) on http://localhost:5173 (`PLAYGROUND_PORT` moves it): every example, the scenarios, the fixtures, the Inspector |
+| `pnpm e2e` | Playwright: the playground's suite (fixtures, shell, scenarios), then each examples app's run of the shared specs (`examples/shared/e2e`) against its production embed; build the packages first (`pnpm build`) |
+| `pnpm site:export --base /tree --out <dir>` | the site export (contract v1.2, `../www/CONTRACT.md`): pages, `examples.json`, `project.json` and the React embed, validated by `site/contract.ts` |
+| `pnpm site:dev --base /tree --port 5183` | every framework's embed with hot reload under `/tree/embed/<framework>/`, for `www`'s dev server |
 
-`pnpm e2e`, `pnpm dev`, `pnpm site:export` and `pnpm site:dev` come with the playground, the
-examples apps and the site (Epic #8).
+**Dev ports.** The playground is 5173. The React embed alone (`pnpm --filter examples-react dev`)
+and `pnpm site:dev` default to **5183**, the port `www` registers for `tree` (the next free one
+after ui 5174, dockable 5180, data-grid 5181, grid-layout 5182); fragiola/www#32 adds
+`{ "slug": "tree", "devUrl": "http://localhost:5183" }` to `../www/projects.json`.
 
 **Releasing is a merge, and it is disabled today.** `.github/workflows/release.yml` is Dockable's
 (Version Packages PR, then npm trusted publishing with pnpm), gated on the repository variable
@@ -167,10 +181,19 @@ packages/core/      @fragiola/tree      src/index.ts (the entry), and one folder
                     src/dom/            owner document / window helpers
                     tests/              mirrors src/; tests/types/ (type fixtures); guard.test.ts
                     scripts/            generate-command-docs.ts
-site/               docs/               the pages fragiola.com/tree serves (docs/api/commands.mdx is generated)
-                    tests/              the repository scripts' tests (check-layout.test.ts)
+packages/react/     @fragiola/tree-react  src/index.ts, parts.ts (the Tree namespace), context.ts, and
+                    src/components/     one primitive per file (root.tsx, item.tsx, item-content.tsx, …)
+                    src/hooks/          one hook per file; internal.ts for those only the primitives call
+                    src/utils/          merge-props.ts, use-render.ts (from Dockable), engine-facade.ts
+                    tests/              named after behaviour (aria, contract, keyboard, dnd, …)
+examples/shared/    src/meta/, src/themes/, src/embed/, scripts/, e2e/ (every spec), tests/
+examples/react/     src/examples/<id>/ (index.tsx, styles.ts), src/examples/_kit/, src/components/ (vendored), src/embed/
+apps/playground/    src/shell/, src/scenarios/<area>/, src/inspector/, src/fixture/, fixtures/<name>/, e2e/
+site/               export.ts, contract.ts, dev.ts, dev-proxy.ts, sources.ts, project.json
+                    docs/               the pages fragiola.com/tree serves (docs/api/commands.mdx is generated)
+                    tests/              the export, the contract, the docs reference, the scripts' tests
 scripts/            check-layout.ts, check-dts.ts, check-package.ts, source-condition.ts, exported-names.ts
-docs/               releasing.md, reports
+docs/               releasing.md, docs-examples-gaps.md, reports
 ```
 
 In dev, the packages resolve to their sources through the `@fragiola/source` export condition
@@ -182,10 +205,27 @@ never npm.
 ## The site (fragiola.com)
 
 The docs and examples are served by `fragiola.com/tree`, built by the `www` repo from this repo's
-site export (`../www/CONTRACT.md`). This repo provides the pages (`site/docs`), the gallery
-configuration and one examples app per framework; the export, the examples apps and the
-registration in `www` come with Epic #8 and fragiola/www#32. The JSON model is documented in
-`site/docs/api/json-model.mdx`, the commands in the generated `site/docs/api/commands.mdx`.
+site export (`../www/CONTRACT.md` v1.2, `pnpm site:export`). This repo provides the pages
+(`site/docs`, sidebar `site/docs/config.json`), `site/project.json` (`frameworks: ["react"]` until
+the Vue and Angular Epics), the gallery configuration (built from `examples/shared`) and one
+examples app per framework; the registration in `www` is fragiola/www#32.
+
+- Pages follow the contract: titles <= 60 characters, descriptions 50-160 characters, no `#` in
+  bodies, only the v1.2 MDX vocabulary, base-free links. `site/tests/contract.test.ts` validates
+  them, and `site/tests/docs-reference.test.ts` fails when an export, a prop, a key or a command
+  field is not documented.
+- The packages are **not on npm yet**: the installation page and the landing say so in a
+  `Callout` (fragiola.com/tree goes live before npm, the maintainer's decision). Remove it with
+  the first release.
+- The JSON model is documented in `site/docs/api/json-model.mdx`, the commands in the generated
+  `site/docs/api/commands.mdx`. The examples' workarounds and the packages' known gaps are listed
+  in `docs/docs-examples-gaps.md` and on `site/docs/limitations.mdx`.
+- **The examples** (`examples/react/src/examples/README.md`): 13 ids, final, that Vue and Angular
+  port in full: `hello-tree`, `file-explorer`, `multi-select`, `checkboxes`, `async-loading`,
+  `rename`, `drag-and-drop`, `keyboard`, `controlled`, `save-restore`, `undo-redo`,
+  `command-console`, `rtl`. The shared specs reach them only through `data-tree-part`,
+  `data-tree-path`, roles, accessible names and test ids. Fragiola UI is vendored into the
+  examples (committed copies), never a dependency of a package.
 
 ## Provenance
 

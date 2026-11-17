@@ -1,0 +1,85 @@
+---
+title: Accessible names
+description: The packages write no text, so the tree's name, each item's name and every announcement come from you. Here is where each one goes.
+---
+
+The primitives set the roles and the state (`role="tree"`, `role="treeitem"`, `aria-level`,
+`aria-expanded`, `aria-selected`, …) but **no text and no `aria-label` of their own**. Every name
+is yours, so it is in your language and says what your tree holds.
+
+## The tree
+
+Name the root with `aria-label`, or point at a visible heading with `aria-labelledby`:
+
+```tsx
+<h2 id="files-heading">Project files</h2>
+<Tree.Root<Types> defaultTree={json} aria-labelledby="files-heading">
+    <Tree.Items<Types>>{(item) => <FileItem item={item} />}</Tree.Items>
+</Tree.Root>
+```
+
+`Tree.Root` sets `aria-multiselectable` when the selection mode is `multiple`.
+
+## The items
+
+An item's accessible name is computed from its content: the text of its row and, since the group
+is inside the item's element, possibly the text of its expanded children too. Keep the label as the row's text, hide the
+icons, and give the item an explicit name only when its content says more than its name:
+
+```tsx
+<Tree.Item item={item} aria-label={item.label}>
+    <Tree.ItemContent>
+        <Tree.Toggle>
+            <ChevronRight aria-hidden />
+        </Tree.Toggle>
+        <FolderIcon aria-hidden />
+        <span>{item.label}</span>
+    </Tree.ItemContent>
+    <Tree.Group<Types>>{(child) => <FileItem item={child} />}</Tree.Group>
+</Tree.Item>
+```
+
+`aria-label={item.label}` keeps a parent's name to its own label rather than its children's. For
+extra facts (a size, "locked"), use `aria-describedby` with the id of an element holding them, as
+the [async loading](/docs/guides/async-loading) and [drag and drop](/docs/guides/drag-and-drop)
+examples do.
+
+`Tree.Toggle` and `Tree.Checkbox` are hidden from assistive technology (`aria-hidden`): the item
+already says `aria-expanded` and `aria-checked`, and the keyboard acts on the item. They need no
+name.
+
+## The rename input
+
+`Tree.RenameInput` is a text field: name it.
+
+```tsx
+<Tree.RenameInput aria-label={`Rename ${item.label}`} />
+```
+
+## Announcements
+
+`Tree.LiveRegion` (`role="status"`) shows what your `announce` function returns for a drag step or
+a failed load. Without `announce`, it stays empty. Write the sentences yourself:
+
+```tsx
+import type { AnnounceEvent } from "@fragiola/tree-react";
+
+const announce = (event: AnnounceEvent) => {
+    switch (event.type) {
+        case "drop":
+            return `Moved ${event.itemIds.length} item(s).`;
+        case "load-error":
+            return "Could not load this folder.";
+        default:
+            return undefined;
+    }
+};
+
+<Tree.Root<Types> defaultTree={json} announce={announce} aria-label="Files">
+    <Tree.Items<Types>>{(item) => <FileItem item={item} />}</Tree.Items>
+    <Tree.LiveRegion className="visually-hidden" />
+</Tree.Root>;
+```
+
+Hide the live region visually with your own visually-hidden class. The events are listed on
+[Tree.LiveRegion](/docs/api/live-region).

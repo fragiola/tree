@@ -9,15 +9,23 @@
 // - every adapter (`ADAPTERS`: each package under packages/ but the core) depends on the core at
 //   its exact version, and passes its smoke test: a scratch app outside the workspace that installs
 //   the adapter's tarball only (the core tarball comes as its dependency), typechecks, builds and
-//   loads its dev server. The core has no adapter yet: each adapter Epic adds its entry and its
-//   smoke app (Dockable's `reactSmoke`, `vueSmoke`, `angularSmoke` are the model).
+//   loads its dev server. Each adapter Epic adds its entry and its smoke app (Dockable's
+//   `reactSmoke`, `vueSmoke`, `angularSmoke` are the model): React's is `reactSmoke`.
 //
 // `--tarballs <dir>` checks the tarballs found in `dir` (at any depth) instead of packing: the
 // release workflow passes the directory `changeset pack` wrote, so what is checked is what is
 // published. A package with no tarball there (a publish plan may hold only some packages) is
 // packed from the repo, as without the option.
-import { execFileSync } from "node:child_process";
-import { mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
+import { execFileSync, spawn } from "node:child_process";
+import {
+    mkdirSync,
+    mkdtempSync,
+    readdirSync,
+    readFileSync,
+    rmSync,
+    writeFileSync,
+} from "node:fs";
+import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { SOURCE_CONDITION } from "./source-condition.ts";
@@ -225,8 +233,241 @@ export interface AdapterCheck {
     ) => Promise<void>;
 }
 
+/** The version the adapter `packages/<dir>` pins for `name` (a dependency or a dev dependency). */
+function adapterVersion(dir: string, name: string): string {
+    const manifest = JSON.parse(
+        readFileSync(join(root, "packages", dir, "package.json"), "utf8"),
+    ) as {
+        dependencies?: Record<string, string>;
+        devDependencies?: Record<string, string>;
+    };
+    const version =
+        manifest.dependencies?.[name] ?? manifest.devDependencies?.[name];
+    if (version === undefined) {
+        throw new Error(`packages/${dir} does not depend on ${name}`);
+    }
+    return version;
+}
+
+// Everything from the React package, the core included: a React app installs that one only.
+const REACT_SMOKE_MAIN = `import {
+    createTreeModel,
+    type ItemOf,
+    Tree,
+    type TreeJson,
+    type TreeModel,
+} from "@fragiola/tree-react";
+import { createRoot } from "react-dom/client";
+
+type Types = { items: { folder: undefined; file: { size: number } } };
+
+const json: TreeJson<Types> = {
+    version: 1,
+    rootItemIds: ["src", "readme"],
+    items: {
+        src: { kind: "folder", label: "src", childItemIds: ["app"] },
+        app: { kind: "file", label: "app.ts", data: { size: 120 } },
+        readme: { kind: "file", label: "README.md", data: { size: 3 } },
+    },
+    expandedItemIds: ["src"],
+};
+
+const model: TreeModel<Types> = createTreeModel<Types>(json);
+
+function size(item: ItemOf<Types>): string {
+    return item.kind === "file" ? \` (\${item.data.size} B)\` : "";
+}
+
+function FileItem({ item }: { item: ItemOf<Types> }) {
+    return (
+        <Tree.Item item={item}>
+            <Tree.ItemContent>
+                <Tree.Toggle />
+                {item.label}
+                {size(item)}
+            </Tree.ItemContent>
+            <Tree.Group<Types>>{(child) => <FileItem item={child} />}</Tree.Group>
+        </Tree.Item>
+    );
+}
+
+const container = document.getElementById("root");
+if (container) {
+    createRoot(container).render(
+        <Tree.Root<Types> model={model} aria-label="Files">
+            <Tree.Items<Types>>{(item) => <FileItem item={item} />}</Tree.Items>
+            <Tree.DropIndicator />
+            <Tree.LiveRegion />
+        </Tree.Root>,
+    );
+}
+`;
+
+/**
+ * A scratch Vite + React app in `dir` that depends on the React tarball only: the core tarball is
+ * installed as its dependency, never declared by the app. Its versions are the adapter's own (Vite
+ * compiles the JSX itself: no plugin is needed to build or serve it).
+ */
+function writeReactSmokeApp(dir: string, core: string, react: string): void {
+    const version = (name: string) => adapterVersion("react", name);
+    const manifest = {
+        name: "tree-smoke",
+        private: true,
+        type: "module",
+        dependencies: {
+            "@fragiola/tree-react": `file:${react}`,
+            react: version("react"),
+            "react-dom": version("react-dom"),
+        },
+        devDependencies: {
+            "@types/react": version("@types/react"),
+            "@types/react-dom": version("@types/react-dom"),
+            typescript: version("typescript"),
+            vite: version("vite"),
+        },
+    };
+    writeFileSync(
+        join(dir, "package.json"),
+        `${JSON.stringify(manifest, null, 4)}\n`,
+    );
+    // The React tarball depends on the core at its own version, which the registry does not have:
+    // the packed core stands in for it. A file of its own also keeps the app out of any workspace.
+    writeFileSync(
+        join(dir, "pnpm-workspace.yaml"),
+        `overrides:\n  "@fragiola/tree": "file:${core}"\n`,
+    );
+    writeFileSync(
+        join(dir, "index.html"),
+        `<!doctype html>\n<html lang="en">\n<body>\n<div id="root"></div>\n<script type="module" src="/src/main.tsx"></script>\n</body>\n</html>\n`,
+    );
+    // strict, with the published declarations checked too (no skipLibCheck)
+    const tsconfig = {
+        compilerOptions: {
+            target: "ES2022",
+            lib: ["ES2022", "DOM", "DOM.Iterable"],
+            module: "ESNext",
+            moduleResolution: "bundler",
+            jsx: "react-jsx",
+            strict: true,
+            noUncheckedIndexedAccess: true,
+            verbatimModuleSyntax: true,
+            noEmit: true,
+            types: [],
+        },
+        include: ["src"],
+    };
+    writeFileSync(
+        join(dir, "tsconfig.json"),
+        `${JSON.stringify(tsconfig, null, 4)}\n`,
+    );
+    mkdirSync(join(dir, "src"));
+    writeFileSync(join(dir, "src/main.tsx"), REACT_SMOKE_MAIN);
+}
+
+function freePort(): Promise<number> {
+    return new Promise((resolve, reject) => {
+        const server = createServer();
+        server.once("error", reject);
+        server.listen(0, "127.0.0.1", () => {
+            const address = server.address();
+            const port =
+                typeof address === "object" && address ? address.port : 0;
+            server.close(() => resolve(port));
+        });
+    });
+}
+
+async function fetchOk(url: string): Promise<string> {
+    const response = await fetch(url);
+    const body = await response.text();
+    if (!response.ok) {
+        throw new Error(`${url}: ${response.status}\n${body.slice(0, 2000)}`);
+    }
+    return body;
+}
+
+/** The absolute imports of a module served by Vite (`/node_modules/.vite/deps/…`, `/@id/…`). */
+export function servedImports(code: string): string[] {
+    return [...code.matchAll(/(?:from|import)\s*["'](\/[^"']+)["']/g)].flatMap(
+        ([, path]) => (path === undefined ? [] : [path]),
+    );
+}
+
+/**
+ * Starts the app's dev server, loads its entry (`/src/main.tsx`) and every module it imports,
+ * then stops it.
+ */
+async function loadThroughDevServer(
+    dir: string,
+    entryPath: string,
+): Promise<void> {
+    const port = await freePort();
+    const base = `http://127.0.0.1:${port}`;
+    const server = spawn(
+        process.execPath,
+        [
+            join(dir, "node_modules/vite/bin/vite.js"),
+            "--host",
+            "127.0.0.1",
+            "--port",
+            String(port),
+            "--strictPort",
+        ],
+        { cwd: dir, stdio: "inherit" },
+    );
+    const exited = new Promise<void>((resolve) => {
+        server.once("exit", () => resolve());
+    });
+    try {
+        const deadline = Date.now() + 30_000;
+        for (;;) {
+            try {
+                await fetchOk(`${base}/`);
+                break;
+            } catch (error) {
+                if (Date.now() > deadline) throw error;
+                await new Promise((resolve) => setTimeout(resolve, 250));
+            }
+        }
+        const entry = await fetchOk(`${base}${entryPath}`);
+        const imports = servedImports(entry);
+        if (!imports.some((path) => path.includes("@fragiola"))) {
+            throw new Error(
+                `the dev server's entry imports no package:\n${entry}`,
+            );
+        }
+        for (const path of imports) {
+            await fetchOk(`${base}${path}`);
+        }
+        console.log(
+            `check-package: the dev server loads the entry (${imports.length} imports)`,
+        );
+    } finally {
+        // the app's directory is removed next: the server must be gone first
+        server.kill();
+        await exited;
+    }
+}
+
+/**
+ * The React smoke test: the scratch Vite + React app installs the React tarball, typechecks,
+ * builds and loads its dev server.
+ */
+async function reactSmoke(
+    app: string,
+    tarballs: { core: string; adapter: string },
+): Promise<void> {
+    writeReactSmokeApp(app, tarballs.core, tarballs.adapter);
+    run("pnpm", ["install", "--no-frozen-lockfile"], app);
+    run("pnpm", ["exec", "tsc", "--noEmit"], app);
+    run("pnpm", ["exec", "vite", "build"], app);
+    await loadThroughDevServer(app, "/src/main.tsx");
+}
+
 /** Every adapter, one per package under packages/ but the core (`unlistedPackages` checks it). */
-export const ADAPTERS: readonly AdapterCheck[] = [];
+export const ADAPTERS: readonly AdapterCheck[] = [
+    { dir: "react", framework: "react", smoke: reactSmoke },
+];
 
 /** The packages/ directories that are neither the core nor an adapter of `adapters`. */
 export function unlistedPackages(

@@ -1,0 +1,51 @@
+---
+title: Tree.Checkbox
+description: The enclosing item's tri-state checkbox - checked, unchecked or mixed. A press toggles it; the item carries aria-checked and Space acts on it.
+---
+
+`Tree.Checkbox` is the box of an item's check. A press toggles it (`item.toggle-check`, with the
+cascade of the tree's `checkMode`). It is `role="checkbox"` with `aria-checked` (`true`, `false`
+or `"mixed"`), hidden from assistive technology and never focused: with the root's `checkboxes`,
+the item itself carries the same `aria-checked` (the `treeitem` is what a screen reader reads),
+and Space toggles the focused item's check.
+
+```tsx
+<Tree.Root<Types> defaultTree={json} checkboxes aria-label="Permissions">
+    <Tree.Items<Types>>
+        {(item) => (
+            <Tree.Item item={item}>
+                <Tree.ItemContent className="row">
+                    <Tree.Checkbox className="box">
+                        <CheckIcon className="check" aria-hidden />
+                        <MinusIcon className="dash" aria-hidden />
+                    </Tree.Checkbox>
+                    <span>{item.label}</span>
+                </Tree.ItemContent>
+            </Tree.Item>
+        )}
+    </Tree.Items>
+</Tree.Root>
+```
+
+Show the check mark on `[data-checked]` and the dash on `[data-indeterminate]`
+([Checkboxes](/docs/guides/checkboxes)).
+
+## Props
+
+`CheckboxProps` extends the [common primitive props](/docs/api/root#common-props) (on a `span`),
+with the item's state (`TreeItemState`: `checkState`, `checked`, `indeterminate`).
+
+| prop | type | description |
+| --- | --- | --- |
+| `children` | `ReactNode` | what it shows (a check mark, a dash when mixed); no text and no icon of its own |
+
+## Attributes
+
+| attribute | when |
+| --- | --- |
+| `role="checkbox"` | always |
+| `aria-checked` | `true`, `false` or `"mixed"` |
+| `aria-disabled` | the item is disabled |
+| `aria-hidden` | always |
+| `data-tree-part="checkbox"` | always |
+| the item's `data-*` state | `data-checked`, `data-indeterminate`, … ([State attributes](/docs/concepts/state-attributes)) |

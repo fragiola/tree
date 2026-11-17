@@ -1,0 +1,93 @@
+---
+title: Testing your tree
+description: Test the rules on the model in plain Node, the component with Testing Library and roles, and the real browser with Playwright and data-tree-path.
+---
+
+The tree splits cleanly into what needs a screen and what does not, and the tests can follow the
+same line: the model's rules in plain Node, the component through its roles, and the browser
+for the gestures.
+
+## The model, in plain Node
+
+The model needs no DOM. Load a document, run the commands your feature runs, and assert the
+state and the results:
+
+```ts title="files.test.ts"
+import { createTreeModel } from "@fragiola/tree";
+import { expect, it } from "vitest";
+import { json, type Types } from "./files";
+import { namingRules } from "./naming-rules";
+
+it("refuses a name already taken in the folder", () => {
+    const model = createTreeModel<Types>(json);
+    namingRules(model);
+    const result = model.run("item.rename", { itemId: "app", label: "main.tsx" });
+    expect(result.ok).toBe(false);
+    expect(model.get("item-by", { id: "app" })?.label).toBe("app.tsx");
+});
+
+it("moves the selection into a folder", () => {
+    const model = createTreeModel<Types>(json);
+    model.run("tree.select", { itemIds: ["readme"] });
+    expect(model.can("item.move", { itemIds: ["readme"], to: { parentItemId: "src", index: 0 } })).toBe(true);
+});
+```
+
+`model.check` returns the error a refusal would have, without changing anything, which makes
+permission tests one line each.
+
+## The component, with Testing Library
+
+The tree is reachable by role and name, like any accessible widget. A tree ref gives the test the
+model and the engine:
+
+```tsx title="file-tree.test.tsx"
+import { createTreeRef, Tree } from "@fragiola/tree-react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
+import { expect, it } from "vitest";
+
+it("expands a folder with ArrowRight", () => {
+    const tree = createTreeRef<Types>();
+    render(
+        <Tree.Root<Types> defaultTree={json} treeRef={tree} aria-label="Files">
+            <Tree.Items<Types>>{(item) => <FileItem item={item} />}</Tree.Items>
+        </Tree.Root>,
+    );
+    const src = screen.getByRole("treeitem", { name: "src" });
+    act(() => src.focus());
+    fireEvent.keyDown(src, { key: "ArrowRight" });
+    expect(src).toHaveAttribute("aria-expanded", "true");
+    expect(tree.current?.model.is("item-expanded", { itemId: "src" })).toBe(true);
+});
+```
+
+Give each item an `aria-label` of its own label when it has children, so its name is not its
+children's text too ([Accessible names](/docs/getting-started/accessible-names)).
+
+## The browser, with Playwright
+
+Drags, scrolling and focus rings need a real browser. Reach items by role and name, and by their
+path (`data-tree-path`) when two share a label; reach a row by its part:
+
+```ts title="file-tree.spec.ts"
+import { expect, test } from "@playwright/test";
+
+test("drags README.md into src", async ({ page }) => {
+    await page.goto("/files");
+    const tree = page.getByRole("tree", { name: "Files" });
+    const readme = tree.getByRole("treeitem", { name: "README.md" });
+    const src = tree.locator('[data-tree-path="/0"] > [data-tree-part="content"]');
+    await readme.locator('[data-tree-part="content"]').dragTo(src);
+    await expect(tree.locator('[data-tree-path="/0/0"]')).toHaveAccessibleName("README.md");
+});
+```
+
+Pointer Events drags work with Playwright's mouse; a drag starts after the press moves past
+`dragThreshold` (4 pixels by default), which `dragTo` does. To test a drag without a pointer,
+use the keyboard drag (Ctrl+Shift+D, the arrows, Enter).
+
+## Never by class name
+
+Select by roles, names, `data-tree-part`, `data-tree-path` and the state attributes, never by
+your class names: the styles can change and the tests stay green
+([Parts and paths](/docs/concepts/parts-and-paths)).

@@ -1,0 +1,58 @@
+---
+title: Glossary
+description: The words these pages, the API and the examples use, each with one meaning - item, leaf, expanded, selected, checked, focused, drop target and more.
+---
+
+The same word always means the same thing, in the API, in these pages and in the examples.
+
+## Items
+
+- An **item** is a node of the tree: an `id`, a `kind`, a `label` and its `data`.
+- A **leaf** is an item with neither `childItemIds` nor `childrenStatus`; any other item is a
+  **parent**.
+- A **root item** is an item at the top level (`rootItemIds`); its **level** is 1.
+- A parent's **children status** says where its children come from when your loader provides
+  them: `unloaded`, `loading`, `loaded` or `error`. A parent without one holds its children
+  itself.
+- An item's **label** is raw data: the app renders it, the packages never do.
+- An item's **kind** is the key of your registry that types its **data**
+  ([Typed data](/docs/concepts/typed-data)).
+
+## States
+
+- **Expanded**: its children are shown. **Collapsed** is the opposite.
+- **Selected**: part of the selection. The **selection mode** is `none`, `single` or
+  `multiple`; the **selection anchor** is where a range selection (Shift) starts.
+- **Checked**, **unchecked** or **mixed**: its checkbox. In `cascade` mode a parent is mixed
+  when only some of its descendants are checked; in `independent` mode each item is checked on
+  its own.
+- **Focused**: the roving tab stop, the one item with `tabindex="0"`. It is model data, kept when
+  the tree does not have DOM focus.
+- **Renaming**: its label is being edited.
+- **Loading**: its children are being loaded.
+- **Disabled**: focusable, not actionable. A disabled item is not expanded, selected, checked,
+  renamed, moved or dropped into.
+
+## Permissions
+
+- **Movable**: the item can be moved (`item.move`, a drag).
+- **Renamable**: its label can be edited.
+- **Droppable**: a parent that accepts items moved into it.
+
+Each flag is set on an item or defaults from the tree's `settings`.
+
+## Drag and drop
+
+- A drag has **dragging items** and a **drop target**: a parent, an index among its children,
+  and a **position** relative to the hovered item: `before`, `after` or `inside`.
+- The **drop indicator** shows the drop target: a line before or after a row, or the row's box
+  for `inside`.
+- A **keyboard drag** steps through the same drop targets with the arrows.
+
+## The tree
+
+- **Visible items** are the items in render order whose ancestors are all expanded, each with its
+  `level`, `posinset` (its position among its siblings, from 1) and `setsize`.
+- A **path** is an item's position from the root: `/0/2`.
+- The **model** is the tree's data and its rules; a **command** is the only way to change it; a
+  **middleware** runs around every command. The **engine** is one tree on screen.

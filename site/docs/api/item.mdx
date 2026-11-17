@@ -1,0 +1,66 @@
+---
+title: Tree.Item
+description: An item of the tree (role treeitem) with its level, position, state and roving tab stop. It is the element DOM focus goes to.
+---
+
+`Tree.Item` is the `role="treeitem"` element of the WAI-ARIA APG tree view: it carries
+`aria-level`, `aria-posinset`, `aria-setsize`, `aria-expanded` (a parent), `aria-selected` (a tree
+that selects), `aria-checked` (a root with `checkboxes`), `aria-disabled` and `aria-busy` (while
+its children load), and the roving `tabindex` (`0` on the one tab stop, `-1` elsewhere). It is the
+element DOM focus goes to, and it provides its item to the parts inside it.
+
+```tsx
+function FileItem({ item }: { item: ItemOf<Types> }) {
+    return (
+        <Tree.Item item={item} aria-label={item.label} className="item">
+            <Tree.ItemContent className="row">{item.label}</Tree.ItemContent>
+            <Tree.Group<Types>>{(child) => <FileItem item={child} />}</Tree.Group>
+        </Tree.Item>
+    );
+}
+```
+
+Its element holds the row and the group of children: style the row (`Tree.ItemContent`), and
+draw the focus ring through the item (`.item:focus-visible > .row`). It is `useTreeItem` on a
+`div` ([Hooks](/docs/api/hooks)).
+
+## Props
+
+`ItemProps<T>` extends the [common primitive props](/docs/api/root#common-props) (on a `div`),
+with the item's state (`TreeItemState`) for `render`, `className` and `style`.
+
+| prop | type | description |
+| --- | --- | --- |
+| `item` | `ItemOf<T>` | the item, as `Tree.Items` or `Tree.Group` gives it |
+| `children` | `ReactNode` | its row (`Tree.ItemContent`) and its group (`Tree.Group`); no text of its own |
+
+## State
+
+`TreeItemState`: its place in the tree (`itemId`, `path`, `level`, `posinset`, `setsize`) and its
+state (`expanded`, `selected`, `focused`, `tabStop`, `checkState`, `checked`, `indeterminate`,
+`renaming`, `loading`, `loadError`, `disabled`, `leaf`, `dragging`, `dropTarget`,
+`dropPosition`). Every part of an item gets the same state; each field is described on
+[Hooks](/docs/api/hooks#usetreeitem).
+
+## Attributes
+
+| attribute | when |
+| --- | --- |
+| `role="treeitem"` | always |
+| `aria-level`, `aria-posinset`, `aria-setsize` | always: 1 for a root item; its position among its siblings, from 1; how many siblings it has |
+| `aria-expanded` | a parent: `true` or `false` |
+| `aria-selected` | the selection mode is not `none` |
+| `aria-checked` | the root has `checkboxes`: `true`, `false` or `"mixed"` |
+| `aria-disabled` | the item is disabled |
+| `aria-busy` | its children are loading |
+| `tabindex` | `0` on the roving tab stop, `-1` on every other item |
+| `data-tree-part="item"` | always |
+| `data-tree-path` | always: its position from the root, `/0/2` |
+| the item's `data-*` state | [State attributes](/docs/concepts/state-attributes) |
+
+Structural style: `--tree-depth` (`0` for a root item).
+
+## Behaviour
+
+- Focus entering its element makes it the focused item (`item.focus`).
+- It registers its element with the engine, which moves DOM focus to it.

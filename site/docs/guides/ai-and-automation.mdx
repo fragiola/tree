@@ -1,0 +1,83 @@
+---
+title: AI and automation
+description: Drive the tree from an assistant or a script with the JSON commands a key or a click runs, validated, described by JSON Schemas and policed by middleware.
+---
+
+Every change to the tree is a JSON command, so an assistant, a script or a remote control can do
+what a user does, through the same rules. The model describes its commands, validates untrusted
+input, and lets your middleware decide what an automated caller may do.
+
+## Describing the commands
+
+`model.get("commands")` lists every command with a description and the JSON Schemas of its
+payload and result: ready to become tool definitions.
+
+```ts
+const tools = model.get("commands").map((command) => ({
+    name: command.name.replace(".", "_"),
+    description: command.description,
+    input_schema: command.payloadSchema,
+}));
+```
+
+Send the tree itself as context with `model.get("tree-json")`, or a smaller view built from
+`model.get("visible-items")`.
+
+## Running untrusted input
+
+`model.dispatch` takes `{ command, payload }` as `unknown`, validates it against the command's
+schema, and runs it through the middleware chain. It never throws; a problem comes back as an
+error with a JSON path:
+
+```ts
+const result = model.dispatch(
+    { command: "item.move", payload: { itemIds: ["readme"], to: { parentItemId: "src", index: 0 } } },
+    { meta: { source: "assistant" } },
+);
+if (!result.ok) {
+    // e.g. { code: "invalid_payload", message: "…", path: "/payload/to/index", issues: […] }
+    reply(JSON.stringify(result.error));
+}
+```
+
+The second argument is yours: `meta` is never read from the input, so a middleware can trust it.
+
+## A policy for automated callers
+
+```ts
+import { veto } from "@fragiola/tree-react";
+
+model.use((ctx, next) => {
+    if (ctx.meta?.source !== "assistant") return next();
+    if (ctx.command === "item.remove") return veto("The assistant may not delete items.");
+    if (ctx.command === "tree.load") return veto("The assistant may not replace the tree.");
+    return next();
+});
+```
+
+## Several steps at once
+
+`batch` runs a list of commands as one step: all of them apply, or none does, and an undo
+history records one step.
+
+```json
+{
+    "command": "batch",
+    "payload": {
+        "commands": [
+            { "command": "item.add", "payload": { "item": { "id": "docs", "kind": "folder", "label": "docs", "childItemIds": [] }, "to": { "parentItemId": null } } },
+            { "command": "item.move", "payload": { "itemIds": ["readme"], "to": { "parentItemId": "docs", "index": 0 } } }
+        ]
+    }
+}
+```
+
+<Example id="command-console" />
+
+## Showing what happened
+
+The tree on screen follows the model, so a dispatched command shows at once. To point the user at
+the result, use the engine: `engine.run("scroll-to", { itemId })` and
+`engine.run("focus", { itemId })`.
+
+Every command, with its payload, result and errors, is on [Commands](/docs/api/commands).

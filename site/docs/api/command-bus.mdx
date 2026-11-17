@@ -1,0 +1,156 @@
+---
+title: The command bus
+description: How a command runs - run, dispatch, can and check, the results and error codes, middleware around every command, change events and batches.
+---
+
+Every change to a tree is a command through the model's bus: `model.run` (typed) or
+`model.dispatch` (untrusted JSON), around which every middleware added with `model.use` runs, and
+after which every listener of `model.subscribe` hears one event. A key, a click, a drop, the
+controlled props and your code all go the same way. The commands themselves are on
+[Commands](/docs/api/commands).
+
+## Running
+
+```ts
+run<C extends CommandName>(command: C, payload: PayloadOf<T, C>, options?: RunOptions): CommandResult<ResultOf<T, C>>;
+dispatch(input: unknown, options?: DispatchOptions): CommandResult<unknown>;
+can<C extends CommandName>(command: C, payload: PayloadOf<T, C>, options?: RunOptions): boolean;
+check<C extends CommandName>(command: C, payload: PayloadOf<T, C>, options?: RunOptions): CommandResult<ResultOf<T, C>>;
+```
+
+- `model.run` validates the payload against the command's JSON Schema, runs the middleware chain
+  and the command, and commits. `CommandName` is every command's name; `CommandMap<T>` maps each
+  one to its payload (`PayloadOf<T, C>`) and result (`ResultOf<T, C>`). A command that takes
+  nothing takes `{}` (`NoPayload`).
+- `model.dispatch` takes `{ command, payload, transient? }` as `unknown` (from an assistant, a
+  socket, a file) and validates the whole input first.
+- `model.can` and `model.check` run the same chain as a dry run: nothing is committed or emitted,
+  and middleware sees `ctx.dryRun === true`.
+
+`RunOptions`:
+
+| option | type | description |
+| --- | --- | --- |
+| `transient` | `boolean` | a step of a continuous gesture: the event is marked so an undo history can merge it with the step that ends the gesture |
+| `meta` | `Readonly<Record<string, unknown>>` | free-form information for middleware and listeners (who asked, a drag's details) |
+
+`DispatchOptions` takes only `meta`: it is never read from the untrusted input, so a middleware
+can trust it (`{ source: "assistant" }`).
+
+## Results and errors
+
+A command never throws on bad input. `CommandResult<R>` is `{ ok: true, value: R }` or
+`{ ok: false, error }`, where `error` is a `CommandError`:
+
+| field | type | description |
+| --- | --- | --- |
+| `code` | `CommandErrorCode` | why it did not apply (below) |
+| `message` | `string` | a sentence for a developer (not for an end user: translate the code yourself) |
+| `path` | `string` | a JSON pointer into the payload (or the dispatched input) |
+| `issues` | `readonly ValidationIssue[]` | every schema problem, for `invalid_payload`: each `ValidationIssue` is a JSON `path` and a `message` |
+
+| code | when |
+| --- | --- |
+| `unknown_command` | no command has this name (`dispatch`) |
+| `invalid_payload` | the payload does not match the command's schema, or a data schema |
+| `not_found` | an item the payload names does not exist |
+| `refused` | a rule of the tree forbids it: a permission flag, the selection mode, a cycle, … |
+| `vetoed` | a middleware vetoed it |
+| `queued` | it was issued from a middleware and will run after the current command |
+| `middleware_error` | a middleware threw |
+
+## Middleware
+
+```ts
+type Middleware<T> = (ctx: CommandContext<T>, next: () => CommandResult<unknown>) => CommandResult<unknown> | undefined;
+use(middleware: Middleware<T>): () => void;
+```
+
+`model.use` adds a `Middleware` around every command, the first added outermost, and returns its
+remover. A middleware can **veto** (return an error without calling `next`; `veto(message)`
+builds one), **rewrite** (assign `ctx.payload`, validated again, then call `next`) or **observe**
+(call `next` and read its result). Returning `undefined` passes on `next`'s result.
+
+```ts
+import { veto } from "@fragiola/tree";
+
+const stop = model.use((ctx, next) => {
+    if (ctx.command === "item.move" && ctx.payload.to.parentItemId === "archive") {
+        return veto("The archive is read-only.");
+    }
+    return next();
+});
+```
+
+`CommandContext<T>` is a union discriminated by `command`, so checking it narrows `payload`. Its
+fields, from `CommandContextBase<T>`:
+
+| field | type | description |
+| --- | --- | --- |
+| `command` | `CommandName` | the command |
+| `payload` | its payload | the validated payload; assign a new object to rewrite it |
+| `dryRun` | `boolean` | `can`, `check` or a drag's hover: nothing will be committed; no side effects |
+| `transient` | `boolean` | the command is a step of a gesture |
+| `inBatch` | `boolean` | the command runs inside a batch (the batch itself also passes the chain) |
+| `meta` | `Readonly<Record<string, unknown>> \| undefined` | the caller's `meta` |
+| `state` | `TreeState<T>` | the committed state the command applies to |
+| `get` | `(key, payload) => …` | reads `"item-by"` or `"item-parent-by"` as the command sees it: inside a batch, after its earlier commands (`CommandContextGetKey`, typed by `CommandContextGetMap`) |
+
+A command a middleware runs while another one is running is queued (`queued`) and runs after it.
+
+## Events
+
+```ts
+subscribe(listener: CommandListener<T>): () => void;
+```
+
+`model.subscribe` calls its listener (a `CommandListener<T>`) once per commit with a
+`CommandEvent<T>`:
+
+| field | type | description |
+| --- | --- | --- |
+| `command` | `CommandName` | the command committed |
+| `payload` | `unknown` | its payload |
+| `result` | `unknown` | its value |
+| `before` | `TreeState<T>` | the state before |
+| `after` | `TreeState<T>` | the state after (`before === after` when nothing changed) |
+| `transient` | `boolean` | a step of a gesture |
+| `meta` | `Readonly<Record<string, unknown>> \| undefined` | the caller's `meta` |
+| `commands` | `readonly BatchStep[]` | for a `batch`: the commands it ran, flattened, each a `BatchStep` (`{ command, payload, result }`) |
+
+## Batches
+
+`batch` runs several commands as one step: in order, each seeing the result of the ones before;
+all apply (one event, one undo step) or none does, and the first failure is returned with its path.
+Each entry is a `BatchEntry<T>`, `{ command, payload }`:
+
+```ts
+model.run("batch", {
+    commands: [
+        { command: "item.expand", payload: { itemId: "src" } },
+        { command: "item.select", payload: { itemId: "app" } },
+    ],
+});
+```
+
+## Describing the commands
+
+`model.get("commands")` returns a `CommandInfo` per command: `name`, `description`,
+`payloadSchema` and `resultSchema` (`JsonSchema`, as `JsonValue` data with `JsonSchemaType`
+types) and `transient` (whether it may run as a gesture's step): ready to become an assistant's
+tool definitions ([AI and automation](/docs/guides/ai-and-automation)).
+
+## Payload types
+
+The types the commands' payloads use, exported for your own helpers:
+
+| type | used by |
+| --- | --- |
+| `SelectMode` | `item.select`'s `mode`: `"replace"`, `"toggle"` or `"extend"` |
+| `AddPlacement` | `item.add`'s `to`: `{ parentItemId, index? }` |
+| `MovePlacement` | `item.move`'s `to`: `{ parentItemId, index }` |
+| `ItemSetDataPayload` | `item.set-data`: `{ itemId, data }`, `data` typed by the item's kind |
+| `ItemSetFlagsPayload` | `item.set-flags`: `{ itemId }` and each flag, `null` to remove it |
+| `TreeSettingsPatch` | `tree.configure`'s `settings` |
+
+`model.is` and `model.get` are on [Model](/docs/api/model).

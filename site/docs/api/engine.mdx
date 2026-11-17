@@ -1,0 +1,170 @@
+---
+title: Engine
+description: One tree on screen - DOM focus, keys, drags, the async loader and announcements - behind the model's verbs, with every key it takes.
+---
+
+The engine is the half of the core that needs a screen: DOM focus, the keyboard, the Pointer
+Events drag and the keyboard drag, scrolling, calling your loader, and the live region's text.
+`Tree.Root` creates one per model for you; read it with `useTree()` or a tree ref. It has the
+model's verbs with its own keys, and changes the tree only by running the model's commands, so
+your middleware sees what a key or a drop does.
+
+```ts
+const { engine } = useTree<Types>();
+
+engine.run("focus", { itemId: "app" });
+engine.run("start-keyboard-drag", { itemIds: ["app"] });
+engine.get("drop-target");
+engine.is("item-dragging", { itemId: "app" });
+```
+
+## Creating an engine
+
+`createTreeEngine(model, options)` creates one. Adapters call it; you need it only for another framework, or a page with no framework:
+
+```ts
+function createTreeEngine<T extends TreeTypes = AnyTypes>(
+    model: TreeModel<T>,
+    options?: TreeEngineOptions<T>,
+): TreeEngine<T>;
+```
+
+```ts
+import { createTreeEngine, createTreeModel } from "@fragiola/tree";
+
+const model = createTreeModel<Types>(json);
+const engine = createTreeEngine(model, { root: document.querySelector<HTMLElement>("#files") ?? undefined });
+// …
+engine.destroy();
+```
+
+The engine reaches the DOM only through the root's `ownerDocument` and `defaultView`, so it works
+in an iframe or a popup window.
+
+### `TreeEngineOptions`
+
+| option | type | default | description |
+| --- | --- | --- | --- |
+| `root` | `HTMLElement` | none | the `role="tree"` element; an adapter may attach it later |
+| `loadChildren` | `LoadChildren<T>` | none | your loader: `(item, { signal }) => Promise<readonly TreeItemJson<T>[]>` |
+| `announce` | `(event: AnnounceEvent) => string \| undefined` | none | the live region's text for a drag step or a failed load |
+| `keyMap` | `Partial<KeyMap>` | `DEFAULT_KEY_MAP` | the key bindings, over the defaults |
+| `expandOnClick` | `boolean` | `false` | a click on a parent's content also expands or collapses it |
+| `checkboxes` | `boolean` | `false` | Space toggles the focused item's checkbox instead of its selection |
+| `dragThreshold` | `number` | `4` | how far (px) a press moves before it is a drag |
+| `autoExpandDelay` | `number` | `800` | how long (ms) a drag hovers a collapsed parent before it expands |
+| `indentation` | `number` | `16` | one level's indentation (px): the pointer's inline offset at the end of a sublist picks the level |
+| `autoScroll` | `{ threshold?: number; speed?: number }` | engine defaults | how close (px) to a scroll container's edge a drag scrolls it, and how fast (px per frame) |
+| `typeAheadTimeout` | `number` | `500` | how long (ms) between two typed characters keeps one search |
+| `resetLoadsOnDestroy` | `boolean` | `false` | `destroy()` puts the items it was loading back to `unloaded`, so the next engine loads them again (adapters set it) |
+
+## Members
+
+| member | does |
+| --- | --- |
+| `run(action, payload?)` | runs a screen action (below); returns a `CommandResult` |
+| `can(action, payload?)` | whether the action would run now |
+| `check(action, payload?)` | what `run` would return, without running it |
+| `get(key, payload?)` | reads a fact of the screen |
+| `is(key, payload?)` | asks a yes/no question about the screen |
+| `subscribe(listener)` | listens to the engine's own state (a drag step, an announcement); returns its remover |
+| `destroy()` | releases every listener, timer and pending load; no command runs afterwards |
+| `adapter` | what only an adapter calls (below) |
+
+## Actions: `run`
+
+An engine key never has a dot, so it never reads as a command (`EngineActionKey`, typed by
+`EngineActionMap`: `EngineActionPayload`, `EngineActionResult`).
+
+| action | payload | does |
+| --- | --- | --- |
+| `"focus"` | `{ itemId }` | moves DOM focus to the item and makes it the focused item (`item.focus`) |
+| `"scroll-to"` | `{ itemId }` | scrolls the item into view (the nearest edge) |
+| `"load-children"` | `{ itemId }` | calls your `loadChildren` for an item with a `childrenStatus` (a retry, or a first load); refused while it loads |
+| `"start-keyboard-drag"` | `{ itemIds }` | starts a keyboard drag: the arrows move the drop target, Enter drops (`item.move`), Escape cancels |
+| `"cancel-drag"` | none | cancels the drag under way, pointer or keyboard: nothing is committed |
+
+## Reading: `get`
+
+`EngineGetKey`, typed by `EngineGetMap` (`EngineGetPayload`, `EngineGetResult`):
+
+| key | result |
+| --- | --- |
+| `"drop-target"` | `DropTarget \| null`: the drop target of the drag under way (only one `model.can` accepts) |
+| `"dragging-item-ids"` | `readonly string[]`: the items being dragged (empty when no drag) |
+| `"drop-indicator"` | `DropIndicator \| null`: where the drop indicator goes |
+| `"announcement"` | `string`: the latest text your `announce` returned (`""` before any) |
+| `"direction"` | `"ltr" \| "rtl"`: the root's writing direction; Right and Left swap in `rtl` |
+
+A `DropTarget` is the `item.move` a drop would run and how it reads on screen; a `DropIndicator`
+is where `Tree.DropIndicator` goes, relative to the root's border box, in pixels and logical
+sides:
+
+| field | of | description |
+| --- | --- | --- |
+| `parentItemId` | `DropTarget` | the parent the items go into (`null`: the root) |
+| `index` | `DropTarget` | their index among its children, as `item.move` takes it |
+| `position` | both | `DropPosition`: `"before"`, `"after"` or `"inside"`, relative to `itemId` |
+| `itemId` | both | the item the position is relative to; `null` for a drop into an empty tree |
+| `level` | both | the level the dropped items take (1 for the root) |
+| `blockOffset` | `DropIndicator` | from the root's top to the line, or to the row's top for `inside`, scroll included |
+| `blockSize` | `DropIndicator` | the row's height for `inside`, 0 for a line |
+| `inlineOffset` | `DropIndicator` | from the root's inline-start edge: `(level - 1) * indentation` |
+
+`DropContext` and `HoverPosition` are the inputs of the drop evaluation (what it reads of the
+tree, and where the pointer is over a row), exported for an adapter's tests.
+
+## Asking: `is`
+
+`EngineIsKey`, typed by `EngineIsMap` (`EngineIsPayload`):
+
+| key | payload | true when |
+| --- | --- | --- |
+| `"dragging"` | none | a drag is under way (pointer or keyboard) |
+| `"keyboard-dragging"` | none | a keyboard drag is under way |
+| `"item-dragging"` | `{ itemId }` | the item is being dragged |
+| `"item-drop-target"` | `{ itemId }` | the drop target is relative to the item |
+
+## Keys
+
+`DEFAULT_KEY_MAP` (a `KeyMap`: each `KeyAction` and its keys) is the WAI-ARIA tree view's,
+listed on [Keyboard and type-ahead](/docs/guides/keyboard). A key handler reads a
+`KeyEventLike` (`key` and the four modifier flags).
+
+## Announcements
+
+`AnnounceEvent` is what your `announce` receives: `drag-start`, `drag-over`, `drop`,
+`drag-cancel` or `load-error` ([Tree.LiveRegion](/docs/api/live-region)). `LoadChildren<T>` is
+the loader's type.
+
+## Attributes it reads
+
+| constant | value |
+| --- | --- |
+| `PART_ATTRIBUTE` | `"data-tree-part"`: every part's element |
+| `PATH_ATTRIBUTE` | `"data-tree-path"`: every item's position from the root |
+| `NO_DRAG_ATTRIBUTE` | `"data-tree-no-drag"`: a subtree of a row that never starts a drag |
+| `DRAG_EXEMPT` | the selector of what never starts a drag or a selection when pressed in a row: native controls, links, editable text, the toggle, the checkbox, the rename input and `data-tree-no-drag` |
+
+## The adapter surface
+
+`engine.adapter` (`TreeEngineAdapter<T>`) is what only an adapter (React, Vue, Angular) calls:
+an app never needs it. The adapter forwards events; the core decides.
+
+| member | does |
+| --- | --- |
+| `model` | the model this engine draws |
+| `attachRoot(element)` | attaches the root element; another element replaces it |
+| `detachRoot()` | detaches it, cancelling a drag under way |
+| `registerItem(itemId, element)` | registers (or, with `null`, unregisters) an item's element, the one DOM focus goes to |
+| `registerContent(itemId, element)` | registers an item's content element: the pointer target and the row a drag hit-tests |
+| `handleKeyDown(event)` | a key on the tree (`KeyEventInput`: a `KeyEventLike` with `target` and `preventDefault`); true when the engine used it |
+| `handlePointerDown(itemId, event)` | a pointer pressed an item's content: it may become a drag |
+| `handleClick(itemId, event)` | a click on an item's content (`PressInput`: its modifiers): focus, select, and expand with `expandOnClick` |
+| `handleToggleClick(itemId)` | a press on an item's toggle: expand or collapse |
+| `handleCheckboxClick(itemId)` | a press on an item's checkbox: toggle its check |
+| `handleFocus(itemId)` | DOM focus entered an item's element: it becomes the focused item |
+| `commitRename(itemId, label, options?)` | the rename input committed: `item.rename`, then focus goes back to the item, unless `{ focus: false }` (a blur: focus stays where it went) |
+| `cancelRename(itemId, options?)` | the rename input was cancelled: `item.cancel-rename`, then focus goes back, unless `{ focus: false }` |
+| `subscribe(listener)` | calls `listener` when adapters should re-render; returns its remover |
+| `getSnapshot()` | the render revision: a number that changes whenever adapters should re-render |

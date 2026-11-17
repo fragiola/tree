@@ -1,0 +1,62 @@
+---
+title: Tree — a headless, accessible tree view for React
+description: A headless tree view for React. It ships the behaviour, the keyboard and the accessibility of a tree; every pixel, icon and word is yours.
+layout: landing
+---
+
+<Hero
+    eyebrow="@fragiola/tree-react · React"
+    title="A tree view that brings the behaviour, and none of the looks."
+    description="File explorers, outlines, navigation, nested settings and permission pickers: selection, checkboxes, the WAI-ARIA keyboard model, inline rename, drag and drop and async children. It ships the behaviour and the accessibility. Every pixel is yours."
+    actions={[
+        { label: "Read the docs", href: "/docs/getting-started/introduction", variant: "primary" },
+        { label: "Browse {examples} examples", href: "/examples", variant: "secondary" },
+        { label: "GitHub", href: "https://github.com/fragiola/tree", variant: "ghost" },
+    ]}
+/>
+
+<Callout type="info" title="Not on npm yet">
+    The packages are not published on npm yet: these pages describe the upcoming first release.
+</Callout>
+
+<Example
+    id="file-explorer"
+    variant="showcase"
+    theme="light"
+    height={520}
+    label="Same markup, light and dark:"
+/>
+
+<Features columns={4}>
+<Feature title="Behaviour">
+Expand and collapse, single and multiple selection, tri-state checkboxes, inline rename, Pointer
+Events drag and drop with a keyboard drag, and children loaded on demand.
+</Feature>
+<Feature title="Accessibility">
+The WAI-ARIA APG tree view: roles, levels, positions, the roving tab stop, type-ahead and a live
+region whose words are yours.
+</Feature>
+<Feature title="A typed JSON model">
+The tree is data, typed by your registry: load it, save it, and veto or rewrite every command
+with middleware, from a click or from an assistant.
+</Feature>
+<Feature title="Primitives">
+Root, Items, Item, ItemContent, Group, Toggle, Checkbox… each renders only what you give it, with
+render instead of asChild. You own the recursion.
+</Feature>
+</Features>
+
+<Section title="What it never ships">
+<Pills strike items={["CSS", "Icons", "Text", "Rendered menus", "A design system"]} />
+
+The state is exposed as data-\* attributes and ARIA, so any styling solution works: Tailwind,
+plain CSS, CSS modules, CSS-in-JS. The examples use Fragiola UI and its palettes.
+</Section>
+
+<Section title="Start here">
+<Cards>
+<Card title="Your first tree" href="/docs/getting-started/first-tree" description="A typed tree in about forty lines: the document, the recursion, the indentation." />
+<Card title="The model and commands" href="/docs/concepts/model-and-commands" description="Every change is a command: run it, ask whether it would succeed, or veto it." />
+<Card title="Drag and drop" href="/docs/guides/drag-and-drop" description="Pointer Events, a keyboard drag and permission flags the commands enforce." />
+</Cards>
+</Section>

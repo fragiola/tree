@@ -1,0 +1,84 @@
+---
+title: Saving and restoring
+description: The whole tree is one JSON document. Save it after each change, restore it at load, and replace it later without losing the model.
+---
+
+`model.get("tree-json")` returns the tree as a JSON document (version 1): the items, and what is
+expanded, selected, checked and focused. `createTreeModel` reads it back, and so does the
+`tree.load` command. Where and when to save is yours: the package ships no persistence.
+
+## Saving after each change
+
+A listener sees every commit. Skip the steps of a gesture (`transient`, a drag's auto-expand) and
+commits that changed nothing:
+
+```ts
+import type { TreeJson, TreeModel, TreeTypes } from "@fragiola/tree-react";
+
+export function persistTree<T extends TreeTypes>(model: TreeModel<T>, key: string): () => void {
+    return model.subscribe((event) => {
+        if (event.transient || event.before === event.after) return;
+        try {
+            localStorage.setItem(key, JSON.stringify(model.get("tree-json")));
+        } catch {
+            // storage full or blocked: keep working
+        }
+    });
+}
+```
+
+It returns the listener's remover, ready for an effect: `useEffect(() => persistTree(model,
+"files"), [model])`. To save less often, debounce the write, or save only some commands (a
+selection change may not be worth a write).
+
+## Restoring at load
+
+```tsx
+function restoreTree<T extends TreeTypes>(key: string): TreeJson<T> | undefined {
+    try {
+        const text = localStorage.getItem(key);
+        return text ? (JSON.parse(text) as TreeJson<T>) : undefined;
+    } catch {
+        return undefined;
+    }
+}
+
+export function Files() {
+    const [model] = useState(() => createTreeModel<Types>(restoreTree<Types>("files") ?? json));
+    useEffect(() => persistTree(model, "files"), [model]);
+    return (
+        <Tree.Root<Types> model={model} aria-label="Files">
+            <Tree.Items<Types>>{(item) => <FileItem item={item} />}</Tree.Items>
+        </Tree.Root>
+    );
+}
+```
+
+`createTreeModel` validates the document and throws a `TreeValidationError` when it is invalid
+(an old format, a hand edit). Check it first with `validateTree(json)`, which returns the issues
+instead, and fall back on a default:
+
+```ts
+import { validateTree } from "@fragiola/tree-react";
+
+const saved = restoreTree<Types>("files");
+const start = saved && validateTree(saved).length === 0 ? saved : json;
+```
+
+<Example id="save-restore" />
+
+## Replacing the tree later
+
+`tree.load` replaces the whole state with a document on the same model, so middleware, listeners
+and the root stay in place. An item that keeps its id and is unchanged keeps its identity:
+
+```ts
+const result = model.run("tree.load", { json: await fetchTree() });
+if (!result.ok) console.error(result.error.issues);
+```
+
+## What the document holds
+
+Everything the model knows, and nothing of the screen: a `loading` item is saved as `unloaded`
+(the next engine loads it again), and the drag, DOM focus and scroll position are not saved. The
+format is on [The JSON model](/docs/api/json-model).

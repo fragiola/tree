@@ -1,0 +1,18 @@
+{
+    "contract": 1,
+    "slug": "tree",
+    "title": "Tree",
+    "description": "A headless tree view for React: selection, checkboxes, keyboard, inline rename, drag and drop and async loading, driven by a serializable model.",
+    "frameworks": ["react"],
+    "defaultFramework": "react",
+    "repository": "https://github.com/fragiola/tree",
+    "keywords": [
+        "tree view",
+        "headless ui",
+        "react",
+        "treeview",
+        "drag and drop",
+        "accessibility",
+        "file explorer"
+    ]
+}

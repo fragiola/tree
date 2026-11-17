@@ -1,0 +1,66 @@
+---
+title: State attributes
+description: Every data-* attribute the primitives set, what it means and where it appears, plus the --tree-depth custom property for the indentation.
+---
+
+The primitives expose their state as `data-*` attributes, present (empty, or with a value) or
+absent, and never `"false"`. Style them with attribute selectors (`.row[data-selected]`) or
+Tailwind's data variants (`data-selected:bg-blue-50`, `data-[drop-position=inside]:ring-2`).
+
+## On every part of an item
+
+`Tree.Item`, `Tree.ItemContent`, `Tree.Group`, `Tree.Toggle`, `Tree.Checkbox` and
+`Tree.RenameInput` carry their item's state, so each row styles itself without reaching for an
+ancestor (a selected parent never leaks into its children's rows).
+
+| attribute | when |
+| --- | --- |
+| `data-expanded` | the item's children are shown |
+| `data-selected` | the item is part of the selection |
+| `data-focused` | the item is the focused item (the roving tab stop, model state; use `:focus-visible` for DOM focus) |
+| `data-checked` | its checkbox is checked |
+| `data-indeterminate` | its checkbox is mixed: only some of its descendants are checked |
+| `data-renaming` | its label is being edited |
+| `data-loading` | its children are being loaded |
+| `data-load-error` | the last load of its children failed |
+| `data-disabled` | it is disabled: focusable, not actionable |
+| `data-leaf` | it has no children and no children status |
+| `data-dragging` | it is being dragged |
+| `data-drop-target` | the drop target of the drag under way is relative to it |
+| `data-drop-position` | while it is the drop target: `before`, `after` or `inside` |
+| `data-depth` | its depth: `0` for a root item (also on `Tree.DropIndicator`, the level the drop lands on) |
+
+## On the root
+
+| attribute | when |
+| --- | --- |
+| `data-dragging` | a drag is under way (pointer or keyboard) |
+| `data-keyboard-dragging` | a keyboard drag is under way |
+| `data-empty` | the tree has no item |
+
+`Tree.Root` also sets `aria-multiselectable` when the selection mode is `multiple`.
+
+## On the other parts
+
+| attribute | on | when |
+| --- | --- | --- |
+| `data-drop-position` | `Tree.DropIndicator` | where the drop goes: `before`, `after` or `inside` |
+| `data-invalid` | `Tree.RenameInput` | the last commit was refused (with `aria-invalid`) |
+
+## ARIA
+
+The ARIA attributes are state too, and selecting on them keeps styles and semantics together:
+`[aria-expanded="true"]`, `[aria-selected="true"]`, `[aria-checked="mixed"]`,
+`[aria-disabled="true"]`, `[aria-busy="true"]` on `Tree.Item`.
+
+## The depth
+
+Every part of an item sets `--tree-depth` (an inline custom property: `0` for a root item) for
+the indentation: `padding-inline-start: calc(var(--tree-depth) * 1rem)`. See
+[Styling the depth](/docs/getting-started/depth).
+
+## Focus
+
+The item is the element that takes DOM focus, and its row is inside it: draw the focus ring on
+the row with `.item:focus-visible > .row` (Tailwind: `[:focus-visible>&]:ring-2` on the row).
+`data-focused` marks the roving tab stop even when the tree does not have focus.

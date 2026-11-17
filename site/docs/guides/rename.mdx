@@ -1,0 +1,98 @@
+---
+title: Inline rename
+description: Edit an item's label in place with Tree.RenameInput, validate the new name with middleware, and show why a name was refused.
+---
+
+Renaming is a short-lived model state: `item.start-rename` (F2 on the focused item) makes an
+item the **renaming** item, `item.rename` sets its label and ends it, `item.cancel-rename` ends it
+unchanged. `Tree.RenameInput` is the text field, rendered only while its item is renaming; the
+rules for a good name are yours.
+
+## The input
+
+Put it in the row, next to (or instead of) the label, and name it:
+
+```tsx
+function FileItem({ item }: { item: ItemOf<Types> }) {
+    return (
+        <Tree.Item item={item}>
+            <Tree.ItemContent className="row">
+                <Tree.Toggle>▸</Tree.Toggle>
+                <span className="label">{item.label}</span>
+                <Tree.RenameInput aria-label={`Rename ${item.label}`} className="rename" />
+            </Tree.ItemContent>
+            <Tree.Group<Types>>{(child) => <FileItem item={child} />}</Tree.Group>
+        </Tree.Item>
+    );
+}
+```
+
+```css
+.row[data-renaming] .label {
+    display: none;
+}
+```
+
+It opens with the label, focused and selected. Enter commits and Escape cancels, and focus goes
+back to the item; leaving the field commits (or cancels, when the name is refused) and leaves
+focus where it went.
+
+## Starting a rename
+
+F2 renames the focused item (rebind it with `keyMap.rename`). From a button, a menu or a double
+click, run the command:
+
+```tsx
+const { model } = useTree<Types>();
+
+<Tree.ItemContent onDoubleClick={() => model.run("item.start-rename", { itemId: item.id })}>
+    {item.label}
+</Tree.ItemContent>;
+```
+
+It is refused for a disabled item and for one that is not `renamable` (on the item, or
+`settings.renamable` for all of them).
+
+## Validating the name
+
+The label is never empty (the command's schema). Every other rule is a middleware, which sees
+each `item.rename`, from the input or from code, and can veto it or rewrite its payload:
+
+```ts
+import { veto } from "@fragiola/tree-react";
+
+model.use((ctx, next) => {
+    if (ctx.command !== "item.rename") return next();
+    const label = ctx.payload.label.trim();
+    if (label.includes("/")) return veto("A name cannot contain “/”.");
+    const parent = ctx.get("item-parent-by", { itemId: ctx.payload.itemId });
+    const siblingIds = parent ? (parent.childItemIds ?? []) : ctx.state.rootItemIds;
+    const taken = siblingIds.some(
+        (id) => id !== ctx.payload.itemId && ctx.get("item-by", { id })?.label === label,
+    );
+    if (taken) return veto(`“${label}” is already in this folder.`);
+    ctx.payload = { ...ctx.payload, label }; // save the trimmed name
+    return next();
+});
+```
+
+## Showing why
+
+A refused commit keeps the input open with `aria-invalid` and `data-invalid`, and calls
+`onRenameError` with the error. Its state (for `className` and `render`) has `invalid` and
+`error`:
+
+```tsx
+const [error, setError] = useState<string>();
+
+<Tree.RenameInput
+    aria-label={`Rename ${item.label}`}
+    aria-describedby={error ? errorId : undefined}
+    onRenameError={(failure) => setError(failure.message)}
+    onChange={() => setError(undefined)}
+    className={(state) => (state.invalid ? "rename rename-invalid" : "rename")}
+/>;
+{error && <span id={errorId} role="alert">{error}</span>}
+```
+
+<Example id="rename" />

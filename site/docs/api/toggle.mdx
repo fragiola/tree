@@ -1,0 +1,47 @@
+---
+title: Tree.Toggle
+description: Expands or collapses the enclosing item on a press. A pointer affordance hidden from assistive technology, since the item carries aria-expanded.
+---
+
+`Tree.Toggle` expands or collapses its item on a press (`item.toggle`). It is a pointer
+affordance: the keyboard expands with the arrows on the item, which carries `aria-expanded`, so
+the toggle is `aria-hidden` and never takes focus, as the WAI-ARIA APG tree view expects. It
+renders a `span` with what you give it (a chevron) and no icon of its own, on a leaf too, with
+`data-leaf`.
+
+```tsx
+<Tree.ItemContent className="row">
+    <Tree.Toggle className="toggle">
+        <ChevronRight aria-hidden />
+    </Tree.Toggle>
+    <span>{item.label}</span>
+</Tree.ItemContent>
+```
+
+```css
+.toggle[data-leaf] {
+    visibility: hidden; /* keeps the room, so labels line up */
+}
+.toggle[data-expanded] {
+    rotate: 90deg;
+}
+```
+
+A press on it never selects the row or starts a drag.
+
+## Props
+
+`ToggleProps` extends the [common primitive props](/docs/api/root#common-props) (on a `span`),
+with the item's state (`TreeItemState`).
+
+| prop | type | description |
+| --- | --- | --- |
+| `children` | `ReactNode` | what it shows (a chevron); no text and no icon of its own |
+
+## Attributes
+
+| attribute | when |
+| --- | --- |
+| `aria-hidden` | always |
+| `data-tree-part="toggle"` | always |
+| the item's `data-*` state | `data-expanded`, `data-leaf`, `data-loading`, … ([State attributes](/docs/concepts/state-attributes)) |

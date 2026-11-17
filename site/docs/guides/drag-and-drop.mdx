@@ -1,0 +1,160 @@
+---
+title: Drag and drop
+description: Move items with the pointer or the keyboard, draw the drop indicator, restrict what moves and where, and announce each step to screen readers.
+---
+
+Drag and drop is on by default: a row dragged with the mouse, a finger or a pen moves its item
+(and the rest of the selection, when it is selected) with one `item.move`. The package brings the
+gesture (Pointer Events, a movement threshold, auto-expanding folders, auto-scroll), the drop
+evaluation and the keyboard drag; the indicator's look and the announcements are yours.
+
+## The drop indicator
+
+Render `Tree.DropIndicator` inside the root. It exists only while there is a drop target, and is
+absolutely positioned in the root: a zero-height line for `before` and `after`, the row's box for
+`inside`. Draw it with `data-drop-position`:
+
+```tsx
+<Tree.Root<Types> defaultTree={json} aria-label="Project files">
+    <Tree.Items<Types>>{(item) => <FileItem item={item} />}</Tree.Items>
+    <Tree.DropIndicator className="drop-indicator" />
+</Tree.Root>
+```
+
+```css
+.drop-indicator[data-drop-position="before"],
+.drop-indicator[data-drop-position="after"] {
+    border-top: 2px solid #2563eb;
+    margin-top: -1px;
+}
+.drop-indicator[data-drop-position="inside"] {
+    border: 2px solid #2563eb;
+    border-radius: 4px;
+}
+```
+
+The rows carry the drag too: `data-dragging` on the dragged items, `data-drop-target` and
+`data-drop-position` on the item the target is relative to, and `data-dragging` on the root.
+
+<Example id="drag-and-drop" />
+
+## How a target is chosen
+
+Over a row, the top third drops before it, the bottom third after it, and the middle third
+inside it, for a row that takes children; a row that takes none splits in halves. At the end of a sublist, the
+pointer's inline position picks the level, in steps of the root's `indentation` (default `16`
+pixels). A collapsed parent hovered for `autoExpandDelay` milliseconds (default `800`) expands,
+and the nearest scroll container scrolls near its edges.
+
+A press becomes a drag after it moves `dragThreshold` pixels (default `4`), so a click still
+selects. A press on a button, a link, an input, the toggle, the checkbox or an element with
+`data-tree-no-drag` never starts one.
+
+## Restricting moves
+
+The rules are the commands': the engine asks `model.can("item.move", …)` for every target, and a
+refused target never shows. Set the permission flags in the document, per item or as defaults:
+
+```ts
+const json: TreeJson<Types> = {
+    version: 1,
+    settings: { movable: true, droppable: true },
+    rootItemIds: ["src", "vendor", "license"],
+    items: {
+        src: { kind: "folder", label: "src", childItemIds: [] },
+        vendor: { kind: "folder", label: "vendor", droppable: false, childItemIds: [] },
+        license: { kind: "file", label: "LICENSE", movable: false },
+    },
+};
+```
+
+A disabled item is neither moved nor dropped into, and an item never goes inside itself. For
+rules of your own (nothing into the archive), write a middleware: a
+drag's hover asks it too, as a dry run.
+
+```ts
+import { veto } from "@fragiola/tree-react";
+
+model.use((ctx, next) =>
+    ctx.command === "item.move" && ctx.payload.to.parentItemId === "archive"
+        ? veto("The archive is read-only.")
+        : next(),
+);
+```
+
+Turn dragging off for the whole tree with `settings.movable: false`. See
+[Middleware and permissions](/docs/guides/middleware).
+
+## The keyboard drag
+
+Ctrl/Cmd + Shift + D (`"start-drag"`) picks up the selection, or the focused item. ArrowDown and
+ArrowUp step through the targets the model accepts, Enter drops and Escape cancels. Start one
+from code with `engine.run("start-keyboard-drag", { itemIds })`, from a "Move" menu item for
+example:
+
+```tsx
+function MoveButton({ itemId }: { itemId: string }) {
+    const { engine } = useTree<Types>();
+    return (
+        <button type="button" onClick={() => engine.run("start-keyboard-drag", { itemIds: [itemId] })}>
+            Move
+        </button>
+    );
+}
+```
+
+## Announcing the drag
+
+`announce` returns the live region's text for each event: `drag-start`, `drag-over` (with the
+`target`, or `null` when there is no valid one), `drop` and `drag-cancel`. Render
+`Tree.LiveRegion`, visually hidden:
+
+```tsx
+import type { AnnounceEvent, DropTarget, TreeModel } from "@fragiola/tree-react";
+
+function announcer(model: TreeModel<Types>) {
+    const label = (itemId: string | null) =>
+        itemId === null ? "the tree" : (model.get("item-by", { id: itemId })?.label ?? itemId);
+    const where = (target: DropTarget) =>
+        target.position === "inside" ? `into ${label(target.itemId)}` : `${target.position} ${label(target.itemId)}`;
+    return (event: AnnounceEvent): string | undefined => {
+        switch (event.type) {
+            case "drag-start":
+                return `Picked up ${event.itemIds.map(label).join(", ")}.`;
+            case "drag-over":
+                return event.target ? `Drop ${where(event.target)}.` : "No place to drop here.";
+            case "drop":
+                return `Moved ${event.itemIds.map(label).join(", ")} ${where(event.target)}.`;
+            case "drag-cancel":
+                return "Cancelled.";
+            default:
+                return undefined;
+        }
+    };
+}
+```
+
+A keyboard drag announces its start and its first target in the same tick, so the second message
+replaces the first before a screen reader reads it. The examples keep the start as the first
+target's prefix ([Known limitations](/docs/limitations)).
+
+## Reacting to a drop
+
+A drop is one `item.move` command, with `meta.source` set to `"drag"` (or `"keyboard-drag"`):
+listen to the model to save it or send it to a server.
+
+```ts
+model.subscribe((event) => {
+    if (event.command === "item.move" && event.before !== event.after) {
+        void saveOrder(model.get("tree-json"));
+    }
+});
+```
+
+A drag's auto-expansion runs `item.expand` as a `transient` step; undo can merge it into the
+drop ([Undo and redo](/docs/guides/undo-redo)).
+
+## What it does not do
+
+The drag stays inside one tree: no drag between two trees, no drop of files or foreign elements,
+and native HTML5 drag and drop is not used. See [Known limitations](/docs/limitations).

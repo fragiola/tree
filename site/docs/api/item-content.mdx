@@ -1,0 +1,46 @@
+---
+title: Tree.ItemContent
+description: An item's row - the element a press selects and a drag starts from, the rectangle a drag hit-tests, and where its label and controls go.
+---
+
+`Tree.ItemContent` is the visible row of an item. A press on it selects the item (Shift extends,
+Ctrl/Cmd toggles; with the root's `expandOnClick`, a parent also expands or collapses), a drag
+starts from it (Pointer Events, after `dragThreshold` pixels), and a drag hit-tests its
+rectangle to find the drop position. It has no role of its own: the item is the `treeitem`.
+
+```tsx
+<Tree.Item item={item}>
+    <Tree.ItemContent className="row">
+        <Tree.Toggle className="toggle">▸</Tree.Toggle>
+        <FileIcon aria-hidden />
+        <span>{item.label}</span>
+        <button type="button" aria-label={`Delete ${item.label}`} onClick={() => remove(item.id)}>
+            ×
+        </button>
+    </Tree.ItemContent>
+    <Tree.Group<Types>>{(child) => <FileItem item={child} />}</Tree.Group>
+</Tree.Item>
+```
+
+A press on a control inside it (a button, a link, an input, `Tree.Toggle`, `Tree.Checkbox`,
+`Tree.RenameInput`, an element with `data-tree-no-drag`) is the control's: it neither selects nor
+starts a drag.
+
+## Props
+
+`ItemContentProps` extends the [common primitive props](/docs/api/root#common-props) (on a
+`div`), with the item's state (`TreeItemState`).
+
+| prop | type | description |
+| --- | --- | --- |
+| `children` | `ReactNode` | the row's content: the label, an icon, the toggle, the checkbox; no text of its own |
+
+## Attributes
+
+| attribute | when |
+| --- | --- |
+| `data-tree-part="content"` | always |
+| the item's `data-*` state | [State attributes](/docs/concepts/state-attributes) |
+
+Structural style: `--tree-depth`, for the indentation
+([Styling the depth](/docs/getting-started/depth)).

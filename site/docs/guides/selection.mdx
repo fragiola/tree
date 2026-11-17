@@ -1,0 +1,105 @@
+---
+title: Selection
+description: Choose a selection mode, select with the pointer, the keyboard or commands, and read the selection back to act on it.
+---
+
+The selection is model state: `state.selectedItemIds`, in the order the items were selected. The
+package selects on a press and on the keys of the WAI-ARIA tree view, and sets `aria-selected`
+and `data-selected`; what a selection means (open a file, delete, move) is yours.
+
+## Choosing a mode
+
+The document's `settings.selectionMode` is `"single"` (the default), `"multiple"` or `"none"`:
+
+```ts
+const json: TreeJson<Types> = {
+    version: 1,
+    settings: { selectionMode: "multiple" },
+    rootItemIds: ["engineering", "design"],
+    items: {
+        /* … */
+    },
+};
+```
+
+Change it later with a command; a narrower mode trims the selection:
+
+```ts
+model.run("tree.configure", { settings: { selectionMode: "single" } });
+```
+
+With `"none"`, the items carry no `aria-selected` and every selection command is refused. A
+disabled item is never selected.
+
+## Pointer and keyboard
+
+| input | does |
+| --- | --- |
+| a press on a row | selects it alone |
+| Shift + press | selects the visible items from the anchor to it (`multiple`) |
+| Ctrl/Cmd + press | adds it to the selection or removes it (`multiple`) |
+| Enter | selects the focused item alone |
+| Space | toggles the focused item's selection (`multiple`), or selects it (`single`) |
+| Ctrl/Cmd + Space | toggles the focused item's selection without moving |
+| Shift + Down / Up | moves and extends the selection |
+| Shift + Space | extends from the anchor to the focused item |
+| Ctrl/Cmd + Shift + Home / End | extends to the first / last visible item |
+| Ctrl/Cmd + A | selects every visible item (`multiple`) |
+
+Moving the focus with the arrows does not select. Pass `expandOnClick` to the root to make a
+press on a parent's row also expand or collapse it, as in a file explorer; the toggle always
+does. Every key can be rebound ([Keyboard and type-ahead](/docs/guides/keyboard)).
+
+<Example id="multi-select" />
+
+## Selecting from code
+
+```ts
+model.run("item.select", { itemId: "maria" }); // alone, and the anchor
+model.run("item.select", { itemId: "lee", mode: "toggle" }); // add or remove
+model.run("item.select", { itemId: "kim", mode: "extend" }); // from the anchor to kim
+model.run("tree.select", { itemIds: ["maria", "lee"] }); // exactly these
+model.run("tree.select-all", {}); // every visible item (multiple)
+model.run("tree.clear-selection", {});
+```
+
+## Reading the selection
+
+`model.get("selected-items")` returns the selected items themselves. In a component,
+`useTreeState` re-renders only when the selection changes:
+
+```tsx
+import { useTree, useTreeState } from "@fragiola/tree-react";
+
+function SelectionBar() {
+    const { model } = useTree<Types>();
+    const selected = useTreeState<Types, readonly string[]>((state) => state.selectedItemIds);
+    if (selected.length === 0) return null;
+    return (
+        <div role="toolbar" aria-label="Selection">
+            <span>{selected.length} selected</span>
+            <button type="button" onClick={() => model.run("item.remove", { itemIds: [...selected] })}>
+                Delete
+            </button>
+            <button type="button" onClick={() => model.run("tree.clear-selection", {})}>
+                Clear
+            </button>
+        </div>
+    );
+}
+```
+
+Render it inside `Tree.Root` (a child of the root renders next to the items), or outside with a
+tree ref. To own the selection in React state instead, see
+[Controlled state](/docs/guides/controlled-state).
+
+## Styling it
+
+```css
+.row[data-selected] {
+    background: #dbeafe;
+}
+```
+
+Each row carries its own item's `data-selected`, so a selected parent does not color its
+children.

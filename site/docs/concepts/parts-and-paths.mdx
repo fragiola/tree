@@ -1,0 +1,48 @@
+---
+title: Parts and paths
+description: Every element carries data-tree-part, and every item data-tree-path, its position from the root, so tests and tooling never depend on class names.
+---
+
+Two attributes identify the tree's elements without relying on your class names or markup:
+`data-tree-part` says what an element is, and `data-tree-path` says where an item is.
+
+## data-tree-part
+
+| part | element |
+| --- | --- |
+| `root` | `Tree.Root` |
+| `item` | `Tree.Item` (or the element `useTreeItem` props are spread on) |
+| `content` | `Tree.ItemContent` |
+| `group` | `Tree.Group` |
+| `toggle` | `Tree.Toggle` |
+| `checkbox` | `Tree.Checkbox` |
+| `rename-input` | `Tree.RenameInput` |
+| `drop-indicator` | `Tree.DropIndicator` |
+| `live-region` | `Tree.LiveRegion` |
+
+The attribute's name is exported as `PART_ATTRIBUTE`.
+
+## data-tree-path
+
+Every item carries its position from the root as a path of zero-based indexes: `/0` is the first
+root item, `/0/2` the third child of the first root item. The model computes it with no screen:
+
+```ts
+model.get("item-path-by", { itemId: "app" }); // "/0/0"
+```
+
+The attribute's name is exported as `PATH_ATTRIBUTE`. A path changes when the item moves; for a
+stable handle, use the item's id (put it in a `data-testid` of your own if a test needs it).
+
+## Selecting by them
+
+```ts
+// the second root item's row
+document.querySelector('[data-tree-path="/1"] > [data-tree-part="content"]');
+
+// every selected row
+document.querySelectorAll('[data-tree-part="content"][data-selected]');
+```
+
+In Playwright, prefer roles and names (`getByRole("treeitem", { name: "app.tsx" })`), and fall back
+on parts and paths for structure. See [Testing your tree](/docs/guides/testing).

@@ -1,0 +1,33 @@
+---
+title: Tree.Items
+description: The root items, handed to your function one by one in order. It renders no element of its own - you own the recursion from here.
+---
+
+`Tree.Items` calls its children function with each root item, in order, keyed by its id. It
+renders no element of its own and takes no common props: the root's element is the tree, and
+each item is your component.
+
+```tsx
+<Tree.Root<Types> defaultTree={json} aria-label="Files">
+    <Tree.Items<Types>>{(item) => <FileItem item={item} />}</Tree.Items>
+</Tree.Root>
+```
+
+The item it passes is the model's, plain and immutable (`ItemOf<T>`): `item.id`, `item.kind`,
+`item.label`, `item.data`, `item.childItemIds`, `item.childrenStatus` and the flags. Pass the
+registry as the type argument (`<Tree.Items<Types>>`): a function cannot infer it through
+context. Inside your item, `Tree.Group` renders the children the same way
+([Composition](/docs/concepts/composition)).
+
+## Props
+
+`ItemsProps<T>`:
+
+| prop | type | description |
+| --- | --- | --- |
+| `children` | `(item: ItemOf<T>) => ReactNode` | renders a root item: called with each one, in order |
+
+## Attributes
+
+None: it renders no element, so it has no `data-tree-part`. An empty tree renders nothing here;
+the root carries `data-empty`.

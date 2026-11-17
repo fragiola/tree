@@ -1,0 +1,124 @@
+---
+title: Tree.Root
+description: The tree element (role tree) - it owns the engine of its model, forwards the keys to it and re-renders the tree when the model changes.
+---
+
+`Tree.Root` is the `role="tree"` element of the WAI-ARIA APG
+[tree view pattern](https://www.w3.org/WAI/ARIA/apg/patterns/treeview/): one tab stop for the
+whole tree, the keys handled on it, and `aria-multiselectable` when the selection mode is
+`multiple`. It takes a `model`, or a `defaultTree` it creates one from, creates the engine for it
+once mounted, and renders only its children. No provider is needed above it.
+
+```tsx
+import { createTreeModel, Tree } from "@fragiola/tree-react";
+import { useState } from "react";
+
+export function Files() {
+    const [model] = useState(() => createTreeModel<Types>(json));
+    return (
+        <Tree.Root<Types> model={model} aria-label="Project files" className="tree">
+            <Tree.Items<Types>>{(item) => <FileItem item={item} />}</Tree.Items>
+            <Tree.DropIndicator className="drop-indicator" />
+            <Tree.LiveRegion className="visually-hidden" />
+        </Tree.Root>
+    );
+}
+```
+
+`Root` is generic over the model's registry (`RootProps<T>`): `model: TreeModel<Types>` types
+`loadChildren` and `treeRef`. The parts that hand you items through a function (`Tree.Items`,
+`Tree.Group`) cannot infer it through context: pass it as their type argument.
+
+The tree's policies live on the model, not on the root: a middleware (`model.use`) sees, rewrites
+or vetoes every command the tree runs, and a listener (`model.subscribe`) every change. See
+[The command bus](/docs/api/command-bus).
+
+## Props
+
+`RootProps<T>` extends the [common primitive props](/docs/api/root#common-props) (on a `div`).
+
+| prop | type | default | description |
+| --- | --- | --- | --- |
+| `model` | `TreeModel<T>` | none | the tree model. Its middleware sees every command the tree runs, and its listeners every change. A new model identity creates a new engine. Give either `model` or `defaultTree` |
+| `defaultTree` | `TreeJson<T>` | an empty tree | the document of a model the root creates and keeps, read once at mount |
+| `expandedItemIds` | `readonly string[]` | uncontrolled | controlled expansion ([Controlled state](/docs/guides/controlled-state)) |
+| `onExpandedItemIdsChange` | `(itemIds: string[]) => void` | none | called with the expanded items after every command that changes them |
+| `selectedItemIds` | `readonly string[]` | uncontrolled | controlled selection |
+| `onSelectedItemIdsChange` | `(itemIds: string[]) => void` | none | called with the selection after every command that changes it |
+| `checkedItemIds` | `readonly string[]` | uncontrolled | controlled checks |
+| `onCheckedItemIdsChange` | `(itemIds: string[]) => void` | none | called with the checked items after every command that changes them |
+| `loadChildren` | `LoadChildren<T>`: `(item, { signal }) => Promise<readonly TreeItemJson<T>[]>` | none | your loader of the children of an item with a `childrenStatus` ([Async loading](/docs/guides/async-loading)) |
+| `announce` | `(event: AnnounceEvent) => string \| undefined` | none | the live region's text for a drag step or a failed load; no text is built in |
+| `keyMap` | `Partial<KeyMap>` | `DEFAULT_KEY_MAP` | key bindings, over the defaults ([Keyboard and type-ahead](/docs/guides/keyboard)) |
+| `expandOnClick` | `boolean` | `false` | a click on a parent's row also expands or collapses it |
+| `checkboxes` | `boolean` | `false` | the items carry `aria-checked`, and Space toggles the focused item's check |
+| `dragThreshold` | `number` | `4` | how far (px) a press moves before it is a drag |
+| `autoExpandDelay` | `number` | `800` | how long (ms) a drag hovers a collapsed parent before it expands |
+| `indentation` | `number` | `16` | the indentation of one level (px): the drop level at the end of a sublist, and the drop indicator's inline offset |
+| `typeAheadTimeout` | `number` | `500` | how long (ms) between two typed characters keeps one type-ahead search |
+| `treeRef` | `TreeRef<T>` | none | access to the model and the engine from outside the root (`useTreeRef`, `createTreeRef`) |
+| `children` | `ReactNode` | none | the tree: `Tree.Items`, `Tree.DropIndicator`, `Tree.LiveRegion`, and anything else |
+
+The root names nothing: give it `aria-label` or `aria-labelledby`
+([Accessible names](/docs/getting-started/accessible-names)).
+
+## State
+
+`RootState`, passed to `render`, `className` and `style` functions.
+
+| field | type | description |
+| --- | --- | --- |
+| `multiselectable` | `boolean` | the selection mode is `multiple` (`aria-multiselectable`) |
+| `dragging` | `boolean` | a drag is under way (pointer or keyboard) |
+| `keyboardDragging` | `boolean` | a keyboard drag is under way |
+| `empty` | `boolean` | the tree has no item |
+
+## Attributes
+
+| attribute | when |
+| --- | --- |
+| `role="tree"` | always |
+| `aria-multiselectable` | the selection mode is `multiple` |
+| `data-tree-part="root"` | always |
+| `data-dragging` | a drag is under way |
+| `data-keyboard-dragging` | a keyboard drag is under way |
+| `data-empty` | the tree has no item |
+
+Structural style: `position: relative`, the containing block `Tree.DropIndicator` is positioned
+in.
+
+## Behaviour
+
+- Creates one engine per model identity once mounted (React's StrictMode remount creates a new
+  one; a load the first engine had started starts again), and destroys it on unmount.
+- Forwards `keydown` to the engine (`onKeyDown` runs after it; a key it used has its default
+  prevented).
+- Re-renders the tree on every commit and on every drag step or announcement.
+- Runs the commands that bring the model to the controlled props, before paint.
+- Attaches `treeRef` while mounted.
+
+## Common props
+
+Every primitive except `Tree.Items` accepts these on top of its own props (`PrimitiveProps<State>`
+and its element's attributes: `DivPrimitiveProps<State>`, `SpanPrimitiveProps<State>` for
+`Tree.Toggle` and `Tree.Checkbox`, `InputPrimitiveProps<State>` for `Tree.RenameInput`):
+
+| prop | type | description |
+| --- | --- | --- |
+| `render` | `RenderProp<State>`: `ReactElement \| ((props: RenderedProps, state: State) => ReactElement)` | replaces the rendered element (never `asChild`) |
+| `className` | `string \| ((state: State) => string \| undefined)` | a class name, or a function of the primitive's state returning one |
+| `style` | `CSSProperties \| ((state: State) => CSSProperties \| undefined)` | a style, or a function of the primitive's state returning one. Structural keys the primitive sets always win |
+| `ref` | `Ref<HTMLElement>` | merged with the primitive's own ref |
+| any attribute of the element | | forwarded to the element; event handlers run after the primitive's own |
+
+`RenderedProps<E extends Element = HTMLElement>` is what a `render` function receives: the
+element's attributes, the primitive's `data-*` attributes and a callback `ref`. Spread them onto
+the element it returns; they fit any element's `ref` with no cast:
+
+```tsx
+<Tree.Item item={item} render={(props, state) => <li {...props} data-kind={item.kind} />}>
+    <Tree.ItemContent>{item.label}</Tree.ItemContent>
+</Tree.Item>
+```
+
+See [The primitive contract](/docs/concepts/primitive-contract).

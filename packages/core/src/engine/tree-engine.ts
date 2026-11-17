@@ -10,6 +10,7 @@ import { PointerDrag } from "../dnd/pointer-drag";
 import {
     asElement,
     directionOf,
+    isDragExempt,
     PART_ATTRIBUTE,
     schedulerOf,
 } from "../dom/owner";
@@ -68,6 +69,13 @@ export interface TreeEngineOptions<T extends TreeTypes = AnyTypes> {
     autoScroll?: { threshold?: number; speed?: number } | undefined;
     /** how long (ms) between two typed characters keeps one type-ahead search (default 500) */
     typeAheadTimeout?: number | undefined;
+    /**
+     * `destroy()` puts the items whose children it was loading back to `unloaded`
+     * (`item.reset-children`), so the next engine on the model loads them again (default false:
+     * they stay `loading`). Adapters set it: a tree that remounts (React's StrictMode, a route
+     * change) must not leave an item loading forever
+     */
+    resetLoadsOnDestroy?: boolean | undefined;
 }
 
 /**
@@ -120,6 +128,8 @@ class Engine<T extends TreeTypes> implements TreeEngine<T>, EngineHost {
     private readonly items = new Map<string, HTMLElement>();
     private readonly contents = new Map<string, HTMLElement>();
     private dragState: DragState | null = null;
+    /** the tree had DOM focus at the last change: the focused item's new element takes it */
+    private refocus = false;
     private announcement = "";
     private revision = 0;
     private destroyed = false;
@@ -277,7 +287,7 @@ class Engine<T extends TreeTypes> implements TreeEngine<T>, EngineHost {
         this.pointerDrag.cancel();
         this.keyboardDrag.cancel();
         this.destroyed = true;
-        this.loader.destroy();
+        this.loader.destroy(this.settings.resetLoadsOnDestroy === true);
         this.typeAhead.reset();
         this.unsubscribeModel();
         this.listeners.clear();
@@ -452,7 +462,11 @@ class Engine<T extends TreeTypes> implements TreeEngine<T>, EngineHost {
             active !== null &&
             active !== undefined &&
             root.contains(active) &&
-            this.isItemElement(active);
+            (this.isItemElement(active) ||
+                active.closest(`[${PART_ATTRIBUTE}="rename-input"]`) !== null);
+        // an item moved to another parent is a new element: the adapter registers it after this
+        // re-render, and it takes the focus the old one had (registerItem)
+        this.refocus = hadFocus || (this.refocus && this.focusLost());
         this.revision += 1;
         for (const listener of [...this.adapterListeners]) listener();
         const focused = this.model.state.focusedItemId;
@@ -463,6 +477,19 @@ class Engine<T extends TreeTypes> implements TreeEngine<T>, EngineHost {
             }
         }
         this.loader.scan();
+    }
+
+    /** Whether DOM focus left the tree for nothing (the body, or an element no longer there). */
+    private focusLost(): boolean {
+        const root = this.rootElement;
+        const active = root?.ownerDocument.activeElement;
+        return (
+            root !== undefined &&
+            (active === null ||
+                active === undefined ||
+                active === root.ownerDocument.body ||
+                !active.isConnected)
+        );
     }
 
     private isItemElement(element: Element): boolean {
@@ -498,8 +525,19 @@ class Engine<T extends TreeTypes> implements TreeEngine<T>, EngineHost {
             detachRoot: () => this.detachRoot(),
             registerItem: (itemId, element) => {
                 if (this.destroyed) return;
-                if (element) this.items.set(itemId, element);
-                else this.items.delete(itemId);
+                if (!element) {
+                    this.items.delete(itemId);
+                    return;
+                }
+                this.items.set(itemId, element);
+                if (
+                    this.refocus &&
+                    itemId === this.model.state.focusedItemId &&
+                    this.focusLost()
+                ) {
+                    this.refocus = false;
+                    element.focus({ preventScroll: true });
+                }
             },
             registerContent: (itemId, element) => {
                 if (this.destroyed) return;
@@ -526,16 +564,20 @@ class Engine<T extends TreeTypes> implements TreeEngine<T>, EngineHost {
                     return;
                 this.model.run("item.focus", { itemId });
             },
-            commitRename: (itemId, label) => {
+            commitRename: (itemId, label, options) => {
                 if (this.destroyed)
                     return fail("refused", "the engine was destroyed");
                 const result = this.model.run("item.rename", { itemId, label });
-                if (result.ok) this.focusElement(itemId);
+                if (result.ok && options?.focus !== false)
+                    this.focusElement(itemId);
                 return result;
             },
-            cancelRename: (itemId) => {
+            cancelRename: (itemId, options) => {
                 if (this.destroyed) return;
-                if (this.model.run("item.cancel-rename", { itemId }).ok)
+                if (
+                    this.model.run("item.cancel-rename", { itemId }).ok &&
+                    options?.focus !== false
+                )
                     this.focusElement(itemId);
             },
             subscribe: (listener) => {
@@ -581,9 +623,11 @@ class Engine<T extends TreeTypes> implements TreeEngine<T>, EngineHost {
 
     private keyDown(event: KeyEventInput): boolean {
         if (this.destroyed) return false;
-        // the rename input handles its own keys
+        // the rename input, and any control inside an item (a button, a link, an input: the
+        // DRAG_EXEMPT elements), handle their own keys
         const target = asElement(event.target);
-        if (target?.closest(`[${PART_ATTRIBUTE}="rename-input"]`)) return false;
+        const item = target?.closest(`[${PART_ATTRIBUTE}="item"]`);
+        if (target && item && isDragExempt(target, item)) return false;
         if (this.keyboardDrag.active) {
             const handled = this.keyboardDragKey(event.key);
             if (handled) event.preventDefault();

@@ -1,0 +1,154 @@
+---
+title: Model
+description: Create a tree model from a document, read it with get and is, and find every key they take. The state only commands change.
+---
+
+A model holds one tree: its items, what is expanded, selected, checked, focused and being
+renamed, and its settings. It runs in plain Node (no DOM), and every member is one verb:
+
+| member | does |
+| --- | --- |
+| `state` | the current state (`TreeState<T>`): immutable, a new object after every change |
+| `run(command, payload, options?)` | **changes** the tree: runs a command through the middleware chain, returns a `CommandResult` |
+| `dispatch(input, options?)` | `run` for untrusted JSON `{ command, payload, transient? }`, validated |
+| `can(command, payload, options?)` | **answers** whether `run` would succeed now: a `boolean` |
+| `check(command, payload, options?)` | returns what `run` would return, without changing anything |
+| `get(key, payload?)` | **reads**: an item, its parent, the visible items, the document ([Reading](#reading-get)) |
+| `is(key, payload)` | **asks** a yes/no question ([Asking](#asking-is)) |
+| `use(middleware)` | adds a middleware around every command; returns its remover |
+| `subscribe(listener)` | listens to every committed command; returns its remover |
+
+Every method is bound: `const { run, get } = model` works. The commands are on
+[Commands](/docs/api/commands), `run`, `dispatch`, middleware and events on
+[The command bus](/docs/api/command-bus), and the document on
+[The JSON model](/docs/api/json-model).
+
+## Creating a model
+
+```ts
+function createTreeModel<T extends TreeTypes = AnyTypes>(
+    json?: TreeJson<T>,
+    options?: TreeModelOptions<T>,
+): TreeModel<T>;
+```
+
+`createTreeModel` validates the document and normalizes it; without one it creates an empty tree.
+An invalid document throws a `TreeValidationError` whose `issues` (`ValidationIssue[]`: a JSON
+`path` and a `message` each) list every problem; `validateTree(json)` returns the same issues
+without throwing. The document's JSON Schema is exported as `treeSchema` (a `JsonSchema`).
+
+`T` is your registry ([Typed data](/docs/concepts/typed-data)): pass it explicitly.
+
+### The type registry
+
+A registry extends `TreeTypes` (`{ items: object }`): each item kind, and the type of its data.
+`KindOf<T>` is the union of its kinds, `DataOf<T, K>` the data type of kind `K`, and `ItemOf<T>`
+an item, discriminated by `kind`. With no registry, `AnyTypes` accepts any kind with `unknown`
+data. `FromSchema<S>` derives a data type from a JSON Schema written `as const`, as in the example
+below.
+
+### `TreeModelOptions`
+
+| option | type | description |
+| --- | --- | --- |
+| `createId` | `CreateId`: `(kind: "item") => string` | generates the id of an item created without one (`item.add`, `item.set-children`); default `` `item-${n}` ``, skipping ids in use |
+| `dataSchemas` | `{ [K in KindOf<T>]?: JsonSchema }` | a JSON Schema per item kind: the document, `item.add`, `item.set-data` and `item.set-children` validate that kind's `data` with it |
+| `freeze` | `boolean` | freeze every state object (default `true`); with `false`, the state must still never be mutated |
+
+```ts
+import { createTreeModel, type FromSchema } from "@fragiola/tree";
+
+const fileSchema = {
+    type: "object",
+    properties: { size: { type: "number", minimum: 0 } },
+    required: ["size"],
+    additionalProperties: false,
+} as const;
+
+type Types = { items: { folder: undefined; file: FromSchema<typeof fileSchema> } };
+
+const model = createTreeModel<Types>(json, {
+    createId: () => `item-${crypto.randomUUID()}`,
+    dataSchemas: { file: fileSchema },
+});
+```
+
+## The state
+
+`TreeState<T>` is plain, frozen, JSON-shaped data:
+
+| field | type | description |
+| --- | --- | --- |
+| `settings` | `TreeSettings` | the modes and the flags' defaults ([The JSON model](/docs/api/json-model#settings)) |
+| `rootItemIds` | `readonly string[]` | the root items, in order |
+| `items` | `{ readonly [id: string]: ItemOf<T> }` | every item, by id |
+| `expandedItemIds` | `readonly string[]` | the expanded items |
+| `selectedItemIds` | `readonly string[]` | the selection, in the order it was made |
+| `checkedItemIds` | `readonly string[]` | the checked items (in `cascade` mode, a parent with children exactly when all are) |
+| `selectionAnchorItemId` | `string \| null` | where a range selection starts |
+| `focusedItemId` | `string \| null` | the roving tab stop, always visible |
+| `renamingItemId` | `string \| null` | the item whose label is being edited |
+
+An item (`TreeItem<K, D>`, typed as `ItemOf<T>`) has `id`, `kind`, `label`, `data`, and
+optionally `childItemIds`, `childrenStatus` (`ChildrenStatus`) and the flags (`ItemFlags`:
+`disabled`, `movable`, `renamable`, `droppable`). `DEFAULT_SETTINGS` are the settings of a
+document that gives none. The mode types are `SelectionMode` (`"none" | "single" | "multiple"`)
+and `CheckMode` (`"cascade" | "independent"`); a checkbox's state is `CheckState`.
+
+## Reading: `get`
+
+`model.get(key, payload)` reads through a named key (`ModelGetKey`, typed by `ModelGetMap`:
+`ModelGetPayload` and `ModelGetResult`). A key that takes an id ends in `-by`; a key that takes
+nothing needs no payload (`QueryArgs`).
+
+| key | payload | result |
+| --- | --- | --- |
+| `"tree-json"` | none | `TreeJson<T>`: the document of the current state, every field written (a copy) |
+| `"commands"` | none | `readonly CommandInfo[]`: every command with its description and JSON Schemas |
+| `"settings"` | none | `TreeSettings` |
+| `"item-by"` | `{ id }` | `ItemOf<T> \| undefined` |
+| `"item-parent-by"` | `{ itemId }` | `ItemOf<T> \| undefined`: undefined for a root item |
+| `"child-items-by"` | `{ itemId }` | `ItemOf<T>[]`: in order; empty for a leaf or a parent not loaded |
+| `"root-items"` | none | `ItemOf<T>[]` |
+| `"visible-items"` | none | `readonly VisibleItem[]`: the render order (below) |
+| `"item-path-by"` | `{ itemId }` | `string \| undefined`: `/0/2`, its `data-tree-path` |
+| `"check-state-by"` | `{ itemId }` | `CheckState`: `"checked"`, `"unchecked"` or `"mixed"` |
+| `"selected-items"` | none | `ItemOf<T>[]`: in the order they were selected |
+| `"children-status-by"` | `{ itemId }` | `ChildrenStatus \| undefined`: undefined when it holds its children itself |
+| `"type-ahead-match"` | `{ text, fromItemId? }` | `ItemOf<T> \| undefined`: the next visible item after `fromItemId` (wrapping) whose label starts with `text`, ignoring case |
+| `"tab-stop-item"` | none | `ItemOf<T> \| undefined`: the focused item, else the first visible selected one, else the first visible one |
+
+A `VisibleItem` is `{ itemId, parentItemId, level, posinset, setsize }`: the items whose
+ancestors are all expanded, in render order. It is the base of the keyboard navigation, and the
+list a virtualizer will consume ([Known limitations](/docs/limitations)).
+
+```ts
+const parent = model.get("item-parent-by", { itemId: "app" });
+const rows = model.get("visible-items").map((entry) => model.get("item-by", { id: entry.itemId }));
+```
+
+## Asking: `is`
+
+`model.is(key, payload)` answers a yes/no question (`ModelIsKey`, typed by `ModelIsMap`:
+`ModelIsPayload`). An unknown item answers `false`.
+
+| key | payload | true when |
+| --- | --- | --- |
+| `"item-expanded"` | `{ itemId }` | its children are shown |
+| `"item-selected"` | `{ itemId }` | it is selected |
+| `"item-focused"` | `{ itemId }` | it is the focused item, as stored (see `"item-tab-stop"`) |
+| `"item-checked"` | `{ itemId }` | its checkbox is checked (not mixed) |
+| `"item-renaming"` | `{ itemId }` | its label is being edited |
+| `"item-loading"` | `{ itemId }` | its children are being loaded |
+| `"item-disabled"` | `{ itemId }` | it is disabled |
+| `"item-movable"` | `{ itemId }` | it can be moved now: movable (its flag or the default) and not disabled |
+| `"item-renamable"` | `{ itemId }` | it can be renamed now: renamable and not disabled |
+| `"item-leaf"` | `{ itemId }` | it has no children and no children status |
+| `"item-visible"` | `{ itemId }` | its ancestors are all expanded |
+| `"item-tab-stop"` | `{ itemId }` | it is the roving tab stop (`"tab-stop-item"`) |
+| `"item-descendant-of"` | `{ itemId, ancestorItemId }` | it is inside the other item's subtree (itself excluded) |
+
+## In React
+
+`useTreeState` selects a value of the state and re-renders only when it changes; `useTree` and a
+tree ref give the model itself ([Hooks](/docs/api/hooks)).

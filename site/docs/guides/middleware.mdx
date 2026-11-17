@@ -1,0 +1,100 @@
+---
+title: Middleware and permissions
+description: Enforce your app's rules on every change - permission flags the commands check, and middleware that vetoes, rewrites or observes any command.
+---
+
+Every change goes through the model, whoever asked: a key, a click, a drop, your code or an
+assistant. Two layers decide what is allowed: the **permission flags**, enforced by the commands
+themselves, and **middleware**, your code around every command. Both answer `model.can` and
+`model.check` too, so a drag, a menu and a button agree on what they offer.
+
+## Permission flags
+
+| flag | refuses |
+| --- | --- |
+| `disabled` | everything but focus: expand, select, check, rename, move and drops into it |
+| `movable: false` | `item.move` of the item (a drag never starts) |
+| `renamable: false` | `item.start-rename` and `item.rename` |
+| `droppable: false` | `item.move` into the item (a drag never targets it) |
+
+Set them per item in the document, or as the tree's defaults in `settings`; change them with
+commands:
+
+```ts
+model.run("item.set-flags", { itemId: "vendor", droppable: false });
+model.run("item.set-flags", { itemId: "vendor", droppable: null }); // back to the default
+model.run("tree.configure", { settings: { renamable: false } });
+model.is("item-movable", { itemId: "license" }); // the flag or its default, and not disabled
+```
+
+A disabled item stays focusable, so a keyboard user can still reach it and hear why; it carries
+`aria-disabled` and `data-disabled`.
+
+## Vetoing
+
+A middleware receives the command's context and `next`. Return an error without calling `next`
+to refuse it; `veto(message)` builds one with the code `vetoed`:
+
+```ts
+import { veto } from "@fragiola/tree-react";
+
+const stop = model.use((ctx, next) => {
+    if (ctx.command === "item.remove" && ctx.payload.itemIds.some((id) => isShared(id))) {
+        return veto("Shared folders are removed from the admin console.");
+    }
+    return next();
+});
+```
+
+`ctx.command` narrows `ctx.payload` to that command's payload. `model.use` returns the remover;
+in React, call it from an effect: `useEffect(() => model.use(rule), [model])`.
+
+## Rewriting
+
+Assign `ctx.payload` before calling `next`; the new payload is validated again:
+
+```ts
+model.use((ctx, next) => {
+    if (ctx.command === "item.rename") {
+        ctx.payload = { ...ctx.payload, label: ctx.payload.label.trim() };
+    }
+    return next();
+});
+```
+
+## Observing
+
+Call `next` and look at its result, or keep a log. `ctx.dryRun` is true for `can`, `check` and a
+drag's hover: do nothing with side effects then.
+
+```ts
+model.use((ctx, next) => {
+    const result = next();
+    if (!ctx.dryRun && result.ok) audit(ctx.command, ctx.payload, ctx.meta);
+    return result;
+});
+```
+
+## Who asked
+
+`meta` is information the caller adds (`model.run(…, { meta })`, `model.dispatch(input, { meta
+})`), never read from untrusted input, so a middleware can trust it. The engine marks a drop with
+`meta.source` `"drag"` or `"keyboard-drag"`; controlled props mark theirs `"controlled"`:
+
+```ts
+model.use((ctx, next) =>
+    ctx.meta?.source === "assistant" && ctx.command === "item.remove"
+        ? veto("The assistant may not delete items.")
+        : next(),
+);
+```
+
+## Reading inside a middleware
+
+`ctx.state` is the committed state; `ctx.get("item-by", { id })` and
+`ctx.get("item-parent-by", { itemId })` read the tree as the command sees it, inside a batch
+after its earlier commands. `ctx.inBatch` says whether the command runs inside one.
+
+The chain, the error codes and the events are on [The command bus](/docs/api/command-bus).
+
+<Example id="rename" variant="card" />

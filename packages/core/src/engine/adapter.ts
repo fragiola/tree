@@ -46,10 +46,20 @@ export interface TreeEngineAdapter<T extends TreeTypes = AnyTypes> {
     handleCheckboxClick(itemId: string): void;
     /** DOM focus entered an item's element: it becomes the focused item */
     handleFocus(itemId: string): void;
-    /** the rename input committed a label (Enter, blur): `item.rename`, then focus goes back to the item */
-    commitRename(itemId: string, label: string): CommandResult<unknown>;
-    /** the rename input was cancelled (Escape): `item.cancel-rename`, then focus goes back to the item */
-    cancelRename(itemId: string): void;
+    /**
+     * the rename input committed a label (Enter, blur): `item.rename`, then focus goes back to the
+     * item unless `focus` is false (a blur: focus went elsewhere and stays there)
+     */
+    commitRename(
+        itemId: string,
+        label: string,
+        options?: { focus?: boolean },
+    ): CommandResult<unknown>;
+    /**
+     * the rename input was cancelled (Escape, a refused blur): `item.cancel-rename`, then focus
+     * goes back to the item unless `focus` is false
+     */
+    cancelRename(itemId: string, options?: { focus?: boolean }): void;
 
     /** calls `listener` when adapters should re-render (a commit, a drag step, an announcement); returns its remover */
     subscribe(listener: () => void): () => void;

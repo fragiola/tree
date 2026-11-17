@@ -1,0 +1,56 @@
+import { describe, expect, it } from "vitest";
+import { THEMES } from "../../../examples/shared/src/themes/themes.ts";
+import { parseView, sameItem, toSearch, type View } from "../src/shell/view";
+
+const DEFAULTS: View = {
+    item: null,
+    theme: "light",
+    code: false,
+    inspect: false,
+};
+
+describe("the view in the URL", () => {
+    it("defaults to nothing chosen, the first light theme, no panels", () => {
+        expect(parseView("")).toEqual(DEFAULTS);
+    });
+
+    it("leaves defaults out of the query", () => {
+        expect(toSearch(DEFAULTS)).toBe("?");
+    });
+
+    it("round-trips every setting", () => {
+        const views: View[] = [
+            { ...DEFAULTS, item: { kind: "example", id: "hello-tree" } },
+            {
+                item: { kind: "example", id: "rtl" },
+                theme: "dark",
+                code: true,
+                inspect: false,
+            },
+            {
+                item: { kind: "scenario", id: "api/commands" },
+                theme: "dark",
+                code: false,
+                inspect: true,
+            },
+            ...THEMES.map((t) => ({ ...DEFAULTS, theme: t.name })),
+        ];
+        for (const view of views) {
+            expect(parseView(toSearch(view))).toEqual(view);
+        }
+    });
+
+    it("falls back on unknown values instead of applying them", () => {
+        expect(parseView("?theme=sepia&code=yes&inspect=true&nope=1")).toEqual(
+            DEFAULTS,
+        );
+    });
+
+    it("compares entries by kind and id", () => {
+        const a = { kind: "example" as const, id: "a" };
+        expect(sameItem(a, { kind: "example", id: "a" })).toBe(true);
+        expect(sameItem(a, { kind: "example", id: "b" })).toBe(false);
+        expect(sameItem(null, null)).toBe(true);
+        expect(sameItem(a, null)).toBe(false);
+    });
+});
