@@ -6,8 +6,18 @@ a `Workaround:` line pointing here; the reader-facing list is `site/docs/limitat
 gaps"). When a gap is fixed in a package, drop the workaround from the example, its entry here and
 its bullet on the limitations page.
 
-No workaround is open: the keyboard drag's first announcement, where it starts and the drop
-indicator's inline offset were fixed in the packages (fragiola/tree#24).
+## Open workarounds
+
+- **The cascade does not skip disabled items** (`permissions-admin`). In `cascade` mode,
+  `item.check` / `item.toggle-check` on a parent set every descendant, disabled ones included, so a
+  locked action would be unchecked with its resource. The example unbinds Space (`keyMap:
+  { toggle: [] }`), handles Space and its check control with the app's `toggle` (one `batch` of
+  `item.check` on the subtree's unlocked actions), and refuses, in a middleware (`lockRule`), any
+  check that would uncheck a locked action. The fix in the package: the cascade leaves a disabled
+  descendant as it is. Listed on `site/docs/limitations.mdx` ("Known gaps").
+
+Earlier workarounds, the keyboard drag's first announcement, where it starts and the drop
+indicator's inline offset, were fixed in the packages (fragiola/tree#24).
 
 ## Docs decisions
 
