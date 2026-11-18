@@ -55,8 +55,9 @@ export default function PermissionsAdmin() {
     useEffect(() => lockRule(model), [model]);
     // The checks are the app's state, as a form field's value is: the tree shows them and reports
     // every change it would make; presets and Discard set them.
+    // (from the model's list: it has the cascade's parents, as every change will)
     const [checkedItemIds, setCheckedItemIds] = useState<readonly string[]>(
-        json.checkedItemIds ?? [],
+        () => model.state.checkedItemIds,
     );
     // what is saved: the granted actions at the last Save
     const [saved, setSaved] = useState(() =>

@@ -52,7 +52,7 @@ test("a parent's check grants its actions, and takes back all but the locked one
     await row(repositories).getByTestId("check").click();
     await expect(repositories).toHaveAttribute("aria-checked", "true");
     await expect(role).toHaveValue("Custom");
-    await expect(changes).toHaveText("2 added, 0 removed");
+    await expect(changes).toHaveText(/^\s*2\sadded,\s0\sremoved\s*$/);
     // Space on the focused row does the same
     await row(repositories).click();
     await page.keyboard.press("Space");
@@ -61,7 +61,7 @@ test("a parent's check grants its actions, and takes back all but the locked one
         "aria-checked",
         "true",
     );
-    await expect(changes).toHaveText("0 added, 2 removed");
+    await expect(changes).toHaveText(/^\s*0\sadded,\s2\sremoved\s*$/);
 });
 
 test("a locked action stays checked", async ({ page }) => {
@@ -82,9 +82,9 @@ test("a role preset fills the checks, and Discard restores the saved ones", asyn
         "aria-checked",
         "false",
     );
-    await expect(changes).toHaveText("0 added, 6 removed");
+    await expect(changes).toHaveText(/^\s*0\sadded,\s6\sremoved\s*$/);
     await stage.getByRole("button", { name: "Discard" }).click();
-    await expect(changes).toHaveText("No changes");
+    await expect(changes).toHaveText(/^\s*No\schanges\s*$/);
     await expect(role).toHaveValue("Editor");
     await expect(itemAt(permissions, "/0/1/0/1")).toHaveAttribute(
         "aria-checked",
@@ -104,7 +104,7 @@ test("saving a risky grant asks first", async ({ page }) => {
     await expect(dialog).toContainText("Projects · Repositories: Delete");
     await dialog.getByRole("button", { name: "Grant and save" }).click();
     await expect(dialog).toBeHidden();
-    await expect(changes).toHaveText("No changes");
+    await expect(changes).toHaveText(/^\s*No\schanges\s*$/);
     await expect(stage.getByTestId("notice")).toHaveText("Saved.");
     await expect(remove).toHaveAccessibleDescription("Risky");
 });
