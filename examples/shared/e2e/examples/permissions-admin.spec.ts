@@ -83,7 +83,26 @@ test("a role preset fills the checks, and Discard restores the saved ones", asyn
         "false",
     );
     await expect(changes).toHaveText(/^\s*0\sadded,\s6\sremoved\s*$/);
+    // People › Teams (/0/2/1): Editor grants all its actions, Viewer only Read
+    await row(item(permissions, "People"))
+        .locator('[data-tree-part="toggle"]')
+        .click();
+    await expect(itemAt(permissions, "/0/2/1")).toHaveAttribute(
+        "aria-checked",
+        "mixed",
+    );
+    await row(itemAt(permissions, "/0/2/1"))
+        .locator('[data-tree-part="toggle"]')
+        .click();
+    await expect(itemAt(permissions, "/0/2/1/0")).toHaveAttribute(
+        "aria-checked",
+        "true",
+    );
     await stage.getByRole("button", { name: "Discard" }).click();
+    await expect(itemAt(permissions, "/0/2/1")).toHaveAttribute(
+        "aria-checked",
+        "true",
+    );
     await expect(changes).toHaveText(/^\s*No\schanges\s*$/);
     await expect(role).toHaveValue("Editor");
     await expect(itemAt(permissions, "/0/1/0/1")).toHaveAttribute(

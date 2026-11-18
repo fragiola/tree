@@ -42,6 +42,7 @@ import {
     ROLE_NAMES,
     roleOf,
     search,
+    setGrants,
     toggle,
 } from "./permissions";
 import * as styles from "./styles";
@@ -54,7 +55,7 @@ export default function PermissionsAdmin() {
     );
     useEffect(() => lockRule(model), [model]);
     // The checks are the app's state, as a form field's value is: the tree shows them and reports
-    // every change it would make; presets and Discard set them.
+    // every change it makes; presets and Discard run commands on the model, which reports them.
     // (from the model's list: it has the cascade's parents, as every change will)
     const [checkedItemIds, setCheckedItemIds] = useState<readonly string[]>(
         () => model.state.checkedItemIds,
@@ -110,7 +111,7 @@ export default function PermissionsAdmin() {
                         className={styles.select}
                         onChange={(event) =>
                             event.target.value !== "Custom" &&
-                            setCheckedItemIds(grantsOf(event.target.value))
+                            run(setGrants(model, grantsOf(event.target.value)))
                         }
                     >
                         {ROLE_NAMES.map((name) => (
@@ -213,7 +214,7 @@ export default function PermissionsAdmin() {
                                 0
                             }
                             onClick={() => {
-                                setCheckedItemIds(saved);
+                                run(setGrants(model, saved));
                                 setNotice("Discarded.");
                             }}
                         >

@@ -312,6 +312,35 @@ export function toggle(model: PermissionModel, itemId: string) {
     });
 }
 
+/**
+ * One step that sets the grants to exactly these actions (a role preset, Discard): each action
+ * that is not granted anyway is checked or unchecked, and the cascade settles the parents. The
+ * tree reports the new list, so the app's controlled `checkedItemIds` follows. Workaround: setting
+ * the controlled list itself can lose checks (see docs/docs-examples-gaps.md).
+ */
+export function setGrants(
+    model: PermissionModel,
+    actionIds: readonly string[],
+) {
+    const wanted = new Set(actionIds);
+    return model.run("batch", {
+        commands: Object.values(model.state.items).flatMap(
+            (item): BatchEntry<PermissionTypes>[] =>
+                item.kind === "action" && !isGranted(item)
+                    ? [
+                          {
+                              command: "item.check",
+                              payload: {
+                                  itemId: item.id,
+                                  checked: wanted.has(item.id),
+                              },
+                          },
+                      ]
+                    : [],
+        ),
+    });
+}
+
 /** The checked actions among `checkedItemIds` (a checked parent is a shortcut for them). */
 export function grantedActions(
     model: TreeModel<PermissionTypes>,

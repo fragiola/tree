@@ -17,6 +17,7 @@ import {
     ROLE_NAMES,
     roleOf,
     search,
+    setGrants,
     toggle,
 } from "./permissions";
 import * as styles from "./styles";
@@ -29,7 +30,7 @@ const model = createTreeModel<PermissionTypes, typeof features>(json, {
 });
 onScopeDispose(lockRule(model));
 // The checks are the app's state, as a form field's value is: the tree shows them and reports
-// every change it would make; presets and Discard set them.
+// every change it makes; presets and Discard run commands on the model, which reports them.
 // (from the model's list: it has the cascade's parents, as every change will)
 const checkedItemIds = ref<string[]>([...model.state.checkedItemIds]);
 // what is saved: the granted actions at the last Save
@@ -54,7 +55,7 @@ const run = (result: { ok: boolean; error?: { message: string } }) => {
 };
 
 function chooseRole(name: string) {
-    if (name !== "Custom") checkedItemIds.value = grantsOf(name);
+    if (name !== "Custom") run(setGrants(model, grantsOf(name)));
 }
 
 function onSearch(value: string) {
@@ -73,7 +74,7 @@ function onKeydown(event: KeyboardEvent) {
 }
 
 function discard() {
-    checkedItemIds.value = [...saved.value];
+    run(setGrants(model, saved.value));
     notice.value = "Discarded.";
 }
 

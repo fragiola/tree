@@ -40,6 +40,7 @@ import {
     ROLE_NAMES,
     roleOf,
     search,
+    setGrants,
     toggle,
 } from "./permissions";
 import * as styles from "./styles";
@@ -215,7 +216,7 @@ export default class PermissionsAdmin {
     >(json, { features });
     /**
      * The checks are the app's state, as a form field's value is: the tree shows them and reports
-     * every change it would make; presets and Discard set them. It starts from the model's list,
+     * every change it makes; presets and Discard run commands on the model, which reports them. It starts from the model's list,
      * which has the cascade's parents, as every change will.
      */
     protected readonly checkedItemIds = signal<string[]>([
@@ -294,12 +295,16 @@ export default class PermissionsAdmin {
     }
 
     protected run(itemId: string) {
-        const result = toggle(this.model, itemId);
-        this.notice.set(result.ok ? "" : result.error.message);
+        this.report(toggle(this.model, itemId));
+    }
+
+    private report(result: { ok: boolean; error?: { message: string } }) {
+        this.notice.set(result.ok ? "" : (result.error?.message ?? ""));
     }
 
     protected chooseRole(name: string) {
-        if (name !== "Custom") this.checkedItemIds.set(grantsOf(name));
+        if (name !== "Custom")
+            this.report(setGrants(this.model, grantsOf(name)));
     }
 
     protected onSearch(value: string) {
@@ -319,7 +324,7 @@ export default class PermissionsAdmin {
     }
 
     protected discard() {
-        this.checkedItemIds.set([...this.saved()]);
+        this.report(setGrants(this.model, this.saved()));
         this.notice.set("Discarded.");
     }
 
