@@ -41,7 +41,7 @@ The ids are final: Vue and Angular port every one, with the same id.
 | `data` | `async-loading`, `controlled`, `save-restore`, `large-tree` (virtualized) |
 | `model-api` | `undo-redo`, `command-console` |
 | `accessibility` | `keyboard`, `rtl` |
-| `apps` | `ide-explorer` (a code editor's explorer and open editors), `warehouse-inventory` (virtualized locations, stock rules and details) |
+| `apps` | `ide-explorer` (a code editor's explorer and open editors), `warehouse-inventory` (virtualized locations, stock rules and details), `task-board` (checks as done work, a board taking rows dropped outside the tree) |
 
 ## Adding an example
 
