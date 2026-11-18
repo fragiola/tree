@@ -42,13 +42,13 @@ const problemsOf = (body: string) =>
     validateSite(withPage("limitations", page(body)));
 
 describe("the site export", () => {
-    it("has the landing, every page in the sidebar, and all 18 examples in React, Vue and Angular", () => {
+    it("has the landing, every page in the sidebar, and all 19 examples in React, Vue and Angular", () => {
         expect(site.pages.has("index")).toBe(true);
         expect(site.pages.size).toBe(49);
         expect([...site.manifests.keys()]).toEqual(["react", "vue", "angular"]);
-        expect(site.manifests.get("react")?.examples).toHaveLength(18);
-        expect(site.manifests.get("vue")?.examples).toHaveLength(18);
-        expect(site.manifests.get("angular")?.examples).toHaveLength(18);
+        expect(site.manifests.get("react")?.examples).toHaveLength(19);
+        expect(site.manifests.get("vue")?.examples).toHaveLength(19);
+        expect(site.manifests.get("angular")?.examples).toHaveLength(19);
     });
 
     it("passes the contract checks", () => {
