@@ -330,6 +330,18 @@ export function unitsIn(model: TreeModel<WarehouseTypes>, binId: string) {
  */
 export function storageRules(model: TreeModel<WarehouseTypes>) {
     return model.use((ctx, next) => {
+        // the units in a bin as the command sees them: inside a batch, after its earlier steps
+        const unitsNow = (binId: string) =>
+            (ctx.get("item-by", { id: binId })?.childItemIds ?? []).reduce(
+                (sum, id) => {
+                    const item = ctx.get("item-by", { id });
+                    return (
+                        sum +
+                        (item?.kind === "product" ? item.data.quantity : 0)
+                    );
+                },
+                0,
+            );
         if (ctx.command === "item.move") {
             const { parentItemId } = ctx.payload.to;
             const bin =
@@ -350,7 +362,7 @@ export function storageRules(model: TreeModel<WarehouseTypes>) {
                 if (ctx.get("item-parent-by", { itemId })?.id !== bin.id)
                     arriving += item.data.quantity;
             }
-            if (unitsIn(model, bin.id) + arriving > bin.data.capacity)
+            if (unitsNow(bin.id) + arriving > bin.data.capacity)
                 return veto(`${bin.label} has no room for them.`);
         }
         if (ctx.command === "item.set-data") {
@@ -362,9 +374,7 @@ export function storageRules(model: TreeModel<WarehouseTypes>) {
                 const bin = ctx.get("item-parent-by", { itemId: item.id });
                 if (
                     bin?.kind === "bin" &&
-                    unitsIn(model, bin.id) -
-                        item.data.quantity +
-                        data.quantity >
+                    unitsNow(bin.id) - item.data.quantity + data.quantity >
                         bin.data.capacity
                 )
                     return veto(
@@ -449,29 +459,36 @@ export function expandToLowStock(model: TreeModel<WarehouseTypes>) {
     });
 }
 
-/** The bins a product may move to: the ones the rules accept (`model.can`), with their zone's name. */
+/**
+ * The bins a product may move to: the ones the rules accept (`model.can`), with their zone's name.
+ * It asks about every bin: an app computes it when the list is about to show, not on every change.
+ */
 export function binsFor(model: TreeModel<WarehouseTypes>, productId: string) {
     const product = model.get("item-by", { id: productId });
     if (product?.kind !== "product") return [];
     const current = model.get("item-parent-by", { itemId: productId })?.id;
-    return Object.values(model.state.items).flatMap((item) =>
-        item.kind === "bin" &&
-        item.id !== current &&
-        model.can("item.move", {
+    return Object.values(model.state.items).flatMap((item) => {
+        if (item.kind !== "bin" || item.id === current) return [];
+        // the cheap checks first (the climate, the room left), then the rules themselves
+        const zone = zoneOf(model, item.id);
+        if (!accepts(zone?.data.climate ?? "returns", product.data.storage))
+            return [];
+        if (
+            unitsIn(model, item.id) + product.data.quantity >
+            item.data.capacity
+        )
+            return [];
+        const accepted = model.can("item.move", {
             itemIds: [productId],
             to: {
                 parentItemId: item.id,
                 index: item.childItemIds?.length ?? 0,
             },
-        })
-            ? [
-                  {
-                      id: item.id,
-                      label: `${item.label} · ${zoneOf(model, item.id)?.label ?? ""}`,
-                  },
-              ]
-            : [],
-    );
+        });
+        return accepted
+            ? [{ id: item.id, label: `${item.label} · ${zone?.label ?? ""}` }]
+            : [];
+    });
 }
 
 /** A number with thousands separators, the same in every locale the examples run in. */

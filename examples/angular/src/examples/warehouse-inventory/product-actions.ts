@@ -6,7 +6,7 @@ import {
     signal,
     untracked,
 } from "@angular/core";
-import { type ItemOf, injectTreeState } from "@fragiola/tree-angular";
+import type { ItemOf } from "@fragiola/tree-angular";
 import { LucideArrowRightLeft } from "@lucide/angular";
 import { ClickableButton } from "#/components/atoms/clickable";
 import type { WarehouseModel } from "./features";
@@ -40,7 +40,7 @@ let nextId = 0;
         <form [class]="styles.form" (submit)="move($event)">
             <label [for]="binId" [class]="styles.term">Move to</label>
             <div [class]="styles.formRow">
-                <select #binSelect [id]="binId" [class]="styles.select" (change)="target.set(binSelect.value)">
+                <select #binSelect [id]="binId" [class]="styles.select" (focus)="listBins()" (change)="target.set(binSelect.value)">
                     <option value="" [selected]="target() === ''">Choose a bin…</option>
                     @for (bin of bins(); track bin.id) {
                         <option [value]="bin.id" [selected]="target() === bin.id">{{ bin.label }}</option>
@@ -66,20 +66,11 @@ export class ProductActions {
     protected readonly target = signal("");
     /** what the rules refused, or what was done */
     protected readonly notice = signal("");
-    private readonly state = injectTreeState((state) => state, {
-        model: this.model,
-    });
-    /** the bins the rules accept for it, asked of the model (`model.can`) once per state */
-    protected readonly bins = computed(
-        () => {
-            this.state();
-            return binsFor(this.model(), this.item().id);
-        },
-        {
-            equal: (a, b) =>
-                a.map((bin) => bin.id).join() === b.map((bin) => bin.id).join(),
-        },
-    );
+    /**
+     * the bins the rules accept for it, asked of the model (`model.can`) when the list is about to
+     * show: it asks about every bin, too much for every change
+     */
+    protected readonly bins = signal<{ id: string; label: string }[]>([]);
 
     constructor() {
         // another product: its own quantity, nothing chosen, nothing said
@@ -94,8 +85,16 @@ export class ProductActions {
         });
     }
 
+    protected listBins() {
+        this.bins.set(binsFor(this.model(), this.item().id));
+    }
+
     protected updateQuantity(event: Event) {
         event.preventDefault();
+        if (this.quantity().trim() === "") {
+            this.notice.set("Enter a quantity.");
+            return;
+        }
         const item = this.item();
         const result = this.model().run("item.set-data", {
             itemId: item.id,

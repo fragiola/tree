@@ -127,15 +127,16 @@ function ProductActions({
     const [target, setTarget] = useState("");
     // what the rules refused, or what was done
     const [notice, setNotice] = useState("");
-    // the bins the rules accept for it, asked of the model (`model.can`) once per state
-    const bins = useTreeState((_state, current) => binsFor(current, item.id), {
-        model,
-        isEqual: (a, b) =>
-            a.map((bin) => bin.id).join() === b.map((bin) => bin.id).join(),
-    });
+    // the bins the rules accept for it, asked of the model (`model.can`) when the list is about
+    // to show: it asks about every bin, too much for every change
+    const [bins, setBins] = useState<{ id: string; label: string }[]>([]);
 
     const updateQuantity = (event: FormEvent) => {
         event.preventDefault();
+        if (quantity.trim() === "") {
+            setNotice("Enter a quantity.");
+            return;
+        }
         const result = model.run("item.set-data", {
             itemId: item.id,
             data: { ...item.data, quantity: Number(quantity) },
@@ -186,6 +187,7 @@ function ProductActions({
                         id={binId}
                         value={target}
                         className={styles.select}
+                        onFocus={() => setBins(binsFor(model, item.id))}
                         onChange={(event) => setTarget(event.target.value)}
                     >
                         <option value="">Choose a bin…</option>

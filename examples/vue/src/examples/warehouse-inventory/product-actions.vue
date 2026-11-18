@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { type ItemOf, useTreeState } from "@fragiola/tree-vue";
+import type { ItemOf } from "@fragiola/tree-vue";
 import { ArrowRightLeft } from "@lucide/vue";
-import { ref, useId } from "vue";
+import { ref, shallowRef, useId } from "vue";
 import { Clickable } from "#/components/atoms/clickable";
 import type { WarehouseModel } from "./features";
 import * as styles from "./styles";
@@ -19,17 +19,18 @@ const quantity = ref(String(props.item.data.quantity));
 const target = ref("");
 // what the rules refused, or what was done
 const notice = ref("");
-// the bins the rules accept for it, asked of the model (`model.can`) once per state
-const bins = useTreeState(
-    (_state, current) => binsFor(current, props.item.id),
-    {
-        model: props.model,
-        isEqual: (a, b) =>
-            a.map((bin) => bin.id).join() === b.map((bin) => bin.id).join(),
-    },
-);
+// the bins the rules accept for it, asked of the model (`model.can`) when the list is about to
+// show: it asks about every bin, too much for every change
+const bins = shallowRef<{ id: string; label: string }[]>([]);
+const listBins = () => {
+    bins.value = binsFor(props.model, props.item.id);
+};
 
 function updateQuantity() {
+    if (String(quantity.value).trim() === "") {
+        notice.value = "Enter a quantity.";
+        return;
+    }
     const result = props.model.run("item.set-data", {
         itemId: props.item.id,
         data: { ...props.item.data, quantity: Number(quantity.value) },
@@ -71,7 +72,7 @@ function move() {
     <form :class="styles.form" @submit.prevent="move">
         <label :for="binId" :class="styles.term">Move to</label>
         <div :class="styles.formRow">
-            <select :id="binId" v-model="target" :class="styles.select">
+            <select :id="binId" v-model="target" :class="styles.select" @focus="listBins">
                 <option value="">Choose a bin…</option>
                 <option v-for="bin in bins" :key="bin.id" :value="bin.id">{{ bin.label }}</option>
             </select>

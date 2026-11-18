@@ -96,6 +96,11 @@ test("the details panel edits a quantity under the bin's capacity", async ({
     await expect(stage.getByTestId("details-notice")).toHaveText(
         "Bin D1-01-1 holds 120 units at most.",
     );
+    await quantity.fill("");
+    await details.getByRole("button", { name: "Update" }).click();
+    await expect(stage.getByTestId("details-notice")).toHaveText(
+        "Enter a quantity.",
+    );
     await quantity.fill("50");
     await details.getByRole("button", { name: "Update" }).click();
     await expect(itemAt(locations, RICE)).toHaveAccessibleDescription(
@@ -108,6 +113,9 @@ test("move to lists only the bins the rules accept", async ({ page }) => {
     await row(itemAt(locations, RICE)).click();
     const details = stage.getByRole("region", { name: "Details" });
     const bins = details.getByRole("combobox", { name: "Move to" });
+    // the list is asked of the rules when it is about to show
+    await bins.focus();
+    await expect(bins.locator("option")).not.toHaveCount(1);
     const labels = await bins.locator("option").allTextContents();
     expect(labels).toContain("Bin D1-01-3 · Dry goods");
     expect(labels.some((label) => label.includes("Cold storage"))).toBe(false);
