@@ -43,6 +43,7 @@ import {
     STATUSES,
     statusOf,
     structureRules,
+    workIdsOf,
 } from "./board";
 import { BoardView } from "./board-view";
 import { type BoardModel, createBoardModel } from "./model";
@@ -347,7 +348,7 @@ function announcer(model: BoardModel) {
                         : `${event.target.position} ${label(event.target.itemId)}`
                 }.`;
             case "drop-outside":
-                return `${names(event.itemIds)}: ${STATUS_NAMES[statusOf(model, event.itemIds[0] ?? "")]}.`;
+                return `${names(event.itemIds)}: ${STATUS_NAMES[statusOf(model, workIdsOf(model, event.itemIds)[0] ?? "")]}.`;
             case "drag-cancel":
                 return "Move cancelled.";
             default:

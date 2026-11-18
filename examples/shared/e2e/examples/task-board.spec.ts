@@ -29,7 +29,9 @@ test("rows carry their work, and parents their progress", async ({ page }) => {
         "2 of 4 done",
     );
     await expect(column("To do").getByTestId("card")).toHaveCount(4);
-    await expect(column("Doing").getByTestId("card")).toHaveCount(2);
+    // Button component's open work is all in review; Payment form's has started
+    await expect(column("Doing").getByTestId("card")).toHaveCount(1);
+    await expect(column("In review").getByTestId("card")).toHaveCount(1);
     await expect(column("Done").getByTestId("card")).toHaveCount(2);
 });
 
@@ -79,6 +81,32 @@ test("a card's buttons move it along the board", async ({ page }) => {
     );
 });
 
+test("a task with subtasks moves to review with all its open work", async ({
+    page,
+}) => {
+    const { stage, projects, column } = await open(page);
+    await stage
+        .getByRole("button", { name: "Move Payment form to In review" })
+        .click();
+    await expect(
+        column("In review")
+            .getByTestId("card")
+            .filter({ hasText: "Payment form" }),
+    ).toHaveCount(1);
+    await expect(item(projects, "Card validation")).toHaveAccessibleDescription(
+        /^In review, /,
+    );
+});
+
+test("an epic dropped on a column changes nothing", async ({ page }) => {
+    const { projects, column } = await open(page);
+    await dragRow(page, row(item(projects, "Analytics")), column("Done"));
+    await expect(column("Done").getByTestId("card")).toHaveCount(2);
+    await expect(item(projects, "Analytics")).toHaveAccessibleDescription(
+        "0 of 2 done",
+    );
+});
+
 test("a subtask cannot leave its task", async ({ page }) => {
     const { projects } = await open(page);
     await dragRow(
@@ -110,6 +138,20 @@ test("a filter highlights its matches and expands to them", async ({
     await expect(item(projects, "Sync queue")).toHaveCount(0);
     await stage.getByRole("button", { name: "Expand to matches" }).click();
     await expect(item(projects, "Sync queue")).toBeVisible();
+});
+
+test("Add task works before any row has focus: into the selected project's first epic", async ({
+    page,
+}) => {
+    const { stage, projects } = await open(page);
+    await stage.getByRole("button", { name: "Add task" }).click();
+    const input = stage.getByRole("textbox", { name: "Rename New task" });
+    await input.press("Escape");
+    await expect(item(projects, "New task")).toHaveAttribute("aria-level", "3");
+    await expect(item(projects, "New task")).toHaveAttribute(
+        "aria-checked",
+        "false",
+    );
 });
 
 test("a task added from the toolbar is named at once, and Enter adds the next", async ({

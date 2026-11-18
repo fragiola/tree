@@ -4,7 +4,13 @@ import { dragAndDrop } from "@fragiola/tree-vue/drag-and-drop";
 import { dropOutside } from "@fragiola/tree-vue/drop-outside";
 import { rename } from "@fragiola/tree-vue/rename";
 import { selection } from "@fragiola/tree-vue/selection";
-import { type BoardTypes, board, parseStatus, setStatus } from "./board";
+import {
+    type BoardTypes,
+    board,
+    parseStatus,
+    setStatus,
+    workIdsOf,
+} from "./board";
 import { indicatorInset } from "./styles";
 
 /** The board's features, written out: the model's type names them before the model exists. */
@@ -33,7 +39,13 @@ export function createBoardModel(): BoardModel {
                     ?.closest("[data-status-column]")
                     ?.getAttribute("data-status-column"),
             );
-            return status !== undefined && setStatus(model, itemIds, status).ok;
+            // a project or an epic has no status: a drop of nothing but those is refused
+            const workIds = workIdsOf(model, itemIds);
+            return (
+                status !== undefined &&
+                workIds.length > 0 &&
+                setStatus(model, workIds, status).ok
+            );
         },
     });
     const features: BoardFeatures = [

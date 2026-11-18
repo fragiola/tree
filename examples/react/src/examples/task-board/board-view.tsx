@@ -1,6 +1,6 @@
 import { type TreeRef, useTreeState } from "@fragiola/tree-react";
 import { ArrowLeft, ArrowRight } from "lucide-react";
-import { useCallback, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import {
     type BoardTypes,
     columnsOf,
@@ -144,7 +144,9 @@ function Card({
  * pointer events of its own).
  */
 function useColumnUnderDrag(tree: TreeRef<BoardTypes, BoardFeatures>) {
-    const engine = tree.current?.engine;
+    // the root fills the ref when it mounts: read it after that
+    const [engine, setEngine] = useState(tree.current?.engine);
+    useEffect(() => setEngine(tree.current?.engine), [tree]);
     const subscribe = useCallback(
         (onChange: () => void) => engine?.subscribe(onChange) ?? (() => {}),
         [engine],

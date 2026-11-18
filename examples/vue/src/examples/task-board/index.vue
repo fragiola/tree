@@ -20,6 +20,7 @@ import {
     STATUSES,
     statusOf,
     structureRules,
+    workIdsOf,
 } from "./board";
 import BoardView from "./board-view.vue";
 import { type BoardFeatures, type BoardModel, createBoardModel } from "./model";
@@ -92,7 +93,7 @@ function announcer(current: BoardModel) {
                         : `${event.target.position} ${label(event.target.itemId)}`
                 }.`;
             case "drop-outside":
-                return `${names(event.itemIds)}: ${STATUS_NAMES[statusOf(current, event.itemIds[0] ?? "")]}.`;
+                return `${names(event.itemIds)}: ${STATUS_NAMES[statusOf(current, workIdsOf(current, event.itemIds)[0] ?? "")]}.`;
             case "drag-cancel":
                 return "Move cancelled.";
             default:

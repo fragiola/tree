@@ -229,7 +229,8 @@ export function workLeaves(
 
 /**
  * A task's status: done when checked; otherwise its own status, or, for a task with subtasks,
- * "doing" once any of them has started, "todo" before.
+ * "review" when all its open work is in review, "doing" once any of it has started or is done,
+ * "todo" before.
  */
 export function statusOf(model: BoardModel, itemId: string): Status {
     if (model.is("item-checked", { itemId })) return "done";
@@ -237,11 +238,14 @@ export function statusOf(model: BoardModel, itemId: string): Status {
     const item = model.get("item-by", { id: itemId });
     if (isWork(item) && leaves.length === 1 && leaves[0]?.id === itemId)
         return item.data.status;
-    return leaves.some(
-        (leaf) =>
-            model.is("item-checked", { itemId: leaf.id }) ||
-            leaf.data.status !== "todo",
-    )
+    const open = leaves.filter(
+        (leaf) => !model.is("item-checked", { itemId: leaf.id }),
+    );
+    // all its open work in review: the task is; any work started or done: doing; else to do
+    if (open.length > 0 && open.every((leaf) => leaf.data.status === "review"))
+        return "review";
+    return open.length < leaves.length ||
+        open.some((leaf) => leaf.data.status !== "todo")
         ? "doing"
         : "todo";
 }
@@ -259,6 +263,12 @@ export function progressOf(model: BoardModel, itemId: string) {
 
 export const isOverdue = (item: BoardItem) =>
     isWork(item) && item.data.due !== null && item.data.due < TODAY;
+
+/** The ids among these that carry work (tasks and subtasks): a project or an epic has no status. */
+export const workIdsOf = (
+    model: TreeModel<BoardTypes>,
+    itemIds: readonly string[],
+) => itemIds.filter((id) => isWork(model.get("item-by", { id })));
 
 /**
  * One step that moves work to a status: done checks it (the cascade checks its subtasks); an open
@@ -329,7 +339,13 @@ export function structureRules(model: TreeModel<BoardTypes>) {
                 parentItemId === null
                     ? null
                     : (ctx.get("item-by", { id: parentItemId })?.kind ?? null);
+            const moving = new Set(ctx.payload.itemIds);
             for (const itemId of ctx.payload.itemIds) {
+                // an item inside another moved one goes with it, where it is
+                let parent = ctx.get("item-parent-by", { itemId });
+                while (parent && !moving.has(parent.id))
+                    parent = ctx.get("item-parent-by", { itemId: parent.id });
+                if (parent) continue;
                 const kind = ctx.get("item-by", { id: itemId })?.kind;
                 if (kind === undefined) continue;
                 const wanted = PARENT_KINDS[kind];
@@ -434,11 +450,11 @@ export function addTask(model: BoardModel, afterItemId?: string) {
         parentItemId = parent?.id;
         index = (parent?.childItemIds ?? []).indexOf(afterItemId) + 1;
     } else {
-        const { focusedItemId } = model.state;
+        // the focused row, or else the selected one
+        const fromId =
+            model.state.focusedItemId ?? model.state.selectedItemIds[0] ?? null;
         let item =
-            focusedItemId === null
-                ? undefined
-                : model.get("item-by", { id: focusedItemId });
+            fromId === null ? undefined : model.get("item-by", { id: fromId });
         while (item && item.kind !== "epic" && item.kind !== "project")
             item = model.get("item-parent-by", { itemId: item.id });
         // a project: its first epic
@@ -471,6 +487,8 @@ export function addTask(model: BoardModel, afterItemId?: string) {
                     to: { parentItemId, index: index ?? 0 },
                 },
             },
+            // a new task is not done, even in a done epic (the cascade would check it)
+            { command: "item.check", payload: { itemId: id, checked: false } },
             { command: "item.select", payload: { itemId: id } },
             { command: "item.focus", payload: { itemId: id } },
             { command: "item.start-rename", payload: { itemId: id } },
