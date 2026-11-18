@@ -24,4 +24,16 @@ Here is what it leaves out, on purpose or for a later release.
 - **React, Vue and Angular.** Another framework needs an adapter of its own, over the same core
   (`@fragiola/tree`).
 
+## Known gaps
+
+- **The cascade does not skip disabled items.** In `cascade` mode, unchecking a parent unchecks
+  every descendant, a disabled one too, so an action locked as granted is unchecked with its
+  resource. The [permissions admin](/examples/permissions-admin) works around it: its check
+  control and Space check only the actions that are not locked (Space through the root's
+  `keyMap`), and a middleware refuses any check that would uncheck a locked one.
+- **A controlled `checkedItemIds` can lose checks.** When the list a root is given drops a parent
+  the cascade had checked, the root unchecks it, and with it children the list still wants, which
+  it does not check again. Until it is fixed, set checks through commands and let the root report
+  them (the [permissions admin](/examples/permissions-admin) presets and Discard do).
+
 Found something else? [Open an issue](https://github.com/fragiola/tree/issues).
