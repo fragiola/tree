@@ -307,12 +307,11 @@ alone (`pnpm --filter examples-vue dev`) defaults to 5191; `site:dev` runs each 
 on a free port behind its one port. The Angular embed alone (`pnpm --filter examples-angular dev`)
 defaults to 5192.
 
-**Releasing is a merge, and it is disabled today.** `.github/workflows/release.yml` is Dockable's
-(Version Packages PR, then npm trusted publishing with pnpm), gated on the repository variable
-`RELEASE_ENABLED`, which is not set: the maintainer's npm account is suspended and nothing is on
-npm. **Never** run `npm publish`, `pnpm publish` or `changeset publish`, create a `0.0.0` stub, run
-`npm trust`, or merge a "Version Packages" PR. The maintainer's steps for when npm is back are in
-[`docs/releasing.md`](docs/releasing.md) ("Status").
+**Releasing is a merge.** `.github/workflows/release.yml` is Dockable's: it opens the Version
+Packages PR, and merging it publishes every package with pnpm through npm trusted publishing
+(OIDC, no token). After the maintainer's first `0.0.0` stubs, nobody but that workflow publishes:
+never run `npm publish`, `pnpm publish` or `changeset publish` by hand. The maintainer's steps,
+including a new package's own stub and trust, are in [`docs/releasing.md`](docs/releasing.md).
 
 ## Repository layout
 
@@ -387,9 +386,6 @@ examples app per framework; the registration in `www` is fragiola/www#32.
   bodies, only the v1.2 MDX vocabulary, base-free links. `site/tests/contract.test.ts` validates
   them, and `site/tests/docs-reference.test.ts` fails when an export, a prop, a key or a command
   field is not documented.
-- The packages are **not on npm yet**: the installation page and the landing say so in a
-  `Callout` (fragiola.com/tree goes live before npm, the maintainer's decision). Remove it with
-  the first release.
 - The JSON model is documented in `site/docs/api/json-model.mdx`, the commands in the generated
   `site/docs/api/commands.mdx`. The examples' workarounds, when there are any, are listed in
   `docs/docs-examples-gaps.md`; what the packages leave out is on `site/docs/limitations.mdx`.
