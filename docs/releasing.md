@@ -7,30 +7,21 @@ changelogs. The release workflow, [`.github/workflows/release.yml`](../.github/w
 publishes them with pnpm through npm **trusted publishing** (OIDC, with provenance): there is no
 npm token anywhere. It is copied from Dockable (`fragiola/dockable`, `docs/releasing.md`).
 
-## Status (2026-11-16): nothing is published, releases are disabled
+## The first release (0.1.0)
 
-The maintainer's npm account is suspended, so **nothing of this repository is on npm**: no `0.0.0`
-stub of any package, and no trusted publisher. The pipeline is wired but does not run:
-every job of `release.yml` needs the repository variable `RELEASE_ENABLED` set to `true`, and it is
-not set. Without that gate, the first push to `main` would find a version npm does not have and
-try to publish it.
+npm can only trust a publisher for a package that already exists, so the first publish is a manual
+`0.0.0` stub. Do these steps in order, once. Steps 1 to 5 come **before** merging the PR that
+enables the release workflow: its merge starts the release (the Version Packages PR, from the
+changesets accumulated in `.changeset/`).
 
-Until npm is back, **nobody publishes**: no `npm publish`, `pnpm publish` or `changeset publish`,
-no stub, no `npm trust`, and no "Version Packages" PR is merged. Changesets still accumulate in
-`.changeset/` with every PR that changes what a package ships; they become the first release's
-changelog.
-
-When the npm account is back, the maintainer does these steps, in order, once:
-
-1. **The scope.** Make sure the npm scope `@fragiola` exists and that the account owns it
-   (`npm org ls fragiola`), with 2FA enabled.
-2. **Let the workflow open PRs.** In the repository's *Settings → Actions → General → Workflow
-   permissions*, enable **Allow GitHub Actions to create and approve pull requests** (in the
-   organization's settings first, if greyed out).
-3. **The `npm` environment.** In *Settings → Environments*, create an environment named exactly
-   `npm`, with the deployment branch rule `main`.
-4. **The stubs.** npm can only trust a publisher for a package that exists. From a clean checkout
-   of `main`, with every package at `0.0.0`, publish each package once by hand:
+1. **The scope.** The npm scope `@fragiola` exists (Dockable, Grid Layout and DnD publish there).
+   Make sure your npm account can publish to it (`npm org ls fragiola`) and has 2FA enabled.
+2. **Let the workflow open PRs.** In the repository's _Settings → Actions → General → Workflow
+   permissions_, enable **Allow GitHub Actions to create and approve pull requests**.
+3. **The `npm` environment.** In _Settings → Environments_, an environment named exactly `npm`,
+   with the deployment branch rule `main`.
+4. **The stubs.** From a clean checkout of `main`, with every package at `0.0.0`, publish each
+   package once by hand:
 
    ```sh
    git switch main && git pull && git status   # clean, up to date
@@ -38,34 +29,32 @@ When the npm account is back, the maintainer does these steps, in order, once:
    pnpm build && pnpm --filter "./packages/*" publish --access public
    ```
 
-   This covers `@fragiola/tree` and every adapter already merged. `pnpm build` comes first for
-   every package, and is required for `@fragiola/tree-angular`: it is **published from its build
-   output** (`publishConfig.directory` is `dist`, which ng-packagr builds in the Angular Package
-   Format, with the published manifest written there by `packages/angular/scripts/publish-manifest.ts`),
-   so pnpm packs and publishes `packages/angular/dist`, not the package folder. The release workflow
-   builds before it packs too. An adapter merged later gets its
-   own stub before its PR merges ("Adding a package" below). The four names are `@fragiola/tree`,
-   `@fragiola/tree-react`, `@fragiola/tree-vue` and `@fragiola/tree-angular`.
-5. **The trusted publishers.** With npm 11.15 or later and 2FA, for each published package:
+   pnpm asks for your 2FA code. `pnpm build` comes first for every package, and is required for
+   `@fragiola/tree-angular`: it is **published from its build output** (`publishConfig.directory`
+   is `dist`, which ng-packagr builds in the Angular Package Format, with the published manifest
+   written there by `packages/angular/scripts/publish-manifest.ts`), so pnpm packs and publishes
+   `packages/angular/dist`, not the package folder. The release workflow builds before it packs
+   too. The four names are `@fragiola/tree`, `@fragiola/tree-react`, `@fragiola/tree-vue` and
+   `@fragiola/tree-angular`.
+5. **The trusted publishers.** With npm 11.15 or later and 2FA, for each package:
 
    ```sh
-   npm trust github @fragiola/tree --file release.yml --repo fragiola/tree --environment npm --allow-publish
-   npm trust github @fragiola/tree-react --file release.yml --repo fragiola/tree --environment npm --allow-publish
-   npm trust github @fragiola/tree-vue --file release.yml --repo fragiola/tree --environment npm --allow-publish
-   npm trust github @fragiola/tree-angular --file release.yml --repo fragiola/tree --environment npm --allow-publish
+   for p in tree tree-react tree-vue tree-angular; do
+     npm trust github @fragiola/$p --file release.yml --repo fragiola/tree --environment npm --allow-publish
+   done
    ```
 
    `--allow-publish` is required (Changesets does not do staged publishing). Never rename
    `release.yml` or its `npm` environment.
-6. **Enable releases.** In *Settings → Secrets and variables → Actions → Variables*, add the
-   repository variable `RELEASE_ENABLED` with the value `true`. The next push to `main` opens the
-   **Version Packages** PR from the pending changesets.
+6. **Merge the PR that enables the release.** Its push to `main` opens the **Version Packages** PR
+   from the pending changesets: every package at `0.1.0`, every changelog.
 7. **Merge the Version Packages PR.** A PR opened with the workflow's token starts no other
-   workflow: close and reopen it (or run *CI* on its branch) to get the checks, then merge it. The
-   release workflow publishes the first version with provenance. Merge nothing else until that run
-   is over (see *While a release runs*). Then check the packages on npm, the tags and the GitHub
-   releases.
-8. **Lock it down.** On npm, for each package, *Settings → Publishing access*: **Require two-factor
+   workflow: close and reopen it (or run _CI_ on its branch) to get the checks, then merge it. The
+   release workflow publishes `0.1.0` with provenance. Merge nothing else until that run is over
+   (see _While a release runs_). Then check the packages on npm, the tags and the GitHub releases.
+   The registry can take a minute or two to show a new version after the run says "Successfully
+   published"; a version stuck in staged publishing shows in `npm stage list @fragiola/<package>`.
+8. **Lock it down.** On npm, for each package, _Settings → Publishing access_: **Require two-factor
    authentication and disallow tokens**.
 
 The site (fragiola.com/tree) is rebuilt by the CI's *Trigger www build* job, which needs the
@@ -74,7 +63,7 @@ The site (fragiola.com/tree) is rebuilt by the CI's *Trigger www build* job, whi
 
 ## How the workflow decides
 
-On every push to `main`, once enabled, the workflow does one of three things:
+On every push to `main`, the workflow does one of three things:
 
 - **changesets are pending:** it opens or updates the **Version Packages** PR, which bumps the
   versions, writes the `CHANGELOG.md` files and deletes the changesets;
@@ -117,9 +106,8 @@ package is versioned with the others from its first release. What it does need:
    `scripts/check-package.ts` with its smoke app (`check:package` fails on a package under
    `packages/` that is neither the core nor listed); and a changeset that names it, so the
    Version Packages PR brings it to the family's next version.
-2. **Before merging that PR, the stub** (while npm is unavailable, skip this step and step 3:
-   the steps of *Status* publish every package merged by then). npm trusts a publisher only for a package that exists, so
-   publish the new package once by hand at `0.0.0`, as in step 4 of *Status*, but for
+2. **Before merging that PR, the stub.** npm trusts a publisher only for a package that exists, so
+   publish the new package once by hand at `0.0.0`, as in step 4 of _The first release_, but for
    that package only (`pnpm --filter @fragiola/tree-vue publish --access public`, from a clean
    checkout of the PR's branch, with 2FA). A package published from its build output
    (`@fragiola/tree-angular`: `publishConfig.directory` is `dist`) is built first: pnpm

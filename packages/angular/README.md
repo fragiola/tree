@@ -15,8 +15,6 @@ word and accessible name comes from you. The ARIA and the `data-*` are the same 
 
 Documentation, guides and live examples: **<https://fragiola.com/tree>**.
 
-> The packages are not on npm yet: the documentation describes the upcoming first release.
-
 ## Install
 
 ```sh

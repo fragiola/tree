@@ -32,5 +32,4 @@ indicator's inline offset, were fixed in the packages (fragiola/tree#24).
 - **No `<InstallCommand>`.** The contract's `<InstallCommand item>` renders a shadcn registry
   install command and fails the build unless the item is in the project's `r/` registry. Tree
   exports no registry, so `getting-started/installation.mdx` uses `<Tabs>` with the pnpm, npm and
-  yarn commands for `@fragiola/tree-react`, with a `<Callout>` saying the packages are not on npm
-  yet.
+  yarn commands for `@fragiola/tree-react`.

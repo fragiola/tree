@@ -9,14 +9,6 @@
 # Do not rename this file, nor the publish job's `npm` environment: npm trusts the packages'
 # publisher by this repository, this filename and that environment.
 #
-# DISABLED until the maintainer enables it. npm is not available yet (the maintainer's account is
-# suspended): no package of this repository exists on npm, no `0.0.0` stub was published and no
-# trusted publisher is configured. Without the gate, the first push to main would find a version npm
-# does not have and try to publish it. Every job therefore needs the repository variable
-# `RELEASE_ENABLED` set to `true` (Settings -> Secrets and variables -> Actions -> Variables), which
-# the maintainer sets after the steps of docs/releasing.md ("Status"). Until then, a push to main
-# runs nothing here.
-#
 # On every push to main, `select-mode` decides what to do:
 #
 #   version   pending changesets: `pnpm release:version` bumps every package (one `fixed` group)
@@ -51,9 +43,8 @@ permissions: {}
 jobs:
   select-mode:
     name: Select mode
-    # not in forks: only this repository is a trusted publisher; and only once the maintainer
-    # enabled releases (see the header)
-    if: github.repository == 'fragiola/tree' && vars.RELEASE_ENABLED == 'true'
+    # not in forks: only this repository is a trusted publisher
+    if: github.repository == 'fragiola/tree'
     runs-on: ubuntu-latest
     permissions:
       contents: read # actions/checkout
