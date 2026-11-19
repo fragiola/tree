@@ -14,8 +14,6 @@ comes from you. The primitives, their ARIA and their `data-*` are the same as
 
 Documentation, guides and live examples: **<https://fragiola.com/tree>**.
 
-> The packages are not on npm yet: the documentation describes the upcoming first release.
-
 ## Install
 
 ```sh
