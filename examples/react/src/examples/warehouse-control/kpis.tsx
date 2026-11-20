@@ -33,44 +33,46 @@ export function Kpis({
     });
     const moved = unitsMoved(model, log, scopeId);
     return (
-        <dl role="group" aria-label="Key figures" className={styles.kpis}>
-            <div className={styles.kpi}>
-                <dt className={styles.kpiTerm}>Units on hand</dt>
-                <dd className={styles.kpiValue} data-testid="kpi-units">
-                    {formatUnits(units)}
-                </dd>
-                <dd aria-hidden className={styles.kpiNote(false)}>
-                    <Sparkline
-                        values={log.states.map(
-                            (state) => stockIn(state, scopeId).units,
-                        )}
-                    />
-                </dd>
-            </div>
-            <div className={styles.kpi}>
-                <dt className={styles.kpiTerm}>Fill</dt>
-                <dd className={styles.kpiValue} data-testid="kpi-fill">
-                    {formatPercent(units / capacity)}
-                </dd>
-                <dd className={styles.kpiNote(false)}>
-                    of {formatUnits(capacity)} units
-                </dd>
-            </div>
-            <div className={styles.kpi}>
-                <dt className={styles.kpiTerm}>Low-stock bins</dt>
-                <dd className={styles.kpiValue} data-testid="kpi-low">
-                    {low}
-                </dd>
-                <dd className={styles.kpiNote(low > 0)}>of {bins} bins</dd>
-            </div>
-            <div className={styles.kpi}>
-                <dt className={styles.kpiTerm}>Moved, last minute</dt>
-                <dd className={styles.kpiValue} data-testid="kpi-moved">
-                    {formatUnits(moved)}
-                </dd>
-                <dd className={styles.kpiNote(false)}>units in and out</dd>
-            </div>
-        </dl>
+        <section aria-label="Key figures">
+            <dl className={styles.kpis}>
+                <div className={styles.kpi}>
+                    <dt className={styles.kpiTerm}>Units on hand</dt>
+                    <dd className={styles.kpiValue} data-testid="kpi-units">
+                        {formatUnits(units)}
+                    </dd>
+                    <dd aria-hidden className={styles.kpiNote(false)}>
+                        <Sparkline
+                            values={log.states.map(
+                                (state) => stockIn(state, scopeId).units,
+                            )}
+                        />
+                    </dd>
+                </div>
+                <div className={styles.kpi}>
+                    <dt className={styles.kpiTerm}>Fill</dt>
+                    <dd className={styles.kpiValue} data-testid="kpi-fill">
+                        {formatPercent(units / capacity)}
+                    </dd>
+                    <dd className={styles.kpiNote(false)}>
+                        of {formatUnits(capacity)} units
+                    </dd>
+                </div>
+                <div className={styles.kpi}>
+                    <dt className={styles.kpiTerm}>Low-stock bins</dt>
+                    <dd className={styles.kpiValue} data-testid="kpi-low">
+                        {low}
+                    </dd>
+                    <dd className={styles.kpiNote(low > 0)}>of {bins} bins</dd>
+                </div>
+                <div className={styles.kpi}>
+                    <dt className={styles.kpiTerm}>Moved, last minute</dt>
+                    <dd className={styles.kpiValue} data-testid="kpi-moved">
+                        {formatUnits(moved)}
+                    </dd>
+                    <dd className={styles.kpiNote(false)}>units in and out</dd>
+                </div>
+            </dl>
+        </section>
     );
 }
 

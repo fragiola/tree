@@ -52,30 +52,32 @@ const points = computed(() => {
 </script>
 
 <template>
-    <dl role="group" aria-label="Key figures" :class="styles.kpis">
-        <div :class="styles.kpi">
-            <dt :class="styles.kpiTerm">Units on hand</dt>
-            <dd :class="styles.kpiValue" data-testid="kpi-units">{{ formatUnits(units) }}</dd>
-            <dd aria-hidden="true" :class="styles.kpiNote(false)">
-                <svg aria-hidden="true" viewBox="0 0 100 24" preserveAspectRatio="none" :class="styles.spark">
-                    <polyline :points="points" vector-effect="non-scaling-stroke" :class="styles.sparkLine" />
-                </svg>
-            </dd>
-        </div>
-        <div :class="styles.kpi">
-            <dt :class="styles.kpiTerm">Fill</dt>
-            <dd :class="styles.kpiValue" data-testid="kpi-fill">{{ formatPercent(units / capacity) }}</dd>
-            <dd :class="styles.kpiNote(false)">of {{ formatUnits(capacity) }} units</dd>
-        </div>
-        <div :class="styles.kpi">
-            <dt :class="styles.kpiTerm">Low-stock bins</dt>
-            <dd :class="styles.kpiValue" data-testid="kpi-low">{{ low }}</dd>
-            <dd :class="styles.kpiNote(low > 0)">of {{ bins }} bins</dd>
-        </div>
-        <div :class="styles.kpi">
-            <dt :class="styles.kpiTerm">Moved, last minute</dt>
-            <dd :class="styles.kpiValue" data-testid="kpi-moved">{{ formatUnits(moved) }}</dd>
-            <dd :class="styles.kpiNote(false)">units in and out</dd>
-        </div>
-    </dl>
+    <section aria-label="Key figures">
+        <dl :class="styles.kpis">
+            <div :class="styles.kpi">
+                <dt :class="styles.kpiTerm">Units on hand</dt>
+                <dd :class="styles.kpiValue" data-testid="kpi-units">{{ formatUnits(units) }}</dd>
+                <dd aria-hidden="true" :class="styles.kpiNote(false)">
+                    <svg aria-hidden="true" viewBox="0 0 100 24" preserveAspectRatio="none" :class="styles.spark">
+                        <polyline :points="points" vector-effect="non-scaling-stroke" :class="styles.sparkLine" />
+                    </svg>
+                </dd>
+            </div>
+            <div :class="styles.kpi">
+                <dt :class="styles.kpiTerm">Fill</dt>
+                <dd :class="styles.kpiValue" data-testid="kpi-fill">{{ formatPercent(units / capacity) }}</dd>
+                <dd :class="styles.kpiNote(false)">of {{ formatUnits(capacity) }} units</dd>
+            </div>
+            <div :class="styles.kpi">
+                <dt :class="styles.kpiTerm">Low-stock bins</dt>
+                <dd :class="styles.kpiValue" data-testid="kpi-low">{{ low }}</dd>
+                <dd :class="styles.kpiNote(low > 0)">of {{ bins }} bins</dd>
+            </div>
+            <div :class="styles.kpi">
+                <dt :class="styles.kpiTerm">Moved, last minute</dt>
+                <dd :class="styles.kpiValue" data-testid="kpi-moved">{{ formatUnits(moved) }}</dd>
+                <dd :class="styles.kpiNote(false)">units in and out</dd>
+            </div>
+        </dl>
+    </section>
 </template>

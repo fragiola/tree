@@ -15,32 +15,34 @@ import {
     selector: "example-control-kpis",
     host: { class: "contents" },
     template: `
-        <dl role="group" aria-label="Key figures" [class]="styles.kpis">
-            <div [class]="styles.kpi">
-                <dt [class]="styles.kpiTerm">Units on hand</dt>
-                <dd [class]="styles.kpiValue" data-testid="kpi-units">{{ formatUnits(stock().units) }}</dd>
-                <dd aria-hidden="true" [class]="styles.kpiNote(false)">
-                    <svg aria-hidden="true" viewBox="0 0 100 24" preserveAspectRatio="none" [attr.class]="styles.spark">
-                        <polyline [attr.points]="points()" vector-effect="non-scaling-stroke" [attr.class]="styles.sparkLine" />
-                    </svg>
-                </dd>
-            </div>
-            <div [class]="styles.kpi">
-                <dt [class]="styles.kpiTerm">Fill</dt>
-                <dd [class]="styles.kpiValue" data-testid="kpi-fill">{{ formatPercent(stock().units / stock().capacity) }}</dd>
-                <dd [class]="styles.kpiNote(false)">of {{ formatUnits(stock().capacity) }} units</dd>
-            </div>
-            <div [class]="styles.kpi">
-                <dt [class]="styles.kpiTerm">Low-stock bins</dt>
-                <dd [class]="styles.kpiValue" data-testid="kpi-low">{{ stock().low }}</dd>
-                <dd [class]="styles.kpiNote(stock().low > 0)">of {{ stock().bins }} bins</dd>
-            </div>
-            <div [class]="styles.kpi">
-                <dt [class]="styles.kpiTerm">Moved, last minute</dt>
-                <dd [class]="styles.kpiValue" data-testid="kpi-moved">{{ formatUnits(moved()) }}</dd>
-                <dd [class]="styles.kpiNote(false)">units in and out</dd>
-            </div>
-        </dl>
+        <section aria-label="Key figures">
+            <dl [class]="styles.kpis">
+                <div [class]="styles.kpi">
+                    <dt [class]="styles.kpiTerm">Units on hand</dt>
+                    <dd [class]="styles.kpiValue" data-testid="kpi-units">{{ formatUnits(stock().units) }}</dd>
+                    <dd aria-hidden="true" [class]="styles.kpiNote(false)">
+                        <svg aria-hidden="true" viewBox="0 0 100 24" preserveAspectRatio="none" [attr.class]="styles.spark">
+                            <polyline [attr.points]="points()" vector-effect="non-scaling-stroke" [attr.class]="styles.sparkLine" />
+                        </svg>
+                    </dd>
+                </div>
+                <div [class]="styles.kpi">
+                    <dt [class]="styles.kpiTerm">Fill</dt>
+                    <dd [class]="styles.kpiValue" data-testid="kpi-fill">{{ formatPercent(stock().units / stock().capacity) }}</dd>
+                    <dd [class]="styles.kpiNote(false)">of {{ formatUnits(stock().capacity) }} units</dd>
+                </div>
+                <div [class]="styles.kpi">
+                    <dt [class]="styles.kpiTerm">Low-stock bins</dt>
+                    <dd [class]="styles.kpiValue" data-testid="kpi-low">{{ stock().low }}</dd>
+                    <dd [class]="styles.kpiNote(stock().low > 0)">of {{ stock().bins }} bins</dd>
+                </div>
+                <div [class]="styles.kpi">
+                    <dt [class]="styles.kpiTerm">Moved, last minute</dt>
+                    <dd [class]="styles.kpiValue" data-testid="kpi-moved">{{ formatUnits(moved()) }}</dd>
+                    <dd [class]="styles.kpiNote(false)">units in and out</dd>
+                </div>
+            </dl>
+        </section>
     `,
 })
 export class Kpis {
