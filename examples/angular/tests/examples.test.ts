@@ -29,7 +29,13 @@ const ALLOWED = [
     /^#\/lib\/cn$/,
 ];
 
-const KIT_FILES = ["data.ts", "loader.ts", "persist.ts", "undo.ts"];
+const KIT_FILES = [
+    "data.ts",
+    "loader.ts",
+    "persist.ts",
+    "undo.ts",
+    "warehouse-live.ts",
+];
 
 function walk(dir: string): string[] {
     return readdirSync(dir).flatMap((name) => {
