@@ -313,6 +313,23 @@ Packages PR, and merging it publishes every package with pnpm through npm truste
 never run `npm publish`, `pnpm publish` or `changeset publish` by hand. The maintainer's steps,
 including a new package's own stub and trust, are in [`docs/releasing.md`](docs/releasing.md).
 
+## CI
+
+`.github/workflows/ci.yml` (its comment header describes every job) runs on pull requests and on
+a manual run: Checks, Package (`pnpm check:package`), Changesets (a PR that changes what a package
+ships needs a changeset; skipped for the Version Packages PR), Site export, and the E2E suites
+(Epic #74, from fragiola/data-grid). A `Changes` job picks the suites a pull request can affect
+(`scripts/e2e-suites.ts`, a `git diff` against the base, tested by `site/tests/e2e-suites.test.ts`):
+none for docs only (`site/docs/**`, `*.md`, `AGENTS.md`); `packages/react` or `examples/react`: the
+playground and examples react; `packages/vue` or `examples/vue`: examples vue; `packages/angular`
+or `examples/angular`: examples angular; any other path, and a manual run: every suite. Only those
+may skip: a new rule names what it skips, never what it runs. It also lists the frameworks with an
+examples app (every `examples/<framework>` with a `playwright.config.ts`); an empty selection runs
+no examples job. The E2E jobs run in `mcr.microsoft.com/playwright:v<version>-noble`
+(`--user 1001`), its tag the version of `@playwright/test` (`site/tests/ci-workflow.test.ts`):
+upgrading Playwright changes both. No shards: add `--shard` only for a suite whose test step takes
+more than about 3 minutes.
+
 ## Repository layout
 
 ```
@@ -365,7 +382,7 @@ apps/playground/    src/shell/, src/scenarios/<area>/, src/inspector/, src/fixtu
 site/               export.ts, contract.ts, dev.ts, dev-proxy.ts, sources.ts, project.json
                     docs/               the pages fragiola.com/tree serves (docs/api/commands.mdx is generated)
                     tests/              the export, the contract, the docs reference, the scripts' tests
-scripts/            check-layout.ts, check-dts.ts, check-features.ts, size-report.ts, built-files.ts (from Data Grid), check-package.ts, source-condition.ts, exported-names.ts
+scripts/            check-layout.ts, check-dts.ts, check-features.ts, size-report.ts, built-files.ts (from Data Grid), check-package.ts, source-condition.ts, exported-names.ts, e2e-suites.ts (CI's Changes job)
 docs/               releasing.md, docs-examples-gaps.md, reports
 ```
 
