@@ -21,7 +21,7 @@ export const body = "flex min-h-0 flex-1 flex-col gap-3 md:flex-row";
  * indicator's containing block.
  */
 export const root =
-    "palette-raised min-h-0 flex-1 overflow-auto rounded-(--tr-radius) border border-palette-line bg-palette-base p-1 shadow-(--tr-shadow) data-dragging:cursor-grabbing max-md:min-h-64";
+    "palette-raised min-h-0 flex-1 overflow-auto rounded-(--tr-radius) border border-palette-line bg-palette-base p-1 shadow-(--tr-shadow) data-dragging:cursor-grabbing max-md:min-h-64 md:w-80 md:flex-none";
 
 /** The item is the row the virtualizer measures: no margin. A zone highlight dims the others. */
 export const item = "outline-none transition-opacity data-dimmed:opacity-40";
@@ -99,9 +99,9 @@ export const dropIndicator = cn(
 
 export const liveRegion = "sr-only";
 
-/** The details panel, beside the tree. */
+/** The details panel, beside the tree: it takes the width the tree leaves. */
 export const details =
-    "palette-raised flex shrink-0 flex-col gap-3 overflow-auto rounded-(--tr-radius) border border-palette-line bg-palette-base p-4 shadow-(--tr-shadow) md:w-72";
+    "palette-raised flex shrink-0 flex-col gap-3 overflow-auto rounded-(--tr-radius) border border-palette-line bg-palette-base p-4 shadow-(--tr-shadow) md:min-w-72 md:flex-1";
 
 export const empty = "m-auto text-center text-palette-accent/85";
 

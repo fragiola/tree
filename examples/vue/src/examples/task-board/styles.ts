@@ -14,7 +14,7 @@ export const select =
 export const matches = "text-palette-accent/85 text-sm tabular-nums";
 
 export const body =
-    "grid min-h-0 flex-1 gap-3 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]";
+    "grid min-h-0 flex-1 gap-3 lg:grid-cols-[minmax(0,20rem)_minmax(0,1fr)]";
 
 export const root =
     "palette-raised min-h-0 overflow-auto rounded-(--tr-radius) border border-palette-line bg-palette-base p-1 shadow-(--tr-shadow) data-dragging:cursor-grabbing max-lg:max-h-72";

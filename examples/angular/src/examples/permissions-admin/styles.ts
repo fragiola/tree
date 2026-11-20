@@ -27,8 +27,9 @@ export const matches = "text-palette-accent/85 text-sm tabular-nums";
 
 export const body = "flex min-h-0 flex-1 flex-col gap-3 md:flex-row";
 
+/** A narrow column (20rem from md), never the width of the screen: the summary takes the rest. */
 export const root =
-    "palette-raised min-h-0 flex-1 overflow-auto rounded-(--tr-radius) border border-palette-line bg-palette-base p-1 shadow-(--tr-shadow)";
+    "palette-raised min-h-0 flex-1 overflow-auto rounded-(--tr-radius) border border-palette-line bg-palette-base p-1 shadow-(--tr-shadow) md:w-80 md:flex-none";
 
 /** The item takes focus; a search dims the rows it does not match, and marks the ones it does. */
 export const item = cn(
@@ -90,7 +91,7 @@ export const change = {
 
 /** The changes panel, beside the tree. */
 export const summary =
-    "palette-raised flex shrink-0 flex-col gap-3 rounded-(--tr-radius) border border-palette-line bg-palette-base p-4 shadow-(--tr-shadow) md:w-64";
+    "palette-raised flex shrink-0 flex-col gap-3 rounded-(--tr-radius) border border-palette-line bg-palette-base p-4 shadow-(--tr-shadow) md:min-w-64 md:flex-1";
 
 export const summaryTitle = "m-0 font-semibold text-base";
 

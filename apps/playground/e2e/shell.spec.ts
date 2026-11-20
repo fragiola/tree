@@ -41,7 +41,7 @@ test("every example renders in the stage", async ({ page }) => {
             .map((a) => a.getAttribute("href") ?? "")
             .filter((href) => href.includes("example=")),
     );
-    expect(hrefs.length).toBe(20);
+    expect(hrefs.length).toBe(21);
     for (const href of hrefs) {
         await page.goto(href);
         await expect(

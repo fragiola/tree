@@ -17,14 +17,14 @@ framework has an adapter, so **every piece of logic that isn't rendering lives i
 | `packages/vue` | `@fragiola/tree-vue` | the same `Tree.*` primitives as Vue 3.5 components (plain `.ts` render functions, `as` and a `render` scoped slot, default scoped slots for the recursion, `v-model:*-item-ids`), `typedTree<Types, Features>()`, the composables (`useTree`, `useTreeItem`, `useTreeState`, `useTreeRef`, `createTreeRef`), and the core re-exported; the features' entries `/selection`, `/checkboxes`, `/rename` (`useTreeItemRename`), `/async-children`, `/type-ahead`, `/virtualization` (`VirtualItems`, `typedVirtualItems`, `useTreeVirtualWindow`), `/drag-and-drop` (`DropIndicator`), `/drag-group`, `/foreign-drop` (`DropIndicator` too) and `/drop-outside` | the core (`workspace:*`, published as the exact version); peer `vue` (^3.5) |
 | `packages/angular` | `@fragiola/tree-angular` | the same primitives as Angular standalone attribute directives on the consumer's elements (`[treeRoot]`, `ng-template[treeItems]` for the recursion, `[treeItem]`, `[treeItemContent]`, `[treeGroup]`, `[treeToggle]`, `[treeLiveRegion]`, the `TREE` array; signals, `host` bindings, zoneless), the injection functions (`injectTree`, `injectTreeItem`, `injectTreeState`), and the core re-exported; the features' secondary entry points `packages/angular/selection/`, `/checkboxes/`, `/rename/` (`input[treeItemRename]`, `TreeItemRenameDirective`, out of `TREE`), `/async-children/`, `/type-ahead/`, `packages/angular/virtualization/` (`ng-template[treeVirtualItems]`, `TreeVirtualItemsDirective`, out of `TREE`; `injectTreeVirtualWindow`), `/drag-and-drop/` (`[treeDropIndicator]`, `TreeDropIndicatorDirective`, out of `TREE`), `/drag-group/`, `/foreign-drop/` (re-exporting the directive) and `/drop-outside/`, which build on the main entry's `ɵ` exports only. Built by ng-packagr (Angular Package Format, partial compilation, ESM only) on TypeScript 6.0.3, pinned in this package (the Angular compiler supports `>=6.0 <6.1`); published from its `dist` (`publishConfig.directory`, its manifest written by `scripts/publish-manifest.ts`) | the core (`workspace:*`, published as the exact version); peer `@angular/core` (^22) |
 | `examples/shared` | `examples-shared`, private | what every framework's examples share: the metadata (`src/meta/<id>.ts`), the five example themes (`light`, `dark`, `ide`, `paper`, `terminal`: Dockable's, each changing the tree's shape as well as its colours, read by every example of every framework through the `--tr-*` tokens), the embed protocol, the manifest builder and loader generator, every Playwright spec | no framework |
-| `examples/react` | `examples-react`, private | the 20 React examples (`src/examples/<id>/`), the vendored Fragiola UI (`src/components`, `scripts/vendor-fragiola.ts`), the embed app | `@fragiola/tree-react`, Fragiola UI's stack |
-| `examples/vue` | `examples-vue`, private | the 20 examples in Vue (`src/examples/<id>/index.vue`, `styles.ts` copied from React's), the Vue kit (Dockable's, over Reka UI, with the React kit's classes; `src/styles` and `src/lib/cn.ts` copied from examples/react, `tests/vendored.test.ts`), the embed app; single-file components checked by `vue-tsc` on TypeScript 6.0.3, pinned in this app only | `@fragiola/tree-vue`, Vue 3.5, Reka UI, `@lucide/vue` |
-| `examples/angular` | `examples-angular`, private | the 20 examples in Angular (`src/examples/<id>/index.ts`, a default-exported standalone component with an inline template, and `styles.ts` copied from Vue's), the Angular kit (Dockable's clickable and switch, with the React kit's classes; `src/styles` and `src/lib/cn.ts` copied from examples/react, `tests/vendored.test.ts`), the embed app (Vite + `@analogjs/vite-plugin-angular`, zoneless); typechecked by `ngc` (strict templates) on TypeScript 6.0.3, pinned in this app only | `@fragiola/tree-angular`, Angular 22, `@lucide/angular` |
+| `examples/react` | `examples-react`, private | the 21 React examples (`src/examples/<id>/`), the vendored Fragiola UI (`src/components`, `scripts/vendor-fragiola.ts`), the embed app | `@fragiola/tree-react`, Fragiola UI's stack |
+| `examples/vue` | `examples-vue`, private | the 21 examples in Vue (`src/examples/<id>/index.vue`, `styles.ts` copied from React's), the Vue kit (Dockable's, over Reka UI, with the React kit's classes; `src/styles` and `src/lib/cn.ts` copied from examples/react, `tests/vendored.test.ts`), the embed app; single-file components checked by `vue-tsc` on TypeScript 6.0.3, pinned in this app only | `@fragiola/tree-vue`, Vue 3.5, Reka UI, `@lucide/vue` |
+| `examples/angular` | `examples-angular`, private | the 21 examples in Angular (`src/examples/<id>/index.ts`, a default-exported standalone component with an inline template, and `styles.ts` copied from Vue's), the Angular kit (Dockable's clickable and switch, with the React kit's classes; `src/styles` and `src/lib/cn.ts` copied from examples/react, `tests/vendored.test.ts`), the embed app (Vite + `@analogjs/vite-plugin-angular`, zoneless); typechecked by `ngc` (strict templates) on TypeScript 6.0.3, pinned in this app only | `@fragiola/tree-angular`, Angular 22, `@lucide/angular` |
 | `apps/playground` | `playground`, private | every example live, dev-only scenarios (`src/scenarios/<area>/<id>.tsx`), unstyled fixtures for Playwright (`fixtures/<name>/`), the Inspector | `@fragiola/tree-react` |
 | `site` | `site`, private | the site export (`export.ts`, `contract.ts`, `dev.ts`, `dev-proxy.ts`, `sources.ts`), the pages fragiola.com/tree serves (`site/docs`), the repository's script tests | |
 
 Vue came with Epic #11 and Angular with Epic #14: each adapter has its package, its examples app
-(the 20 examples with the same ids, passing the shared specs unchanged), its CI e2e job (one per
+(the 21 examples with the same ids, passing the shared specs unchanged), its CI e2e job (one per
 `examples/*/playwright.config.ts`), its entry in `ADAPTERS` (`scripts/check-package.ts`), its
 framework in `site/project.json` and in `COMPLETE_FRAMEWORKS` (`examples/shared/e2e/available.ts`):
 React, Vue and Angular all ship every example.
@@ -375,7 +375,7 @@ packages/vue/       @fragiola/tree-vue  src/index.ts, parts.ts, typed.ts (typedT
                     src/selection/, src/virtualization/  the features' entries (VirtualItems, typedVirtualItems)
                     tests/              the React adapter's behaviour files, parity.test.ts, ssr.test.ts, types/
 examples/shared/    src/meta/, src/themes/, src/embed/, scripts/, e2e/ (every spec), tests/
-examples/react/     src/examples/<id>/ (index.tsx, styles.ts), src/examples/_kit/, src/components/ (vendored), src/embed/
+examples/react/     src/examples/<id>/ (index.tsx, styles.ts), src/examples/_kit/ (data, loader, persist, undo, warehouse-live), src/components/ (vendored), src/embed/
 examples/vue/       src/examples/<id>/ (index.vue, tree.ts, *.vue, styles.ts), src/examples/_kit/ (React's), src/components/ (Vue kit), src/embed/
 examples/angular/   src/examples/<id>/ (index.ts, *.ts, styles.ts), src/examples/_kit/ (React's), src/components/ (Angular kit), src/embed/
 apps/playground/    src/shell/, src/scenarios/<area>/, src/inspector/, src/fixture/, fixtures/<name>/, e2e/
@@ -406,11 +406,15 @@ examples app per framework; the registration in `www` is fragiola/www#32.
 - The JSON model is documented in `site/docs/api/json-model.mdx`, the commands in the generated
   `site/docs/api/commands.mdx`. The examples' workarounds, when there are any, are listed in
   `docs/docs-examples-gaps.md`; what the packages leave out is on `site/docs/limitations.mdx`.
-- **The examples** (`examples/react/src/examples/README.md`): 20 ids, final, that Vue and
+- **The examples** (`examples/react/src/examples/README.md`): 21 ids, final, that Vue and
   Angular port in full: `hello-tree`, `file-explorer`, `multi-select`, `checkboxes`, `async-loading`,
   `rename`, `drag-and-drop`, `two-trees`, `file-drop`, `keyboard`, `controlled`, `save-restore`, `large-tree`, `undo-redo`,
   `command-console`, `rtl`, and the `apps` category's real applications built on several
-  features at once: `ide-explorer`, `warehouse-inventory`, `task-board`, `permissions-admin`. The shared specs reach them only through `data-tree-part`,
+  features at once: `ide-explorer`, `warehouse-inventory`, `task-board`, `permissions-admin`, and
+  `warehouse-control`, the landing's showcase: a live scene (a seeded feed in `_kit/warehouse-live.ts`,
+  Pause/Play, paused under reduced motion and while hidden) where the tree is a narrow column beside
+  Fragiola UI panels and hand-drawn SVG charts. In an `apps` scene the tree is never the lone,
+  full-width part: it keeps a narrow column (about 18-20rem) beside its companions. The shared specs reach them only through `data-tree-part`,
   `data-tree-path`, roles, accessible names and test ids. Fragiola UI is vendored into the
   examples (committed copies), never a dependency of a package.
 - **Every framework in the docs**: every page that shows framework code has a

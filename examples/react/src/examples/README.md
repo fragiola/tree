@@ -9,7 +9,8 @@ src/examples/
   <slug>/styles.ts     how it looks: one class string (or state function) per part
   <slug>/*.ts(x)       optional sibling files, shown in the code panel
   _kit/                shared demo content and app logic (the demo trees, the fake loader,
-                       persistence, undo/redo); no tree assembly, no styles
+                       persistence, undo/redo, the seeded live stock feed); no tree assembly,
+                       no styles
 ```
 
 What every framework's examples share, and no reader copies, lives once in `examples/shared`
@@ -41,7 +42,7 @@ The ids are final: Vue and Angular port every one, with the same id.
 | `data` | `async-loading`, `controlled`, `save-restore`, `large-tree` (virtualized) |
 | `model-api` | `undo-redo`, `command-console` |
 | `accessibility` | `keyboard`, `rtl` |
-| `apps` | `ide-explorer` (a code editor's explorer and open editors), `warehouse-inventory` (virtualized locations, stock rules and details), `task-board` (checks as done work, a board taking rows dropped outside the tree), `permissions-admin` (controlled cascade checks, locked actions, saved changes) |
+| `apps` | `ide-explorer` (a code editor's explorer and open editors), `warehouse-inventory` (virtualized locations, stock rules and details), `task-board` (checks as done work, a board taking rows dropped outside the tree), `permissions-admin` (controlled cascade checks, locked actions, saved changes), `warehouse-control` (the landing's showcase: a live control room, the tree a narrow column beside figures, an SVG chart, a feed and a table) |
 
 ## Adding an example
 
@@ -94,3 +95,9 @@ same file, below the default export.
 - **Accessible names**: the tree, every button and every input has a name; the package renders
   none.
 - **Workarounds are commented** in the code and listed in `docs/docs-examples-gaps.md`.
+- **The tree is never the lone, full-width part of an `apps` scene**: it keeps a narrow column
+  (about 18-20rem) beside its companions, which are Fragiola UI and plain markup, never another
+  Fragiola library; charts are hand-drawn SVG.
+- **Live data is a seeded simulation** in `_kit/` (`warehouse-live.ts`): a visible Pause/Play,
+  paused under `prefers-reduced-motion: reduce` and while the document is hidden; a spec pauses it
+  (or opens the example under reduced motion) before asserting values.

@@ -66,7 +66,13 @@ const ALLOWED = [
 const SITE_FILES = [/\.generated\.ts$/, /\.md$/, /\.css$/];
 
 /** What `_kit/` may hold: demo content and app logic, never a tree assembly or a style layer. */
-const KIT_FILES = ["data.ts", "loader.ts", "persist.ts", "undo.ts"];
+const KIT_FILES = [
+    "data.ts",
+    "loader.ts",
+    "persist.ts",
+    "undo.ts",
+    "warehouse-live.ts",
+];
 
 /**
  * Where an example's `.tsx` styles itself instead of reading `styles.ts`: a class string on a
