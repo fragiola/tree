@@ -295,7 +295,7 @@ The words never swap meaning, in code, docs and examples.
 | `pnpm release:version` | `changeset version`: only the release workflow runs it (the Version Packages PR); never commit a version bump by hand |
 | `pnpm dev` | the playground (`apps/playground`) on http://localhost:5173 (`PLAYGROUND_PORT` moves it): every example, the scenarios, the fixtures, the Inspector |
 | `pnpm e2e` | Playwright: the playground's suite (fixtures, shell, scenarios), then each examples app's run of the shared specs (`examples/shared/e2e`) against its production embed; build the packages first (`pnpm build`) |
-| `pnpm site:export --base /tree --out <dir>` | the site export (contract v1.2, `../www/CONTRACT.md`): pages, `examples.json`, `project.json` and the React, Vue and Angular embeds, validated by `site/contract.ts` |
+| `pnpm site:export --base /tree --out <dir>` | the site export (contract v1.7, `../www/CONTRACT.md`): pages, `examples.json`, `project.json` and the React, Vue and Angular embeds, validated by `site/contract.ts` |
 | `pnpm site:dev --base /tree --port 5190` | every framework's embed with hot reload under `/tree/embed/<framework>/`, for `www`'s dev server |
 
 **Dev ports.** The playground is 5173. The React embed alone (`pnpm --filter examples-react dev`)
@@ -395,14 +395,17 @@ never npm.
 ## The site (fragiola.com)
 
 The docs and examples are served by `fragiola.com/tree`, built by the `www` repo from this repo's
-site export (`../www/CONTRACT.md` v1.2, `pnpm site:export`). This repo provides the pages
+site export (`../www/CONTRACT.md` v1.7, `pnpm site:export`). This repo provides the pages
 (`site/docs`, sidebar `site/docs/config.json`), `site/project.json` (`frameworks: ["react", "vue", "angular"]`), the gallery configuration (built from `examples/shared`) and one
 examples app per framework; the registration in `www` is fragiola/www#32.
 
 - Pages follow the contract: titles <= 60 characters, descriptions 50-160 characters, no `#` in
-  bodies, only the v1.2 MDX vocabulary, base-free links. `site/tests/contract.test.ts` validates
+  bodies, only the v1.2 MDX vocabulary, base-free links (`/ai`, v1.7, is the site's AI agents
+  docs: nothing below it). `site/tests/contract.test.ts` validates
   them, and `site/tests/docs-reference.test.ts` fails when an export, a prop, a key or a command
   field is not documented.
+- The landing's Hero actions go examples (primary), "Use with your AI agent" (`/ai`, secondary),
+  then the docs (ghost), as on every fragiola.com landing (v1.7); the header and footer link GitHub.
 - The JSON model is documented in `site/docs/api/json-model.mdx`, the commands in the generated
   `site/docs/api/commands.mdx`. The examples' workarounds, when there are any, are listed in
   `docs/docs-examples-gaps.md`; what the packages leave out is on `site/docs/limitations.mdx`.
