@@ -33,7 +33,7 @@ export function Kpis({
     });
     const moved = unitsMoved(model, log, scopeId);
     return (
-        <dl aria-label="Key figures" className={styles.kpis}>
+        <dl role="group" aria-label="Key figures" className={styles.kpis}>
             <div className={styles.kpi}>
                 <dt className={styles.kpiTerm}>Units on hand</dt>
                 <dd className={styles.kpiValue} data-testid="kpi-units">

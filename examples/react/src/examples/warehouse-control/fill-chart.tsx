@@ -1,5 +1,4 @@
 import { useTreeState } from "@fragiola/tree-react";
-import { TriangleAlert } from "lucide-react";
 import { useId } from "react";
 import * as styles from "./styles";
 import {
@@ -40,7 +39,7 @@ export function FillChart({
                 aria-label={bars
                     .map(
                         (bar) =>
-                            `${bar.label} ${formatPercent(bar.units / bar.capacity)}`,
+                            `${bar.label} ${formatPercent(bar.units / bar.capacity)}${bar.low > 0 ? " (low stock)" : ""}`,
                     )
                     .join(", ")}
                 viewBox={`0 0 ${WIDTH} ${bars.length * ROW}`}
@@ -86,11 +85,10 @@ export function FillChart({
                                 {formatPercent(ratio)}
                             </text>
                             {bar.low > 0 && (
-                                <TriangleAlert
-                                    x={WIDTH - 14}
-                                    y={y + 4}
-                                    width={14}
-                                    height={14}
+                                <circle
+                                    cx={WIDTH - 6}
+                                    cy={y + 11}
+                                    r={4}
                                     className={styles.chartLow}
                                 />
                             )}

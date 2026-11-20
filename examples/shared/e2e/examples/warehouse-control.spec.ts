@@ -127,7 +127,7 @@ test("selecting a zone scopes the figures, the chart and the table", async ({
         stage.getByRole("heading", { name: "Fill by aisle" }),
     ).toBeVisible();
     await expect(stage.getByTestId("fill-chart")).toHaveAccessibleName(
-        /^Aisle LD1 \d+%, Aisle LD2 \d+%, Aisle LD3 \d+%$/,
+        /^Aisle LD1 \d+%( \(low stock\))?, Aisle LD2 \d+%( \(low stock\))?, Aisle LD3 \d+%( \(low stock\))?$/,
     );
     const table = stage.getByRole("table", {
         name: "Bins, lowest stock first",

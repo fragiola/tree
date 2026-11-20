@@ -168,7 +168,7 @@ export const chartBar = (ratio: number) =>
 export const chartValue = "fill-palette-accent/85 text-[11px] tabular-nums";
 
 /** The marker of a location with low stock, after its figure. */
-export const chartLow = "palette-orange text-palette-accent";
+export const chartLow = "palette-orange fill-palette-accent";
 
 /** The movements: newest first, one line each. */
 export const feed = "m-0 flex list-none flex-col gap-1 p-0";
