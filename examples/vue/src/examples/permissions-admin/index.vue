@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { createTreeModel, useTreeState } from "@fragiola/tree-vue";
 import { RotateCcw, Save, Search } from "@lucide/vue";
-import { computed, onScopeDispose, ref, useId } from "vue";
+import { computed, ref, useId } from "vue";
 import { Clickable } from "#/components/atoms/clickable";
 import { features } from "./features";
 import PermissionItem from "./permission-item.vue";
@@ -10,15 +10,11 @@ import {
     expand,
     grantedActions,
     grantsOf,
-    keyMap,
-    lockRule,
     organization,
     type PermissionTypes,
     ROLE_NAMES,
     roleOf,
     search,
-    setGrants,
-    toggle,
 } from "./permissions";
 import * as styles from "./styles";
 import { Tree } from "./tree";
@@ -28,10 +24,9 @@ const json = organization();
 const model = createTreeModel<PermissionTypes, typeof features>(json, {
     features,
 });
-onScopeDispose(lockRule(model));
 // The checks are the app's state, as a form field's value is: the tree shows them and reports
-// every change it makes; presets and Discard run commands on the model, which reports them.
-// (from the model's list: it has the cascade's parents, as every change will)
+// every change it makes; presets and Discard set them, and the tree follows (a granted action
+// is disabled, so it stays checked). The list starts as the model's, with the cascade's parents.
 const checkedItemIds = ref<string[]>([...model.state.checkedItemIds]);
 // what is saved: the granted actions at the last Save
 const saved = ref(grantedActions(model, json.checkedItemIds ?? []));
@@ -55,7 +50,7 @@ const run = (result: { ok: boolean; error?: { message: string } }) => {
 };
 
 function chooseRole(name: string) {
-    if (name !== "Custom") run(setGrants(model, grantsOf(name)));
+    if (name !== "Custom") checkedItemIds.value = grantsOf(name);
 }
 
 function onSearch(value: string) {
@@ -64,17 +59,12 @@ function onSearch(value: string) {
     expand(model, search(model, value).aroundIds);
 }
 
-// Space is the app's: the tree's own would uncheck granted actions with their parent
-function onKeydown(event: KeyboardEvent) {
-    if (event.key !== " " || event.target instanceof HTMLInputElement) return;
-    const { focusedItemId } = model.state;
-    if (focusedItemId === null) return;
-    event.preventDefault();
-    run(toggle(model, focusedItemId));
+function toggle(itemId: string) {
+    run(model.run("item.toggle-check", { itemId }));
 }
 
 function discard() {
-    run(setGrants(model, saved.value));
+    checkedItemIds.value = [...saved.value];
     notice.value = "Discarded.";
 }
 
@@ -124,10 +114,8 @@ function askToSave() {
             <Tree.Root
                 v-model:checked-item-ids="checkedItemIds"
                 :model="model"
-                :key-map="keyMap"
                 aria-label="Permissions"
                 :class="styles.root"
-                @keydown="onKeydown"
             >
                 <Tree.Items v-slot="{ item }">
                     <PermissionItem
@@ -135,7 +123,7 @@ function askToSave() {
                         :model="model"
                         :saved="saved"
                         :found="found"
-                        @toggle="(itemId) => run(toggle(model, itemId))"
+                        @toggle="toggle"
                     />
                 </Tree.Items>
             </Tree.Root>

@@ -17,14 +17,7 @@ import {
     Search,
     TriangleAlert,
 } from "lucide-react";
-import {
-    type KeyboardEvent,
-    useEffect,
-    useId,
-    useMemo,
-    useRef,
-    useState,
-} from "react";
+import { useId, useMemo, useRef, useState } from "react";
 import { Clickable } from "#/components/atoms/clickable";
 import { features, type PermissionModel } from "./features";
 import { KindIcon } from "./kind-icon";
@@ -35,15 +28,11 @@ import {
     grantedActions,
     grantsOf,
     isRisky,
-    keyMap,
-    lockRule,
     organization,
     type PermissionTypes,
     ROLE_NAMES,
     roleOf,
     search,
-    setGrants,
-    toggle,
 } from "./permissions";
 import * as styles from "./styles";
 
@@ -53,10 +42,9 @@ export default function PermissionsAdmin() {
     const [model] = useState(() =>
         createTreeModel<PermissionTypes, typeof features>(json, { features }),
     );
-    useEffect(() => lockRule(model), [model]);
     // The checks are the app's state, as a form field's value is: the tree shows them and reports
-    // every change it makes; presets and Discard run commands on the model, which reports them.
-    // (from the model's list: it has the cascade's parents, as every change will)
+    // every change it makes; presets and Discard set them, and the tree follows (a granted action
+    // is disabled, so it stays checked). The list starts as the model's, with the cascade's parents.
     const [checkedItemIds, setCheckedItemIds] = useState<readonly string[]>(
         () => model.state.checkedItemIds,
     );
@@ -85,16 +73,6 @@ export default function PermissionsAdmin() {
     const run = (result: { ok: boolean; error?: { message: string } }) =>
         setNotice(result.ok ? "" : (result.error?.message ?? ""));
 
-    // Space is the app's: the tree's own would uncheck granted actions with their parent
-    const onKeyDown = (event: KeyboardEvent) => {
-        if (event.key !== " " || event.target instanceof HTMLInputElement)
-            return;
-        const { focusedItemId } = model.state;
-        if (focusedItemId === null) return;
-        event.preventDefault();
-        run(toggle(model, focusedItemId));
-    };
-
     const save = () => {
         setSaved(current);
         setNotice("Saved.");
@@ -111,7 +89,7 @@ export default function PermissionsAdmin() {
                         className={styles.select}
                         onChange={(event) =>
                             event.target.value !== "Custom" &&
-                            run(setGrants(model, grantsOf(event.target.value)))
+                            setCheckedItemIds(grantsOf(event.target.value))
                         }
                     >
                         {ROLE_NAMES.map((name) => (
@@ -154,10 +132,8 @@ export default function PermissionsAdmin() {
                     model={model}
                     checkedItemIds={checkedItemIds}
                     onCheckedItemIdsChange={setCheckedItemIds}
-                    keyMap={keyMap}
                     aria-label="Permissions"
                     className={styles.root}
-                    onKeyDown={onKeyDown}
                 >
                     <Tree.Items<PermissionTypes>>
                         {(item) => (
@@ -167,7 +143,11 @@ export default function PermissionsAdmin() {
                                 saved={saved}
                                 found={found}
                                 onToggle={(itemId) =>
-                                    run(toggle(model, itemId))
+                                    run(
+                                        model.run("item.toggle-check", {
+                                            itemId,
+                                        }),
+                                    )
                                 }
                             />
                         )}
@@ -214,7 +194,7 @@ export default function PermissionsAdmin() {
                                 0
                             }
                             onClick={() => {
-                                run(setGrants(model, saved));
+                                setCheckedItemIds(saved);
                                 setNotice("Discarded.");
                             }}
                         >
@@ -342,8 +322,8 @@ function PermissionItem({
                 <Tree.Toggle className={styles.toggle}>
                     <ChevronRight aria-hidden />
                 </Tree.Toggle>
-                {/* the app's own check control: the item carries aria-checked; Space is the app's
-                    too (onKeyDown on the root); it toggles the actions that are not granted */}
+                {/* the app's own check control: the item carries aria-checked, and Space toggles
+                    it too; a granted action is disabled, so neither unchecks it */}
                 <span
                     aria-hidden
                     data-tree-no-drag=""
