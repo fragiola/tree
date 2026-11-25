@@ -19,6 +19,7 @@ import type { CheckMode, CheckState } from "../state/types";
 import { itemCheck, itemToggleCheck } from "./commands";
 import {
     type CheckboxesState,
+    cascadeOf,
     checkedOf,
     checkedSet,
     checkModeOf,
@@ -96,18 +97,28 @@ const rootProps: readonly TreeRootProp[] = [
                 itemIds.every((id) => current.has(id))
             )
                 return;
+            const unchecked = now.filter((itemId) => !wanted.has(itemId));
+            // what the unchecks take with them (cascade): checked again when the list wants it
+            const lost = new Set(
+                checkModeOf(model.state) === "cascade"
+                    ? unchecked.flatMap((itemId) =>
+                          cascadeOf(model.state, itemId),
+                      )
+                    : [],
+            );
             // unchecks first: unchecking a parent (cascade) must not undo a check of its children
             runAll(
                 model,
                 [
-                    ...now
-                        .filter((itemId) => !wanted.has(itemId))
-                        .map((itemId) => ({
-                            command: "item.check",
-                            payload: { itemId, checked: false },
-                        })),
+                    ...unchecked.map((itemId) => ({
+                        command: "item.check",
+                        payload: { itemId, checked: false },
+                    })),
                     ...itemIds
-                        .filter((itemId) => !current.has(itemId))
+                        .filter(
+                            (itemId) =>
+                                !current.has(itemId) || lost.has(itemId),
+                        )
                         .map((itemId) => ({
                             command: "item.check",
                             payload: { itemId, checked: true },

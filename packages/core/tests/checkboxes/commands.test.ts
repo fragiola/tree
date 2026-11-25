@@ -104,6 +104,45 @@ describe("tri-state checkboxes, cascade mode", () => {
             model.check("item.check", { itemId: "a", checked: true }),
         ).toMatchObject({ ok: false, error: { code: "refused" } });
     });
+
+    it("a parent's check leaves a disabled descendant, and what is under it, as it is", () => {
+        const model = filesModel({ checkedItemIds: ["a"] });
+        model.run("item.set-flags", { itemId: "a", disabled: true });
+        model.run("item.check", { itemId: "src", checked: false });
+        expect(model.state.checkedItemIds).toEqual(["a"]);
+        expect(model.get("check-state-by", { itemId: "utils" })).toBe("mixed");
+        model.run("item.set-flags", { itemId: "utils", disabled: true });
+        model.run("item.check", { itemId: "src", checked: true });
+        expect(sorted(model.state.checkedItemIds)).toEqual(
+            sorted(["a", "app", "lib"]),
+        );
+        expect(model.get("check-state-by", { itemId: "src" })).toBe("mixed");
+    });
+
+    it("toggling a parent a disabled child keeps mixed still checks and unchecks the others", () => {
+        const model = filesModel();
+        model.run("item.set-flags", { itemId: "a", disabled: true });
+        expect(model.run("item.toggle-check", { itemId: "utils" })).toEqual({
+            ok: true,
+            value: { itemId: "utils", checked: true },
+        });
+        expect(model.state.checkedItemIds).toEqual(["b"]);
+        expect(model.get("check-state-by", { itemId: "utils" })).toBe("mixed");
+        expect(model.run("item.toggle-check", { itemId: "utils" })).toEqual({
+            ok: true,
+            value: { itemId: "utils", checked: false },
+        });
+        expect(model.state.checkedItemIds).toEqual([]);
+
+        const granted = filesModel({ checkedItemIds: ["a"] });
+        granted.run("item.set-flags", { itemId: "a", disabled: true });
+        granted.run("item.toggle-check", { itemId: "utils" });
+        expect(sorted(granted.state.checkedItemIds)).toEqual(
+            sorted(["a", "b", "utils"]),
+        );
+        granted.run("item.toggle-check", { itemId: "utils" });
+        expect(granted.state.checkedItemIds).toEqual(["a"]);
+    });
 });
 
 describe("tri-state checkboxes, independent mode", () => {

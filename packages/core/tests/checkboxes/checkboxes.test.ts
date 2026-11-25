@@ -119,6 +119,25 @@ describe("the checkboxes feature", () => {
         );
     });
 
+    it("syncing a list that drops a checked parent keeps the children it still lists", () => {
+        const model = filesModel(
+            { checkedItemIds: ["utils"] },
+            { features: allFeatures() },
+        );
+        const rootProp = model
+            .get("features")
+            .flatMap((feature) => feature.rootProps)
+            .find((prop) => prop.prop === "checkedItemIds");
+        expect([...model.state.checkedItemIds].sort()).toEqual([
+            "a",
+            "b",
+            "utils",
+        ]);
+        rootProp?.sync(loose(model), ["a"], {});
+        expect(model.state.checkedItemIds).toEqual(["a"]);
+        expect(model.get("check-state-by", { itemId: "utils" })).toBe("mixed");
+    });
+
     it("keeps the cascade when items are added, moved or removed", () => {
         const model = filesModel(
             { expandedItemIds: ["src", "utils"], checkedItemIds: ["utils"] },
