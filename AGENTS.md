@@ -150,7 +150,7 @@ Do not "fix" these. A change that breaks one is a decision for the maintainer.
      released outside every tree of its group goes to the app, with the element under the pointer
      (`get("drop-outside-element")` while it is outside).
    **Native outbound drags** (rows to the desktop or another window) are not done: a second,
-   native mechanism is the maintainer's decision (`site/docs/limitations.mdx`).
+   native mechanism is the maintainer's decision.
 10. **App policy stays in the app.** No undo/redo, no persistence, no translations, no announcement
     text in the packages. Labels are raw model data no primitive reads or renders. The examples
     show those features as copyable code.
@@ -164,7 +164,8 @@ Do not "fix" these. A change that breaks one is a decision for the maintainer.
     (`src/selection/`: the slice, its commands and keys, clicks, `aria-selected`,
     `aria-multiselectable`, the `selectedItemIds` root prop); `checkboxes({ mode, space })`
     (`src/checkboxes/`: `checkedItemIds`, `checkMode`, `item.check` / `item.toggle-check`, the
-    cascade on loads, adds, moves and removals, `aria-checked`, the `checkedItemIds` root prop;
+    cascade on loads, adds, moves and removals, which leaves a disabled descendant's check as it is,
+    `aria-checked`, the `checkedItemIds` root prop;
     **Space** checks when `space: "check"`, or when `space` is unset and the tree has no
     `selection()`; else it selects); `rename({ renamable })` (`src/rename/`: `renamingItemId`, the
     `renamable` flag and setting, the rename commands, F2, the engine's `commit-rename` /
@@ -383,7 +384,7 @@ site/               export.ts, contract.ts, dev.ts, dev-proxy.ts, sources.ts, pr
                     docs/               the pages fragiola.com/tree serves (docs/api/commands.mdx is generated)
                     tests/              the export, the contract, the docs reference, the scripts' tests
 scripts/            check-layout.ts, check-dts.ts, check-features.ts, size-report.ts, built-files.ts (from Data Grid), check-package.ts, source-condition.ts, exported-names.ts, e2e-suites.ts (CI's Changes job)
-docs/               releasing.md, docs-examples-gaps.md, reports
+docs/               releasing.md, docs-decisions.md, reports
 ```
 
 In dev, the packages resolve to their sources through the `@fragiola/source` export condition
@@ -407,8 +408,9 @@ examples app per framework; the registration in `www` is fragiola/www#32.
 - The landing's Hero actions go examples (primary), "Use with your AI agent" (`/ai`, secondary),
   then the docs (ghost), as on every fragiola.com landing (v1.7); the header and footer link GitHub.
 - The JSON model is documented in `site/docs/api/json-model.mdx`, the commands in the generated
-  `site/docs/api/commands.mdx`. The examples' workarounds, when there are any, are listed in
-  `docs/docs-examples-gaps.md`; what the packages leave out is on `site/docs/limitations.mdx`.
+  `site/docs/api/commands.mdx`. Each behaviour is described on its part's page, facts true by
+  design included; no page lists what is not built. The docs' own choices are in
+  `docs/docs-decisions.md`.
 - **The examples** (`examples/react/src/examples/README.md`): 21 ids, final, that Vue and
   Angular port in full: `hello-tree`, `file-explorer`, `multi-select`, `checkboxes`, `async-loading`,
   `rename`, `drag-and-drop`, `two-trees`, `file-drop`, `keyboard`, `controlled`, `save-restore`, `large-tree`, `undo-redo`,
