@@ -124,7 +124,8 @@ start at the top of its content box: put a header outside the root.
 
 ## A flat tree
 
-A virtualized tree renders its rows as siblings in the root: no `Tree.Group` holds them. Each
+A tree scrolls on one axis, so `virtualization()` windows its rows. A virtualized tree renders
+them as siblings in the root: no `Tree.Group` holds them. Each
 item still carries its `aria-level`, `aria-posinset` and `aria-setsize`, which is how the WAI-ARIA
 tree pattern describes a flat tree, so a screen reader reads the same structure. The indentation
 is the item's depth: `--tree-depth` is on every part of an item, as in a nested tree

@@ -221,10 +221,6 @@
             "label": "More",
             "pages": [
                 {
-                    "label": "Known limitations",
-                    "path": "limitations"
-                },
-                {
                     "label": "Found a problem?",
                     "href": "https://github.com/fragiola/tree/issues",
                     "external": true

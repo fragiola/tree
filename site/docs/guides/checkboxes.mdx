@@ -193,7 +193,10 @@ A `button` would take focus when clicked and keep the tree's keys to itself.
 - **cascade**: checking a parent checks its descendants; a parent is checked when all its
   children are, and **mixed** when only some of its descendants are. Children loaded later
   inherit a checked parent. A mixed parent is never stored: `model.get("check-state-by", {
-  itemId })` computes it, and `checkedItemIds` holds the fully checked items only.
+  itemId })` computes it, and `checkedItemIds` holds the fully checked items only. A disabled
+  descendant, and what is under it, keeps its check when a parent is checked or unchecked, so a
+  parent above a locked item can stay mixed; toggling it still works both ways, since
+  `item.toggle-check` unchecks a parent when every item the cascade reaches is checked.
 - **independent**: each item is checked on its own (a filter where a category and its entries
   mean different things).
 
@@ -274,3 +277,5 @@ The selector returns a string so that `Object.is` sees an unchanged selection as
 `isEqual` to compare arrays instead. To keep the checks in your app's state, control
 `checkedItemIds` on the root (with `onCheckedItemIdsChange` in React, `v-model:checked-item-ids`
 in Vue, `[(checkedItemIds)]` in Angular: [Controlled state](/docs/guides/controlled-state)).
+Setting that list brings the tree to exactly its checks: a list of leaves (a role's preset, the
+saved grants) checks those leaves, and the cascade derives their parents.

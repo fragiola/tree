@@ -594,8 +594,10 @@ const overTrash = useSyncExternalStore(
 
 A keyboard drag stays in the trees of its group: it has no place outside them.
 
-## What it does not do
+## Within the page
 
-No native outbound drag: a row cannot be dragged to the desktop or into another window (the drag
-uses Pointer Events), and trees in two documents (an iframe, a popup) never share a drag. See
-[Known limitations](/docs/limitations).
+A tree's drag uses Pointer Events, one path for mouse, touch, pen and the keyboard, and they stay
+in the page: a row is dragged between trees of one group or to your own targets
+([Dropping outside](#dropping-outside)), not to the desktop or into another window, and trees in
+two documents (an iframe, a popup) never share a drag. What comes in from outside the page
+arrives as native content ([Foreign content](#foreign-content)).

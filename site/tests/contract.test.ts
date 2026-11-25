@@ -37,14 +37,14 @@ const page = (body: string) =>
 /** The landing's frontmatter: a title that names the project and says what it is. */
 const LANDING = `---\ntitle: Tree — a test landing\ndescription: ${DESCRIPTION}\nlayout: landing\n---`;
 
-/** The problems of a copy where `limitations` (a listed page) has `body`. */
+/** The problems of a copy where `guides/rtl` (a listed page) has `body`. */
 const problemsOf = (body: string) =>
-    validateSite(withPage("limitations", page(body)));
+    validateSite(withPage("guides/rtl", page(body)));
 
 describe("the site export", () => {
     it("has the landing, every page in the sidebar, and all 21 examples in React, Vue and Angular", () => {
         expect(site.pages.has("index")).toBe(true);
-        expect(site.pages.size).toBe(49);
+        expect(site.pages.size).toBe(48);
         expect([...site.manifests.keys()]).toEqual(["react", "vue", "angular"]);
         expect(site.manifests.get("react")?.examples).toHaveLength(21);
         expect(site.manifests.get("vue")?.examples).toHaveLength(21);
@@ -203,7 +203,7 @@ describe("the contract checks", () => {
 
     it("reject missing frontmatter, and a page missing from the sidebar", () => {
         expect(
-            validateSite(withPage("limitations", "# no frontmatter\n")).join(),
+            validateSite(withPage("guides/rtl", "# no frontmatter\n")).join(),
         ).toMatch(/title is required.*description is required/);
         expect(validateSite(withPage("extra", page(""))).join()).toContain(
             "extra.mdx is not listed",
@@ -279,18 +279,18 @@ describe("the v1.2 checks", () => {
         expect(
             validateSite(
                 withPage(
-                    "limitations",
+                    "guides/rtl",
                     `---\ntitle: ${"t".repeat(61)}\ndescription: Short.\n---\n\n## A heading\n`,
                 ),
             ),
         ).toEqual([
-            "docs/limitations.mdx:2: frontmatter: title is 61 characters: at most 60 (§3.2)",
-            "docs/limitations.mdx:3: frontmatter: description is 6 characters: 50–160 (§3.2)",
+            "docs/guides/rtl.mdx:2: frontmatter: title is 61 characters: at most 60 (§3.2)",
+            "docs/guides/rtl.mdx:3: frontmatter: description is 6 characters: 50–160 (§3.2)",
         ]);
         expect(
             validateSite(
                 withPage(
-                    "limitations",
+                    "guides/rtl",
                     `---\ntitle: ${"é".repeat(60)}\ndescription: ${"é".repeat(160)}\n---\n`,
                 ),
             ),
@@ -301,17 +301,17 @@ describe("the v1.2 checks", () => {
         expect(
             validateSite(
                 withPage(
-                    "limitations",
+                    "guides/rtl",
                     `---\ntitle: Hooks\ndescription: The lower layer: hooks under the primitives, for your own markup.\n---\n`,
                 ),
             ),
         ).toEqual([
-            `docs/limitations.mdx:3: the frontmatter is not valid YAML: description's value has ": " or " #" in it; quote it`,
+            `docs/guides/rtl.mdx:3: the frontmatter is not valid YAML: description's value has ": " or " #" in it; quote it`,
         ]);
         expect(
             validateSite(
                 withPage(
-                    "limitations",
+                    "guides/rtl",
                     `---\ntitle: "Hooks: the lower layer"\ndescription: "The lower layer: hooks under the primitives, for your own markup."\n---\n`,
                 ),
             ),
@@ -320,29 +320,29 @@ describe("the v1.2 checks", () => {
 
     it("reject a value that goes on past its line: an indented line, a block scalar (§3.2)", () => {
         const fm = (fields: string) =>
-            validateSite(withPage("limitations", `---\n${fields}\n---\n`));
+            validateSite(withPage("guides/rtl", `---\n${fields}\n---\n`));
         expect(
             fm(
                 `title: Hooks\ndescription: ${DESCRIPTION}\n    and a second line that YAML reads as part of it.`,
             ),
         ).toEqual([
-            "docs/limitations.mdx:4: frontmatter: an indented line continues a value: write each field on one line (§3.2)",
+            "docs/guides/rtl.mdx:4: frontmatter: an indented line continues a value: write each field on one line (§3.2)",
         ]);
         expect(
             fm(`title: Hooks\ndescription: >\n    ${DESCRIPTION}`).slice(0, 2),
         ).toEqual([
-            "docs/limitations.mdx:3: frontmatter: description is a block scalar (>): write it on one line (§3.2)",
-            "docs/limitations.mdx:4: frontmatter: an indented line continues a value: write each field on one line (§3.2)",
+            "docs/guides/rtl.mdx:3: frontmatter: description is a block scalar (>): write it on one line (§3.2)",
+            "docs/guides/rtl.mdx:4: frontmatter: an indented line continues a value: write each field on one line (§3.2)",
         ]);
         expect(
             fm(`title: |-\n    Hooks\ndescription: ${DESCRIPTION}`),
         ).toContain(
-            "docs/limitations.mdx:2: frontmatter: title is a block scalar (|-): write it on one line (§3.2)",
+            "docs/guides/rtl.mdx:2: frontmatter: title is a block scalar (|-): write it on one line (§3.2)",
         );
         expect(
             fm(`title: Hooks\nnot a field\ndescription: ${DESCRIPTION}`),
         ).toEqual([
-            'docs/limitations.mdx:3: the frontmatter is not valid YAML here: one "key: value" per line',
+            'docs/guides/rtl.mdx:3: the frontmatter is not valid YAML here: one "key: value" per line',
         ]);
         expect(
             fm(`# a comment\ntitle: Hooks\n\ndescription: ${DESCRIPTION}`),
@@ -360,12 +360,12 @@ describe("the v1.2 checks", () => {
         expect(
             validateSite(
                 withPage(
-                    "limitations",
+                    "guides/rtl",
                     `---\ntitle: T\ndescription: ${description}\n---\n`,
                 ),
             ),
         ).toEqual([
-            "docs/limitations.mdx:3: frontmatter: description is 48 characters: 50–160 (§3.2)",
+            "docs/guides/rtl.mdx:3: frontmatter: description is 48 characters: 50–160 (§3.2)",
         ]);
     });
 
@@ -391,20 +391,20 @@ describe("the v1.2 checks", () => {
     it("reject a Markdown # heading and a skipped level (§3.4)", () => {
         // the body of problemsOf starts on line 8, under "## A heading"
         expect(problemsOf("# Title")).toEqual([
-            "docs/limitations.mdx:8: a Markdown # heading: the page's h1 is its frontmatter title (§3.4)",
+            "docs/guides/rtl.mdx:8: a Markdown # heading: the page's h1 is its frontmatter title (§3.4)",
         ]);
         expect(problemsOf("#### Deep")).toEqual([
-            "docs/limitations.mdx:8: a #### heading after an h2: headings do not skip a level (§3.4)",
+            "docs/guides/rtl.mdx:8: a #### heading after an h2: headings do not skip a level (§3.4)",
         ]);
         expect(
             validateSite(
                 withPage(
-                    "limitations",
+                    "guides/rtl",
                     `---\ntitle: T\ndescription: ${DESCRIPTION}\n---\n\n### Steps first\n`,
                 ),
             ),
         ).toEqual([
-            "docs/limitations.mdx:6: a ### heading after an h1: headings do not skip a level (§3.4)",
+            "docs/guides/rtl.mdx:6: a ### heading after an h1: headings do not skip a level (§3.4)",
         ]);
         expect(landing(`${HERO}\n\n# Title`)).toEqual([
             "docs/index.mdx:9: a Markdown # heading: the page's h1 is its <Hero>'s title (§3.4)",
@@ -427,19 +427,19 @@ describe("the v1.2 checks", () => {
         const nested =
             "a heading in a blockquote or a list item: write headings as ## at the start of a line (§3.4)";
         expect(problemsOf("An h1\n===")).toEqual([
-            `docs/limitations.mdx:8: ${setext}`,
+            `docs/guides/rtl.mdx:8: ${setext}`,
         ]);
         expect(problemsOf("An h2\n---")).toEqual([
-            `docs/limitations.mdx:8: ${setext}`,
+            `docs/guides/rtl.mdx:8: ${setext}`,
         ]);
         expect(problemsOf("> # quoted")).toEqual([
-            `docs/limitations.mdx:8: ${nested}`,
+            `docs/guides/rtl.mdx:8: ${nested}`,
         ]);
         expect(problemsOf("- #### in a list")).toEqual([
-            `docs/limitations.mdx:8: ${nested}`,
+            `docs/guides/rtl.mdx:8: ${nested}`,
         ]);
         expect(problemsOf("1. ## in an ordered list")).toEqual([
-            `docs/limitations.mdx:8: ${nested}`,
+            `docs/guides/rtl.mdx:8: ${nested}`,
         ]);
         // a rule after a blank line, a table, a list item that is not a heading, code
         expect(
@@ -462,12 +462,12 @@ describe("the v1.2 checks", () => {
         expect(
             validateSite(
                 withPage(
-                    "limitations",
+                    "guides/rtl",
                     `---\ntitle: T\ndescription: ${DESCRIPTION}\n---\n\n${cards}\n`,
                 ),
             ),
         ).toEqual([
-            "docs/limitations.mdx:7: a <Card> (an h3) after an h1: headings do not skip a level (§3.4)",
+            "docs/guides/rtl.mdx:7: a <Card> (an h3) after an h1: headings do not skip a level (§3.4)",
         ]);
         // first thing after the Hero
         expect(landing(`${HERO}\n\n${cards}`)).toEqual([
@@ -476,7 +476,7 @@ describe("the v1.2 checks", () => {
         // a Markdown heading after a Card compares against 3
         expect(problemsOf(`${cards}\n\n#### After the cards`)).toEqual([]);
         expect(problemsOf(`### x\n\n${cards}\n\n##### Too deep`)).toEqual([
-            "docs/limitations.mdx:14: a ##### heading after an h3: headings do not skip a level (§3.4)",
+            "docs/guides/rtl.mdx:14: a ##### heading after an h3: headings do not skip a level (§3.4)",
         ]);
     });
 
@@ -505,11 +505,11 @@ describe("the v1.2 checks", () => {
 
     it("want alt text on every image (§3.4)", () => {
         expect(problemsOf("![](https://x.dev/a.png)")).toEqual([
-            "docs/limitations.mdx:8: an image needs alt text: ![what it shows](…) (§3.4)",
+            "docs/guides/rtl.mdx:8: an image needs alt text: ![what it shows](…) (§3.4)",
         ]);
         expect(problemsOf("![ ][shot]\n\n[shot]: https://x.dev/a.png")).toEqual(
             [
-                "docs/limitations.mdx:8: an image needs alt text: ![what it shows](…) (§3.4)",
+                "docs/guides/rtl.mdx:8: an image needs alt text: ![what it shows](…) (§3.4)",
             ],
         );
         expect(
