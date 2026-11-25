@@ -1,15 +1,12 @@
 // The permissions admin's demo content and app logic, framework-free: an organization's areas,
-// resources and actions as a tree document (JSON v1), the role presets, the lock rule as
-// middleware, the app's own toggle, the changes against the saved grants, and the search.
-import {
-    type BatchEntry,
-    type ItemOf,
-    type KeyMap,
-    type TreeJson,
-    type TreeModel,
-    veto,
+// resources and actions as a tree document (JSON v1), the role presets, the changes against the
+// saved grants, and the search. A granted action is disabled: the cascade leaves it checked.
+import type {
+    BatchEntry,
+    ItemOf,
+    TreeJson,
+    TreeModel,
 } from "@fragiola/tree-vue";
-import type { PermissionModel } from "./features";
 
 /** What an action does. */
 export type Verb =
@@ -242,13 +239,6 @@ export function grantsOf(role: string): string[] {
     return [...new Set([...(ROLES[role] ?? []), ...Object.keys(GRANTED)])];
 }
 
-/**
- * Space is the app's here, not the tree's: the tree's own toggle would uncheck granted actions
- * along with their parent (the cascade does not skip disabled items). Workaround: see
- * docs/docs-examples-gaps.md.
- */
-export const keyMap: Partial<KeyMap> = { toggle: [] };
-
 /** The actions under an item (itself, for an action). */
 export function actionsOf(
     model: TreeModel<PermissionTypes>,
@@ -260,85 +250,6 @@ export function actionsOf(
     return (item.childItemIds ?? []).flatMap((childId) =>
         actionsOf(model, childId),
     );
-}
-
-const isGranted = (item: Item | undefined) =>
-    item?.kind === "action" && item.data.grantedBy !== null;
-
-/**
- * The lock rule, as one middleware: no check may uncheck a granted action, directly or through
- * its resource, area or organization (the cascade). The app's toggle checks the actions one by
- * one, so it never asks; a script that does is told why.
- */
-export function lockRule(model: PermissionModel) {
-    return model.use((ctx, next) => {
-        if (ctx.command !== "item.check" && ctx.command !== "item.toggle-check")
-            return next();
-        const { itemId } = ctx.payload;
-        const unchecking =
-            ctx.command === "item.check"
-                ? !ctx.payload.checked
-                : model.get("check-state-by", { itemId }) === "checked";
-        if (!unchecking) return next();
-        const granted = actionsOf(model, itemId).find((action) =>
-            isGranted(action),
-        );
-        if (granted) {
-            const resource = ctx.get("item-parent-by", { itemId: granted.id });
-            return veto(
-                `${resource?.label ?? ""} ${granted.label.toLowerCase()} is granted by ${granted.data.grantedBy}.`,
-            );
-        }
-        return next();
-    });
-}
-
-/**
- * The app's toggle (its check control and Space): an unchecked or mixed item gets all its actions,
- * a checked one loses them, the granted ones kept. One step: the cascade settles the parents.
- */
-export function toggle(model: PermissionModel, itemId: string) {
-    const checked = model.get("check-state-by", { itemId }) === "checked";
-    const actions = actionsOf(model, itemId).filter(
-        (action) => !isGranted(action),
-    );
-    return model.run("batch", {
-        commands: actions.map(
-            (action): BatchEntry<PermissionTypes> => ({
-                command: "item.check",
-                payload: { itemId: action.id, checked: !checked },
-            }),
-        ),
-    });
-}
-
-/**
- * One step that sets the grants to exactly these actions (a role preset, Discard): each action
- * that is not granted anyway is checked or unchecked, and the cascade settles the parents. The
- * tree reports the new list, so the app's controlled `checkedItemIds` follows. Workaround: setting
- * the controlled list itself can lose checks (see docs/docs-examples-gaps.md).
- */
-export function setGrants(
-    model: PermissionModel,
-    actionIds: readonly string[],
-) {
-    const wanted = new Set(actionIds);
-    return model.run("batch", {
-        commands: Object.values(model.state.items).flatMap(
-            (item): BatchEntry<PermissionTypes>[] =>
-                item.kind === "action" && !isGranted(item)
-                    ? [
-                          {
-                              command: "item.check",
-                              payload: {
-                                  itemId: item.id,
-                                  checked: wanted.has(item.id),
-                              },
-                          },
-                      ]
-                    : [],
-        ),
-    });
 }
 
 /** The checked actions among `checkedItemIds` (a checked parent is a shortcut for them). */

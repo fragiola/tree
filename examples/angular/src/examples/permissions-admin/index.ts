@@ -1,9 +1,7 @@
 import {
     Component,
     computed,
-    DestroyRef,
     type ElementRef,
-    inject,
     signal,
     viewChild,
 } from "@angular/core";
@@ -33,15 +31,11 @@ import {
     grantedActions,
     grantsOf,
     isRisky,
-    keyMap,
-    lockRule,
     organization,
     type PermissionTypes,
     ROLE_NAMES,
     roleOf,
     search,
-    setGrants,
-    toggle,
 } from "./permissions";
 import * as styles from "./styles";
 
@@ -99,10 +93,8 @@ let nextInstance = 0;
                 <div
                     [treeRoot]="model"
                     [(checkedItemIds)]="checkedItemIds"
-                    [keyMap]="keyMap"
                     aria-label="Permissions"
                     [class]="styles.root"
-                    (keydown)="onKeyDown($event)"
                 >
                     <ng-template [treeItems]="model" let-item>
                         <!-- the search's highlight is the app's: data attributes its styles read -->
@@ -118,8 +110,8 @@ let nextInstance = 0;
                                 <span treeToggle [class]="styles.toggle">
                                     <svg lucideChevronRight aria-hidden="true"></svg>
                                 </span>
-                                <!-- the app's own check control: the item carries aria-checked; Space is the
-                                     app's too (keydown on the root); it toggles the actions that are not granted -->
+                                <!-- the app's own check control: the item carries aria-checked, and Space
+                                     toggles it too; a granted action is disabled, so neither unchecks it -->
                                 <span
                                     aria-hidden="true"
                                     data-tree-no-drag=""
@@ -207,7 +199,6 @@ let nextInstance = 0;
 export default class PermissionsAdmin {
     protected readonly styles = styles;
     protected readonly roles = ROLE_NAMES;
-    protected readonly keyMap = keyMap;
     protected readonly isRisky = isRisky;
     // The model is the source of truth: create it once.
     protected readonly model = createTreeModel<
@@ -216,8 +207,8 @@ export default class PermissionsAdmin {
     >(json, { features });
     /**
      * The checks are the app's state, as a form field's value is: the tree shows them and reports
-     * every change it makes; presets and Discard run commands on the model, which reports them. It starts from the model's list,
-     * which has the cascade's parents, as every change will.
+     * every change it makes; presets and Discard set them, and the tree follows (a granted action
+     * is disabled, so it stays checked). The list starts as the model's, with the cascade's parents.
      */
     protected readonly checkedItemIds = signal<string[]>([
         ...this.model.state.checkedItemIds,
@@ -253,10 +244,6 @@ export default class PermissionsAdmin {
     protected readonly titleId = `permissions-${this.instance}-dialog-title`;
     private readonly dialog =
         viewChild.required<ElementRef<HTMLDialogElement>>("dialog");
-
-    constructor() {
-        inject(DestroyRef).onDestroy(lockRule(this.model));
-    }
 
     protected descriptionId(itemId: string) {
         return `permissions-${this.instance}-description-${itemId}`;
@@ -295,7 +282,7 @@ export default class PermissionsAdmin {
     }
 
     protected run(itemId: string) {
-        this.report(toggle(this.model, itemId));
+        this.report(this.model.run("item.toggle-check", { itemId }));
     }
 
     private report(result: { ok: boolean; error?: { message: string } }) {
@@ -303,8 +290,7 @@ export default class PermissionsAdmin {
     }
 
     protected chooseRole(name: string) {
-        if (name !== "Custom")
-            this.report(setGrants(this.model, grantsOf(name)));
+        if (name !== "Custom") this.checkedItemIds.set(grantsOf(name));
     }
 
     protected onSearch(value: string) {
@@ -313,18 +299,8 @@ export default class PermissionsAdmin {
         expand(this.model, search(this.model, value).aroundIds);
     }
 
-    // Space is the app's: the tree's own would uncheck granted actions with their parent
-    protected onKeyDown(event: KeyboardEvent) {
-        if (event.key !== " " || event.target instanceof HTMLInputElement)
-            return;
-        const { focusedItemId } = this.model.state;
-        if (focusedItemId === null) return;
-        event.preventDefault();
-        this.run(focusedItemId);
-    }
-
     protected discard() {
-        this.report(setGrants(this.model, this.saved()));
+        this.checkedItemIds.set([...this.saved()]);
         this.notice.set("Discarded.");
     }
 

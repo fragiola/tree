@@ -5,12 +5,12 @@ import { defineCommand, ok } from "../commands/define";
 import { itemIdPayload } from "../commands/expansion";
 import { isFailure, requireEnabled } from "../commands/rules";
 import { idListSchema } from "../schema/tree";
-import { checkedOf, checkStateOf, setChecked } from "./state";
+import { checkedOf, setChecked, toggledCheck } from "./state";
 
 export const itemCheck = defineCommand({
     name: "item.check",
     description:
-        "Check or uncheck an item's checkbox. In cascade mode its loaded descendants follow it and its ancestors are recomputed (checked when all their children are, mixed when some are); children loaded later inherit a checked parent. In independent mode only the item changes. Refused for a disabled item.",
+        "Check or uncheck an item's checkbox. In cascade mode its loaded descendants follow it (a disabled descendant, and what is under it, keeps its check) and its ancestors are recomputed (checked when all their children are, mixed when some are); children loaded later inherit a checked parent. In independent mode only the item changes. Refused for a disabled item.",
     payloadSchema: {
         type: "object",
         properties: {
@@ -46,7 +46,7 @@ export const itemCheck = defineCommand({
 export const itemToggleCheck = defineCommand({
     name: "item.toggle-check",
     description:
-        "Toggle an item's checkbox: a checked item is unchecked, an unchecked or mixed one is checked (with the cascade of `item.check`). Refused for a disabled item.",
+        "Toggle an item's checkbox (with the cascade of `item.check`): an item is unchecked when it is checked, or in cascade mode when every item the cascade reaches is checked (a disabled descendant keeping it mixed does not count), and checked otherwise. Refused for a disabled item.",
     payloadSchema: itemIdPayload,
     resultSchema: {
         type: "object",
@@ -64,7 +64,7 @@ export const itemToggleCheck = defineCommand({
     reduce: (payload, { draft }) => {
         const item = requireEnabled(draft, payload.itemId, "be checked");
         if (isFailure(item)) return item;
-        const checked = checkStateOf(draft.state, item.id) !== "checked";
+        const checked = toggledCheck(draft.state, item.id);
         setChecked(draft, item.id, checked);
         return ok({ itemId: item.id, checked });
     },

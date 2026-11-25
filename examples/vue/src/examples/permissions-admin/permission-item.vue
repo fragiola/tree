@@ -69,8 +69,8 @@ const onCheck = () => {
             <Tree.Toggle :class="styles.toggle">
                 <ChevronRight aria-hidden="true" />
             </Tree.Toggle>
-            <!-- the app's own check control: the item carries aria-checked; Space is the app's too
-                 (keydown on the root); it toggles the actions that are not granted -->
+            <!-- the app's own check control: the item carries aria-checked, and Space toggles it
+                 too; a granted action is disabled, so neither unchecks it -->
             <span
                 aria-hidden="true"
                 data-tree-no-drag=""

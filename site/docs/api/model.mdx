@@ -128,7 +128,7 @@ nothing needs no payload (`QueryArgs`).
 
 A `VisibleItem` is `{ itemId, parentItemId, level, posinset, setsize }`: the items whose
 ancestors are all expanded, in render order. It is the base of the keyboard navigation, and the
-list a virtualizer will consume ([Known limitations](/docs/limitations)).
+list a virtualized tree windows ([Virtualization](/docs/guides/virtualization)).
 
 ```ts
 const parent = model.get("item-parent-by", { itemId: "app" });

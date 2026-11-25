@@ -94,7 +94,8 @@ same file, below the default export.
   `item.kind`; no casts on item data or kinds.
 - **Accessible names**: the tree, every button and every input has a name; the package renders
   none.
-- **Workarounds are commented** in the code and listed in `docs/docs-examples-gaps.md`.
+- **No workarounds**: an example uses the packages as they are; what it would need from them is
+  fixed in the package.
 - **The tree is never the lone, full-width part of an `apps` scene**: it keeps a narrow column
   (about 18-20rem) beside its companions, which are Fragiola UI and plain markup, never another
   Fragiola library; charts are hand-drawn SVG.

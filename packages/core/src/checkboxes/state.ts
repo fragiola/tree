@@ -1,5 +1,5 @@
 // Tri-state checkboxes. In `cascade` mode `checkedItemIds` is kept consistent: checking an item
-// checks its descendants, and a parent with children is checked exactly when all its children are
+// checks its descendants (a disabled one, and what is under it, keeps its check), and a parent with children is checked exactly when all its children are
 // (so `mixed` is derived, never stored). A parent whose children are not loaded keeps its own
 // state, and its children inherit it when they load. In `independent` mode each item is on its own.
 import type { Draft } from "../state/draft";
@@ -114,8 +114,41 @@ export function settleAncestors(
 }
 
 /**
- * Checks or unchecks an item: in cascade mode its descendants follow and its ancestors are
- * recomputed; in independent mode only the item changes.
+ * The descendants a check of `itemId` reaches in cascade mode: a disabled descendant, and what is
+ * under it, keeps its own check.
+ */
+export function cascadeOf(state: TreeState, itemId: string): string[] {
+    const out: string[] = [];
+    const visit = (ids: readonly string[]) => {
+        for (const id of ids) {
+            const item = itemOf(state, id);
+            if (item === undefined || item.disabled === true) continue;
+            out.push(id);
+            if (item.childItemIds) visit(item.childItemIds);
+        }
+    };
+    visit(itemOf(state, itemId)?.childItemIds ?? []);
+    return out;
+}
+
+/**
+ * What `item.toggle-check` does to `itemId`: uncheck when every item the cascade reaches that
+ * holds its own check (no loaded children) is checked, else check. A disabled descendant that
+ * keeps its parent `mixed` never blocks the toggle either way.
+ */
+export function toggledCheck(state: TreeState, itemId: string): boolean {
+    if (checkModeOf(state) !== "cascade") return !checkedSet(state).has(itemId);
+    const checked = checkedSet(state);
+    const own = [itemId, ...cascadeOf(state, itemId)].filter(
+        (id) => (itemOf(state, id)?.childItemIds?.length ?? 0) === 0,
+    );
+    if (own.length === 0) return checkStateOf(state, itemId) !== "checked";
+    return !own.every((id) => checked.has(id));
+}
+
+/**
+ * Checks or unchecks an item: in cascade mode the descendants it reaches follow (a disabled one
+ * keeps its check) and its ancestors are recomputed; in independent mode only the item changes.
  */
 export function setChecked(
     draft: Draft,
@@ -125,7 +158,7 @@ export function setChecked(
     const cascade = checkModeOf(draft.state) === "cascade";
     const ids = new Set([
         itemId,
-        ...(cascade ? descendantsOf(draft.state, itemId) : []),
+        ...(cascade ? cascadeOf(draft.state, itemId) : []),
     ]);
     setCheckedIds(
         draft,
@@ -133,7 +166,8 @@ export function setChecked(
             ? withChecks(draft.state, ids, new Set())
             : withChecks(draft.state, new Set(), ids),
     );
-    if (cascade) settleAncestors(draft, parentOf(draft.state, itemId));
+    // from the item itself: a disabled child it did not reach may keep it unchecked
+    if (cascade) settleAncestors(draft, itemId);
 }
 
 /** New children of `parentItemId` inherit its checked state (cascade mode). */
