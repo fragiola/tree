@@ -1,6 +1,6 @@
 {
     "name": "@fragiola/tree-angular",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "description": "Composable, headless Angular directives and injection functions for @fragiola/tree: an accessible tree view you assemble and style yourself.",
     "keywords": [
         "angular",

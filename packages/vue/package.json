@@ -1,6 +1,6 @@
 {
     "name": "@fragiola/tree-vue",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "description": "Composable, headless Vue 3 primitives and composables for @fragiola/tree: an accessible tree view you assemble and style yourself.",
     "keywords": [
         "vue",

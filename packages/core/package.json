@@ -1,6 +1,6 @@
 {
     "name": "@fragiola/tree",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "description": "Headless, accessible tree view: a typed state model with a command bus, the WAI-ARIA keyboard model, drag and drop, async children, rename and tri-state checkboxes.",
     "keywords": [
         "tree",

@@ -1,5 +1,12 @@
 # @fragiola/tree-angular
 
+## 0.1.1
+
+### Patch Changes
+
+- Updated dependencies [[`680fba9`](https://github.com/fragiola/tree/commit/680fba9c06decbdea6c4724b8b0856bfd4e39c17)]:
+  - @fragiola/tree@0.1.1
+
 ## 0.1.0
 
 ### Minor Changes
