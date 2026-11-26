@@ -1,5 +1,11 @@
 # @fragiola/tree
 
+## 0.1.1
+
+### Patch Changes
+
+- [#86](https://github.com/fragiola/tree/pull/86) [`680fba9`](https://github.com/fragiola/tree/commit/680fba9c06decbdea6c4724b8b0856bfd4e39c17) Thanks [@maurodesouza](https://github.com/maurodesouza)! - In `cascade` mode, checking or unchecking an item leaves its disabled descendants, and what is under them, as they are, so an action locked as granted stays checked when its parent is unchecked. `item.toggle-check` on a parent unchecks it when every item the cascade reaches is checked, even when a disabled descendant keeps it `mixed`, and checks it otherwise. A controlled `checkedItemIds` that drops a parent the cascade had checked now keeps the children it still lists.
+
 ## 0.1.0
 
 ### Minor Changes
